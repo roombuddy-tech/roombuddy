@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoomBuddy — Affordable Short-Term Stays in Shared Homes</title>
+<meta name="description" content="Book affordable rooms in shared apartments for days or weeks. Home-cooked food, friendly flatmates, real homes. Launching soon in Bengaluru.">
+<meta property="og:title" content="RoomBuddy — Affordable Short-Term Stays">
+<meta property="og:description" content="Book affordable rooms in shared apartments. Launching soon in Bengaluru.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #1A6B4E;
+  --primary-dark: #0F4832;
+  --primary-light: #E8F5EE;
+  --accent: #F2994A;
+  --accent-light: #FFF3E6;
+  --text: #1A1A1A;
+  --text-sec: #6B7280;
+  --text-light: #9CA3AF;
+  --bg: #FAFAF8;
+  --card: #FFFFFF;
+  --border: #E8E8E4;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Background pattern */
+.bg-pattern {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(26,107,78,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(242,153,74,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, rgba(26,107,78,0.04) 0%, transparent 50%);
+}
+
+.container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* Nav */
+nav {
+  padding: 20px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  text-decoration: none;
+}
+.logo span { color: var(--accent); }
+.nav-badge {
+  padding: 6px 14px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Hero */
+.hero {
+  padding: 80px 0 60px;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  animation: fadeDown 0.8s ease;
+}
+.hero-badge .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--primary-dark);
+  margin-bottom: 20px;
+  animation: fadeUp 0.8s ease;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--accent);
+  position: relative;
+}
+.hero h1 em::after {
+  content: '';
+  position: absolute;
+  bottom: 2px; left: 0; right: 0;
+  height: 6px;
+  background: var(--accent-light);
+  border-radius: 3px;
+  z-index: -1;
+}
+
+.hero-sub {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: var(--text-sec);
+  max-width: 580px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+  animation: fadeUp 0.8s ease 0.1s both;
+}
+
+/* Email form */
+.email-form {
+  display: flex;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto 16px;
+  animation: fadeUp 0.8s ease 0.2s both;
+}
+.email-form input {
+  flex: 1;
+  padding: 16px 20px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  background: var(--card);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+.email-form input:focus { border-color: var(--primary); }
+.email-form input::placeholder { color: var(--text-light); }
+.email-form button {
+  padding: 16px 28px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.email-form button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.form-note {
+  font-size: 13px;
+  color: var(--text-light);
+  animation: fadeUp 0.8s ease 0.3s both;
+}
+
+/* Success message (hidden by default) */
+.success-msg {
+  display: none;
+  padding: 14px 24px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  max-width: 460px;
+  margin: 0 auto 16px;
+}
+.success-msg.show { display: block; animation: fadeUp 0.4s ease; }
+
+/* Features */
+.features {
+  padding: 60px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+.feature-card {
+  padding: 28px 24px;
+  background: var(--card);
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  transition: all 0.3s;
+  animation: fadeUp 0.6s ease both;
+}
+.feature-card:nth-child(1) { animation-delay: 0.1s; }
+.feature-card:nth-child(2) { animation-delay: 0.2s; }
+.feature-card:nth-child(3) { animation-delay: 0.3s; }
+.feature-card:nth-child(4) { animation-delay: 0.4s; }
+.feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.06); border-color: var(--primary); }
+.feature-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin-bottom: 16px;
+}
+.fi-green { background: var(--primary-light); }
+.fi-orange { background: var(--accent-light); }
+.fi-blue { background: #EBF5FB; }
+.fi-purple { background: #F0E6FF; }
+.feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.feature-card p { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
+
+/* How it works */
+.how-section { padding: 60px 0; text-align: center; }
+.how-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 40px;
+}
+.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
+.how-step {
+  padding: 24px;
+  text-align: center;
+  animation: fadeUp 0.6s ease both;
+}
+.how-step:nth-child(1) { animation-delay: 0.1s; }
+.how-step:nth-child(2) { animation-delay: 0.2s; }
+.how-step:nth-child(3) { animation-delay: 0.3s; }
+.how-num {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; margin: 0 auto 14px;
+}
+.how-step h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.how-step p { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+
+/* Host CTA */
+.host-cta {
+  margin: 40px 0 60px;
+  padding: 40px;
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  border-radius: 24px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  position: relative;
+  overflow: hidden;
+}
+.host-cta::after {
+  content: ''; position: absolute; right: -40px; top: -40px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+}
+.host-cta::before {
+  content: ''; position: absolute; right: 80px; bottom: -60px;
+  width: 150px; height: 150px; border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+}
+.host-cta-content { flex: 1; position: relative; z-index: 1; }
+.host-cta h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+.host-cta p { font-size: 15px; opacity: 0.85; line-height: 1.5; margin-bottom: 20px; }
+.host-cta-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; background: #fff; color: var(--primary-dark);
+  border-radius: 14px; font-size: 15px; font-weight: 700;
+  text-decoration: none; transition: all 0.2s;
+}
+.host-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+.host-cta-earn {
+  text-align: center; position: relative; z-index: 1;
+  padding: 24px; background: rgba(255,255,255,0.1);
+  border-radius: 16px; min-width: 200px;
+}
+.host-cta-earn .amount { font-size: 28px; font-weight: 700; }
+.host-cta-earn .label { font-size: 13px; opacity: 0.75; margin-top: 4px; }
+
+/* Cities */
+.cities-section { padding: 0 0 60px; text-align: center; }
+.cities-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; font-weight: 700; color: var(--primary-dark); margin-bottom: 12px;
+}
+.cities-section .sub { font-size: 15px; color: var(--text-sec); margin-bottom: 24px; }
+.cities-chips {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+}
+.city-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 18px; background: var(--card);
+  border: 1.5px solid var(--border); border-radius: 24px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  transition: all 0.2s;
+}
+.city-chip:hover { border-color: var(--primary); background: var(--primary-light); }
+.city-chip.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.city-chip .emoji { font-size: 18px; }
+
+/* Footer */
+footer {
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.footer-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--primary-dark);
+  margin-bottom: 16px;
+}
+.footer-logo span { color: var(--accent); }
+.social-links {
+  display: flex; gap: 12px; justify-content: center; margin-bottom: 16px;
+}
+.social-link {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--primary-light); color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  text-decoration: none; font-size: 16px; font-weight: 700;
+  transition: all 0.2s;
+}
+.social-link:hover { background: var(--primary); color: #fff; }
+.footer-text { font-size: 13px; color: var(--text-light); margin-bottom: 6px; }
+.footer-email { font-size: 14px; color: var(--primary); font-weight: 600; text-decoration: none; }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hero { padding: 50px 0 40px; }
+  .email-form { flex-direction: column; }
+  .email-form button { width: 100%; }
+  .host-cta { flex-direction: column; padding: 30px 24px; text-align: center; }
+  .host-cta-earn { width: 100%; }
+  .features { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+
+<div class="container">
+  <!-- Nav -->
+  <nav>
+    <a href="#" class="logo">Room<span>Buddy</span></a>
+    <div class="nav-badge">🚀 Launching Soon</div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">
+      <div class="dot"></div>
+      Coming soon to Bengaluru
+    </div>
+    <h1>Affordable stays in<br><em>real homes</em></h1>
+    <p class="hero-sub">Book a room in someone's shared apartment for days or weeks. Home-cooked food, friendly flatmates, and prices that don't burn a hole in your pocket.</p>
+
+    <div class="success-msg" id="successMsg">🎉 You're on the list! We'll notify you when we launch.</div>
+
+    <form class="email-form" id="emailForm" onsubmit="handleSubmit(event)">
+      <input type="email" placeholder="Enter your email for early access" required id="emailInput">
+      <button type="submit">Join Waitlist</button>
+    </form>
+    <p class="form-note">🔒 No spam. Just launch updates. First 100 users get exclusive perks.</p>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="feature-card">
+      <div class="feature-icon fi-green">🏠</div>
+      <h3>Rooms, not hotels</h3>
+      <p>Stay in a furnished room in a real apartment. Queen bed, WiFi, attached bathroom — at 60% less than a hotel.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-orange">🍳</div>
+      <h3>Food sorted</h3>
+      <p>Full kitchen access to cook your own meals. Or choose a local tiffin service starting ₹120/meal. No overpriced room service.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-blue">🤝</div>
+      <h3>Friendly flatmates</h3>
+      <p>See who you'll be living with before you book. Real profiles, verified identities, shared interests. Like a friend's place, but anywhere.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-purple">🔒</div>
+      <h3>100% verified & safe</h3>
+      <p>Every guest and host is Aadhaar-verified. Secure payments via Razorpay. 24/7 support and SOS button for peace of mind.</p>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="how-section">
+    <h2>How it works</h2>
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="how-num">1</div>
+        <h3>Search</h3>
+        <p>Enter your city, dates, and budget. Filter by food, AC, gender preference, and more.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">2</div>
+        <h3>Book</h3>
+        <p>Pick a room you love. See photos, flatmate profiles, and reviews. Pay securely online.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">3</div>
+        <h3>Stay</h3>
+        <p>Check in, cook a meal, chat with flatmates. Feel at home from day one.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Host CTA -->
+  <section class="host-cta">
+    <div class="host-cta-content">
+      <h2>Got a spare room?</h2>
+      <p>Your flatmate's going home for a week? Turn that empty room into income. Free to list, zero hassle. We handle payments, verification, and support.</p>
+      <a href="#emailForm" class="host-cta-btn">Start Earning →</a>
+    </div>
+    <div class="host-cta-earn">
+      <div class="amount">₹9K – ₹15K</div>
+      <div class="label">per month at 50–70% occupancy</div>
+    </div>
+  </section>
+
+  <!-- Cities -->
+  <section class="cities-section">
+    <h2>Launching in Bengaluru</h2>
+    <p class="sub">Starting with the neighborhoods where you work and live</p>
+    <div class="cities-chips">
+      <div class="city-chip active"><span class="emoji">🏙️</span> Koramangala</div>
+      <div class="city-chip active"><span class="emoji">💻</span> HSR Layout</div>
+      <div class="city-chip active"><span class="emoji">🏢</span> Whitefield</div>
+      <div class="city-chip"><span class="emoji">⚡</span> Electronic City</div>
+      <div class="city-chip"><span class="emoji">🌳</span> Indiranagar</div>
+      <div class="city-chip"><span class="emoji">📍</span> BTM Layout</div>
+      <div class="city-chip"><span class="emoji">🚀</span> Marathahalli</div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-logo">Room<span>Buddy</span></div>
+    <div class="social-links">
+      <a href="#" class="social-link" title="Instagram">📸</a>
+      <a href="#" class="social-link" title="Twitter">𝕏</a>
+      <a href="#" class="social-link" title="LinkedIn">in</a>
+      <a href="#" class="social-link" title="WhatsApp">💬</a>
+    </div>
+    <p class="footer-text">Affordable short-term stays in shared homes</p>
+    <a href="mailto:support@roombuddy.co.in" class="footer-email">support@roombuddy.co.in</a>
+    <p class="footer-text" style="margin-top: 16px">© 2026 RoomBuddy Technologies Pvt Ltd. All rights reserved.</p>
+  </footer>
+</div>
+
+<script>
+function handleSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('emailInput').value;
+  // For now, just show success. Later connect to a backend or Google Sheets.
+  document.getElementById('emailForm').style.display = 'none';
+  document.getElementById('successMsg').classList.add('show');
+  // You can send this email to Google Sheets using a free Google Apps Script webhook
+  console.log('Waitlist signup:', email);
+}
+</script>
+
+</body>
+</html>
