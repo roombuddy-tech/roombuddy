@@ -464,22 +464,51 @@ footer {
       <a href="#" class="social-link" title="WhatsApp">💬</a>
     </div>
     <p class="footer-text">Affordable short-term stays in shared homes</p>
-    <a href="mailto:support@roombuddy.co.in" class="footer-email">support@roombuddy.co.in</a>
+    <a href="mailto:hello@roombuddy.co.in" class="footer-email">hello@roombuddy.co.in</a>
     <p class="footer-text" style="margin-top: 16px">© 2026 RoomBuddy Technologies Pvt Ltd. All rights reserved.</p>
   </footer>
 </div>
 
 <script>
-function handleSubmit(e) {
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwfSEkF-KCnXO0rOBV0msJSXjotC4AqpjjGgdxk7xKRs4z4jDP19zXnxCFXKzrYRBoo9A/exec";
+
+async function handleSubmit(e) {
   e.preventDefault();
   const email = document.getElementById('emailInput').value;
-  // For now, just show success. Later connect to a backend or Google Sheets.
-  document.getElementById('emailForm').style.display = 'none';
-  document.getElementById('successMsg').classList.add('show');
-  // You can send this email to Google Sheets using a free Google Apps Script webhook
-  console.log('Waitlist signup:', email);
+  const button = document.querySelector('.email-form button');
+  const originalText = button.textContent;
+
+  // Show loading state
+  button.textContent = 'Joining...';
+  button.style.opacity = '0.7';
+  button.disabled = true;
+
+  try {
+    // Send to Google Sheets
+    if (GOOGLE_SHEET_URL !== "https://script.google.com/macros/s/AKfycbwfSEkF-KCnXO0rOBV0msJSXjotC4AqpjjGgdxk7xKRs4z4jDP19zXnxCFXKzrYRBoo9A/exec") {
+      await fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      });
+    }
+
+    // Show success
+    document.getElementById('emailForm').style.display = 'none';
+    document.getElementById('successMsg').classList.add('show');
+    console.log('Waitlist signup:', email);
+
+  } catch (error) {
+    // Even if Google Sheets fails, show success to user
+    // (no-cors mode means we can't read the response anyway)
+    document.getElementById('emailForm').style.display = 'none';
+    document.getElementById('successMsg').classList.add('show');
+    console.log('Waitlist signup (offline):', email);
+  }
 }
 </script>
 
 </body>
 </html>
+
