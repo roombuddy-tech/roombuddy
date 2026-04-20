@@ -1,0 +1,30 @@
+# ── Python ───────────────────────────────────────────────
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.so
+
+# ── Django ───────────────────────────────────────────────
+backend/db.sqlite3
+backend/staticfiles/
+backend/media/
+
+# ── Environment / secrets ────────────────────────────────
+.env
+*.env
+.env.*
+
+# ── IDE / editors ────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── OS ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

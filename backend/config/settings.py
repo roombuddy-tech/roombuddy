@@ -6,6 +6,7 @@ Follows 12-factor app principles.
 """
 
 import os
+import urllib.parse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "corsheaders",
     "core",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -64,12 +66,41 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+_database_url = os.getenv("DATABASE_URL")
+_db_host = os.getenv("DB_HOST")
+
+if _database_url:
+    _url = urllib.parse.urlparse(_database_url)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _url.path.lstrip("/"),
+            "USER": _url.username,
+            "PASSWORD": urllib.parse.unquote(_url.password or ""),
+            "HOST": _url.hostname,
+            "PORT": str(_url.port or 5432),
+            "OPTIONS": {"sslmode": "require"},
+        }
     }
-}
+elif _db_host:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME", "postgres"),
+            "USER": os.getenv("DB_USER", "postgres"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": _db_host,
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "OPTIONS": {"sslmode": "require"},
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
