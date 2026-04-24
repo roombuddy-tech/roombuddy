@@ -30,8 +30,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "corsheaders",
-    "core",
-    "users",
+    "apps.users",
+    "apps.properties",
+    "apps.rooms",
+    "apps.amenities",
+    "apps.listings",
+    "apps.bookings",
+    "apps.reviews",
 ]
 
 MIDDLEWARE = [
