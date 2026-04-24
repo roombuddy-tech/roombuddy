@@ -4,506 +4,129 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RoomBuddy — Affordable Short-Term Stays in Shared Homes</title>
-<meta name="description" content="Book affordable rooms in shared apartments for days or weeks. Home-cooked food, friendly flatmates, real homes. Launching soon in Bengaluru.">
-<meta property="og:title" content="RoomBuddy — Affordable Short-Term Stays">
-<meta property="og:description" content="Book affordable rooms in shared apartments. Launching soon in Bengaluru.">
-<meta property="og:type" content="website">
+<meta name="description" content="Book affordable rooms in shared apartments across India. Home food, friendly flatmates, verified hosts. Download the app.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --primary: #1A6B4E;
-  --primary-dark: #0F4832;
-  --primary-light: #E8F5EE;
-  --accent: #F2994A;
-  --accent-light: #FFF3E6;
-  --text: #1A1A1A;
-  --text-sec: #6B7280;
-  --text-light: #9CA3AF;
-  --bg: #FAFAF8;
-  --card: #FFFFFF;
-  --border: #E8E8E4;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* Background pattern */
-.bg-pattern {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(26,107,78,0.06) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(242,153,74,0.06) 0%, transparent 50%),
-    radial-gradient(circle at 50% 80%, rgba(26,107,78,0.04) 0%, transparent 50%);
-}
-
-.container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-
-/* Nav */
-nav {
-  padding: 20px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--primary-dark);
-  text-decoration: none;
-}
-.logo span { color: var(--accent); }
-.nav-badge {
-  padding: 6px 14px;
-  background: var(--accent-light);
-  color: var(--accent);
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-/* Hero */
-.hero {
-  padding: 80px 0 60px;
-  text-align: center;
-}
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 18px;
-  background: var(--primary-light);
-  color: var(--primary);
-  border-radius: 24px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  animation: fadeDown 0.8s ease;
-}
-.hero-badge .dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent);
-  animation: pulse 2s infinite;
-}
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-.hero h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(36px, 6vw, 64px);
-  font-weight: 800;
-  line-height: 1.15;
-  color: var(--primary-dark);
-  margin-bottom: 20px;
-  animation: fadeUp 0.8s ease;
-}
-.hero h1 em {
-  font-style: normal;
-  color: var(--accent);
-  position: relative;
-}
-.hero h1 em::after {
-  content: '';
-  position: absolute;
-  bottom: 2px; left: 0; right: 0;
-  height: 6px;
-  background: var(--accent-light);
-  border-radius: 3px;
-  z-index: -1;
-}
-
-.hero-sub {
-  font-size: clamp(16px, 2.5vw, 20px);
-  color: var(--text-sec);
-  max-width: 580px;
-  margin: 0 auto 40px;
-  line-height: 1.6;
-  animation: fadeUp 0.8s ease 0.1s both;
-}
-
-/* Email form */
-.email-form {
-  display: flex;
-  gap: 10px;
-  max-width: 460px;
-  margin: 0 auto 16px;
-  animation: fadeUp 0.8s ease 0.2s both;
-}
-.email-form input {
-  flex: 1;
-  padding: 16px 20px;
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  font-size: 15px;
-  font-family: inherit;
-  outline: none;
-  background: var(--card);
-  color: var(--text);
-  transition: border-color 0.2s;
-}
-.email-form input:focus { border-color: var(--primary); }
-.email-form input::placeholder { color: var(--text-light); }
-.email-form button {
-  padding: 16px 28px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-}
-.email-form button:hover { background: var(--primary-dark); transform: translateY(-1px); }
-.form-note {
-  font-size: 13px;
-  color: var(--text-light);
-  animation: fadeUp 0.8s ease 0.3s both;
-}
-
-/* Success message (hidden by default) */
-.success-msg {
-  display: none;
-  padding: 14px 24px;
-  background: var(--primary-light);
-  color: var(--primary);
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  max-width: 460px;
-  margin: 0 auto 16px;
-}
-.success-msg.show { display: block; animation: fadeUp 0.4s ease; }
-
-/* Features */
-.features {
-  padding: 60px 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-}
-.feature-card {
-  padding: 28px 24px;
-  background: var(--card);
-  border-radius: 20px;
-  border: 1.5px solid var(--border);
-  transition: all 0.3s;
-  animation: fadeUp 0.6s ease both;
-}
-.feature-card:nth-child(1) { animation-delay: 0.1s; }
-.feature-card:nth-child(2) { animation-delay: 0.2s; }
-.feature-card:nth-child(3) { animation-delay: 0.3s; }
-.feature-card:nth-child(4) { animation-delay: 0.4s; }
-.feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.06); border-color: var(--primary); }
-.feature-icon {
-  width: 52px; height: 52px; border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; margin-bottom: 16px;
-}
-.fi-green { background: var(--primary-light); }
-.fi-orange { background: var(--accent-light); }
-.fi-blue { background: #EBF5FB; }
-.fi-purple { background: #F0E6FF; }
-.feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-.feature-card p { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
-
-/* How it works */
-.how-section { padding: 60px 0; text-align: center; }
-.how-section h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--primary-dark);
-  margin-bottom: 40px;
-}
-.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
-.how-step {
-  padding: 24px;
-  text-align: center;
-  animation: fadeUp 0.6s ease both;
-}
-.how-step:nth-child(1) { animation-delay: 0.1s; }
-.how-step:nth-child(2) { animation-delay: 0.2s; }
-.how-step:nth-child(3) { animation-delay: 0.3s; }
-.how-num {
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--primary); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700; margin: 0 auto 14px;
-}
-.how-step h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-.how-step p { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
-
-/* Host CTA */
-.host-cta {
-  margin: 40px 0 60px;
-  padding: 40px;
-  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-  border-radius: 24px;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 30px;
-  position: relative;
-  overflow: hidden;
-}
-.host-cta::after {
-  content: ''; position: absolute; right: -40px; top: -40px;
-  width: 200px; height: 200px; border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-}
-.host-cta::before {
-  content: ''; position: absolute; right: 80px; bottom: -60px;
-  width: 150px; height: 150px; border-radius: 50%;
-  background: rgba(255,255,255,0.04);
-}
-.host-cta-content { flex: 1; position: relative; z-index: 1; }
-.host-cta h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin-bottom: 8px; }
-.host-cta p { font-size: 15px; opacity: 0.85; line-height: 1.5; margin-bottom: 20px; }
-.host-cta-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 28px; background: #fff; color: var(--primary-dark);
-  border-radius: 14px; font-size: 15px; font-weight: 700;
-  text-decoration: none; transition: all 0.2s;
-}
-.host-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
-.host-cta-earn {
-  text-align: center; position: relative; z-index: 1;
-  padding: 24px; background: rgba(255,255,255,0.1);
-  border-radius: 16px; min-width: 200px;
-}
-.host-cta-earn .amount { font-size: 28px; font-weight: 700; }
-.host-cta-earn .label { font-size: 13px; opacity: 0.75; margin-top: 4px; }
-
-/* Cities */
-.cities-section { padding: 0 0 60px; text-align: center; }
-.cities-section h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 28px; font-weight: 700; color: var(--primary-dark); margin-bottom: 12px;
-}
-.cities-section .sub { font-size: 15px; color: var(--text-sec); margin-bottom: 24px; }
-.cities-chips {
-  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
-}
-.city-chip {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 18px; background: var(--card);
-  border: 1.5px solid var(--border); border-radius: 24px;
-  font-size: 14px; font-weight: 600; color: var(--text);
-  transition: all 0.2s;
-}
-.city-chip:hover { border-color: var(--primary); background: var(--primary-light); }
-.city-chip.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
-.city-chip .emoji { font-size: 18px; }
-
-/* Footer */
-footer {
-  padding: 40px 0;
-  border-top: 1px solid var(--border);
-  text-align: center;
-}
-.footer-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 22px; font-weight: 700; color: var(--primary-dark);
-  margin-bottom: 16px;
-}
-.footer-logo span { color: var(--accent); }
-.social-links {
-  display: flex; gap: 12px; justify-content: center; margin-bottom: 16px;
-}
-.social-link {
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--primary-light); color: var(--primary);
-  display: flex; align-items: center; justify-content: center;
-  text-decoration: none; font-size: 16px; font-weight: 700;
-  transition: all 0.2s;
-}
-.social-link:hover { background: var(--primary); color: #fff; }
-.footer-text { font-size: 13px; color: var(--text-light); margin-bottom: 6px; }
-.footer-email { font-size: 14px; color: var(--primary); font-weight: 600; text-decoration: none; }
-
-/* Animations */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .hero { padding: 50px 0 40px; }
-  .email-form { flex-direction: column; }
-  .email-form button { width: 100%; }
-  .host-cta { flex-direction: column; padding: 30px 24px; text-align: center; }
-  .host-cta-earn { width: 100%; }
-  .features { grid-template-columns: 1fr; }
-}
+:root{--pri:#0D7377;--pri-l:#14919B;--pri-d:#0A5C5F;--pri-dp:#072829;--acc:#FF6B4A;--acc-h:#E85A3A;--warm:#FFF8F0;--bg:#FFF;--sf:#F7F9FA;--bd:#E8ECEF;--tx:#1A2B3C;--txs:#5F7285;--txm:#94A3B8;--ok:#10B981}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Outfit',sans-serif;color:var(--tx);background:var(--bg);overflow-x:hidden}
+@keyframes fadeUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideR{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.an{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.16,1,.3,1)}.an.v{opacity:1;transform:translateY(0)}.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(232,236,239,.5);transition:all .3s}
+nav.sc{box-shadow:0 4px 30px rgba(0,0,0,.06)}
+.ni{max-width:1200px;margin:0 auto;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
+.nl{font-family:'Playfair Display',serif;font-size:26px;font-weight:800;color:var(--pri-d);text-decoration:none}.nl span{color:var(--acc)}
+.nk{display:flex;align-items:center;gap:32px}.nk a{font-size:14px;font-weight:500;color:var(--txs);text-decoration:none;transition:color .2s}.nk a:hover{color:var(--pri)}
+.nc{padding:10px 24px;background:var(--acc);color:#fff;border-radius:50px;font-size:14px;font-weight:600;text-decoration:none;transition:all .2s}
+.nc:hover{background:var(--acc-h);transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,107,74,.3)}
+.hero{min-height:100vh;padding:140px 32px 80px;background:linear-gradient(160deg,var(--pri-dp) 0%,var(--pri) 40%,var(--pri-l) 100%);background-size:200% 200%;animation:grad 8s ease infinite;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;right:-20%;width:80%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.04) 0%,transparent 70%)}
+.hi{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:1}
+.ht{animation:slideL 1s cubic-bezier(.16,1,.3,1)}
+.hb{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:50px;font-size:13px;font-weight:500;color:rgba(255,255,255,.85);margin-bottom:24px;backdrop-filter:blur(10px)}
+.hb .dt{width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 2s infinite}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(40px,5vw,62px);font-weight:800;color:#fff;line-height:1.1;margin-bottom:20px}
+.hero h1 em{font-style:normal;color:var(--acc)}
+.hs{font-size:18px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:36px;max-width:480px}
+.ha{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px}
+.bp{display:inline-flex;align-items:center;gap:8px;padding:16px 32px;background:var(--acc);color:#fff;border-radius:50px;font-size:16px;font-weight:700;text-decoration:none;transition:all .3s;border:none;cursor:pointer;font-family:inherit}
+.bp:hover{background:var(--acc-h);transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,107,74,.4)}
+.bo{display:inline-flex;align-items:center;gap:8px;padding:16px 32px;background:rgba(255,255,255,.08);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:50px;font-size:16px;font-weight:600;text-decoration:none;transition:all .3s;backdrop-filter:blur(10px)}
+.bo:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
+.hst{display:flex;gap:40px}.hst div{text-align:left}.hst .n{font-size:28px;font-weight:800;color:#fff}.hst .l{font-size:13px;color:rgba(255,255,255,.55)}
+.hv{animation:slideR 1s cubic-bezier(.16,1,.3,1) .2s both;text-align:center}
+.pm{width:280px;height:560px;background:#111;border-radius:40px;border:4px solid #333;margin:0 auto;position:relative;box-shadow:0 40px 80px rgba(0,0,0,.3);overflow:hidden;animation:float 4s ease-in-out infinite}
+.pn{width:120px;height:28px;background:#111;border-radius:0 0 20px 20px;position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:2}
+.ps{width:100%;height:100%;background:linear-gradient(180deg,var(--pri-d),var(--pri));padding:48px 20px 20px;display:flex;flex-direction:column;align-items:center}
+.ps .pl{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:16px}.ps .pl span{color:var(--acc)}
+.ps .sb{width:100%;padding:10px 14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.5);font-size:12px;margin-bottom:16px}
+.pc{width:100%;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid rgba(255,255,255,.08)}
+.pr{display:flex;gap:10px;align-items:center}
+.pi{width:50px;height:50px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.pf{flex:1}.pt{font-size:12px;font-weight:600;color:#fff}.pp{font-size:10px;color:rgba(255,255,255,.5)}.px{font-size:14px;font-weight:700;color:var(--acc)}
+.sec{padding:100px 32px}.si{max-width:1200px;margin:0 auto}
+.st{display:inline-block;padding:6px 18px;background:rgba(13,115,119,.08);color:var(--pri);border-radius:50px;font-size:13px;font-weight:600;letter-spacing:.5px;margin-bottom:16px}
+.sh{font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,48px);font-weight:700;color:var(--tx);margin-bottom:12px;line-height:1.2}
+.sd{font-size:17px;color:var(--txs);max-width:560px;line-height:1.6;margin-bottom:48px}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+.fc{padding:32px 28px;background:var(--bg);border-radius:20px;border:1.5px solid var(--bd);transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+.fc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pri),var(--acc));transform:scaleX(0);transition:transform .4s;transform-origin:left}
+.fc:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,.08);border-color:var(--pri)}.fc:hover::before{transform:scaleX(1)}
+.fic{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:18px}
+.ft{background:rgba(13,115,119,.08)}.fo{background:rgba(255,107,74,.08)}.fg2{background:rgba(16,185,129,.08)}.fa{background:rgba(255,184,0,.08)}
+.fc h3{font-size:18px;font-weight:700;margin-bottom:8px}.fc p{font-size:14px;color:var(--txs);line-height:1.6}
+.hw{padding:100px 32px;background:linear-gradient(180deg,var(--sf) 0%,var(--bg) 100%)}
+.hg{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:48px}
+.hs2{text-align:center;position:relative}.hs2::after{content:'→';position:absolute;right:-20px;top:36px;font-size:24px;color:var(--txm)}.hs2:last-child::after{display:none}
+.hn{width:64px;height:64px;border-radius:20px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri-l));box-shadow:0 8px 24px rgba(13,115,119,.25)}
+.hs2 h3{font-size:18px;font-weight:700;margin-bottom:8px}.hs2 p{font-size:14px;color:var(--txs);line-height:1.5;max-width:280px;margin:0 auto}
+.hban{max-width:1200px;margin:0 auto;padding:56px 48px;background:linear-gradient(135deg,var(--pri-dp),var(--pri),var(--pri-l));border-radius:28px;color:#fff;position:relative;overflow:hidden;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center}
+.hban::before{content:'';position:absolute;right:-60px;top:-60px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04)}
+.hc{position:relative;z-index:1}.hc h2{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;margin-bottom:12px}.hc p{font-size:16px;opacity:.8;line-height:1.6;margin-bottom:24px}
+.he{text-align:center;position:relative;z-index:1;padding:32px;background:rgba(255,255,255,.08);border-radius:20px;border:1px solid rgba(255,255,255,.1)}
+.he .am{font-size:40px;font-weight:800}.he .lb{font-size:14px;opacity:.7;margin-top:4px}
+.bw{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:#fff;color:var(--pri-d);border-radius:50px;font-size:15px;font-weight:700;text-decoration:none;transition:all .3s}
+.bw:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.ssg{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.sc2{text-align:center;padding:32px 20px}.sn{font-size:42px;font-weight:800;color:var(--pri);margin-bottom:4px}.sl{font-size:14px;color:var(--txs);font-weight:500}
+.tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:48px}
+.tc{padding:28px;background:var(--bg);border-radius:20px;border:1.5px solid var(--bd);transition:all .3s}.tc:hover{box-shadow:0 12px 40px rgba(0,0,0,.06)}
+.ts2{font-size:16px;margin-bottom:12px}.tt{font-size:15px;color:var(--tx);line-height:1.6;margin-bottom:16px;font-style:italic}
+.ta{display:flex;align-items:center;gap:12px}.tv{width:40px;height:40px;border-radius:50%;background:rgba(13,115,119,.1);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--pri);font-size:14px}
+.tn{font-size:14px;font-weight:600}.tr{font-size:12px;color:var(--txm)}
+.dl{padding:100px 32px;background:linear-gradient(160deg,var(--pri-dp),var(--pri));text-align:center;color:#fff;position:relative;overflow:hidden}
+.dl::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 50%,rgba(255,255,255,.03),transparent 60%),radial-gradient(circle at 70% 50%,rgba(255,107,74,.04),transparent 60%)}
+.dc{position:relative;z-index:1}.dc h2{font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,44px);font-weight:700;margin-bottom:12px}
+.dc p{font-size:18px;opacity:.75;margin-bottom:36px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.6}
+.sb2{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
+.sb3{display:flex;align-items:center;gap:12px;padding:14px 28px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);border-radius:14px;color:#fff;text-decoration:none;transition:all .3s;backdrop-filter:blur(10px)}
+.sb3:hover{background:rgba(255,255,255,.18);transform:translateY(-2px);border-color:rgba(255,255,255,.35)}
+.sb3 .si2{font-size:28px}.sb3 .st2{text-align:left}.sb3 .ss{font-size:11px;opacity:.7}.sb3 .sn2{font-size:17px;font-weight:700}
+.de{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:rgba(255,107,74,.15);border:1px solid rgba(255,107,74,.25);border-radius:50px;color:var(--acc);font-size:15px;font-weight:600}
+footer{padding:60px 32px 32px;background:var(--pri-dp);color:rgba(255,255,255,.7)}
+.fi2{max-width:1200px;margin:0 auto}.fgr{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:48px;margin-bottom:48px}
+.fb .fl{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#fff;margin-bottom:12px}.fb .fl span{color:var(--acc)}
+.fb p{font-size:14px;line-height:1.6;opacity:.6;max-width:280px}
+.fcl h4{font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;letter-spacing:.5px;text-transform:uppercase}
+.fcl a{display:block;font-size:14px;color:rgba(255,255,255,.5);text-decoration:none;margin-bottom:10px;transition:color .2s}.fcl a:hover{color:var(--acc)}
+.fbt{padding-top:24px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.5}
+.fso{display:flex;gap:12px}.fso a{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);text-decoration:none;font-size:14px;transition:all .2s}.fso a:hover{background:var(--acc);color:#fff}
+@media(max-width:900px){.hi{grid-template-columns:1fr;text-align:center}.hs{margin:0 auto 36px}.ha{justify-content:center}.hst{justify-content:center}.hv{order:-1}.pm{width:220px;height:440px}.hban{grid-template-columns:1fr;text-align:center}.hg{grid-template-columns:1fr}.hs2::after{display:none}.ssg{grid-template-columns:1fr 1fr}.fgr{grid-template-columns:1fr 1fr}.nk{display:none}}
+@media(max-width:600px){.fg{grid-template-columns:1fr}.ssg{grid-template-columns:1fr}.fgr{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<div class="bg-pattern"></div>
+<nav id="nav"><div class="ni"><a href="#" class="nl">Room<span>Buddy</span></a><div class="nk"><a href="#features">Features</a><a href="#how">How it works</a><a href="#host">Become a host</a><a href="#download" class="nc">Download App</a></div></div></nav>
 
-<div class="container">
-  <!-- Nav -->
-  <nav>
-    <a href="#" class="logo">Room<span>Buddy</span></a>
-    <div class="nav-badge">🚀 Launching Soon</div>
-  </nav>
+<section class="hero"><div class="hi">
+<div class="ht"><div class="hb"><div class="dt"></div> Now available across India</div><h1>Book a room,<br>not a <em>hotel</em></h1><p class="hs">Affordable short-term stays in shared homes. Furnished rooms with kitchen access, friendly flatmates, and prices starting at ₹500/night.</p><div class="ha"><a href="#download" class="bp">📱 Download App</a><a href="#host" class="bo">🏠 List your room</a></div><div class="hst"><div><div class="n">500+</div><div class="l">Verified rooms</div></div><div><div class="n">50+</div><div class="l">Cities</div></div><div><div class="n">4.8★</div><div class="l">Avg rating</div></div></div></div>
+<div class="hv"><div class="pm"><div class="pn"></div><div class="ps"><div class="pl">Room<span>Buddy</span></div><div class="sb">🔍 Search by city, area...</div><div class="pc"><div class="pr"><div class="pi">🏠</div><div class="pf"><div class="pt">Cozy room in 2BHK</div><div class="pp">Koramangala · AC · WiFi</div></div><div class="px">₹750</div></div></div><div class="pc"><div class="pr"><div class="pi">🌅</div><div class="pf"><div class="pt">Sunny private room</div><div class="pp">HSR Layout · Kitchen</div></div><div class="px">₹650</div></div></div><div class="pc"><div class="pr"><div class="pi">✨</div><div class="pf"><div class="pt">Spacious 3BHK room</div><div class="pp">Whitefield · Parking</div></div><div class="px">₹900</div></div></div><div class="pc"><div class="pr"><div class="pi">🚇</div><div class="pf"><div class="pt">Near metro room</div><div class="pp">Indiranagar · Budget</div></div><div class="px">₹500</div></div></div></div></div></div>
+</div></section>
 
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-badge">
-      <div class="dot"></div>
-      Coming soon to Bengaluru
-    </div>
-    <h1>Affordable stays in<br><em>real homes</em></h1>
-    <p class="hero-sub">Book a room in someone's shared apartment for days or weeks. Home-cooked food, friendly flatmates, and prices that don't burn a hole in your pocket.</p>
+<section class="sec" id="features"><div class="si"><div class="an"><span class="st">Why RoomBuddy</span></div><h2 class="sh an d1">Not a hotel. Not a PG.<br>Something <em>better</em>.</h2><p class="sd an d2">We're building a new category of stays — affordable, flexible, and human. Like staying at a friend's place, but anywhere in India.</p><div class="fg"><div class="fc an"><div class="fic ft">🏠</div><h3>Real homes, not hotels</h3><p>Stay in a furnished room in a real apartment. Queen bed, WiFi, attached bathroom — at 60% less than a hotel.</p></div><div class="fc an d1"><div class="fic fo">🍳</div><h3>Food sorted</h3><p>Full kitchen access to cook your meals. Or choose a local tiffin service starting ₹120/meal. No overpriced room service.</p></div><div class="fc an d2"><div class="fic fg2">🤝</div><h3>Friendly flatmates</h3><p>See who you'll be living with before you book. Real profiles, shared interests. Like a friend's place, but anywhere.</p></div><div class="fc an d3"><div class="fic fa">🔒</div><h3>100% verified & safe</h3><p>Every guest and host is Aadhaar-verified. Secure payments via Razorpay. 24/7 support and SOS button.</p></div></div></div></section>
 
-    <div class="success-msg" id="successMsg">🎉 You're on the list! We'll notify you when we launch.</div>
+<section class="hw" id="how"><div class="si"><div style="text-align:center"><div class="an"><span class="st">How it works</span></div><h2 class="sh an d1" style="margin:0 auto 12px">Book a room in 3 steps</h2><p class="sd an d2" style="margin:0 auto 48px;text-align:center">No brokerage. No long-term lock-in. No hidden charges.</p></div><div class="hg"><div class="hs2 an"><div class="hn">1</div><h3>Search</h3><p>Enter your city, dates, and budget. Filter by food, AC, gender preference, and more.</p></div><div class="hs2 an d1"><div class="hn">2</div><h3>Book</h3><p>Pick a room you love. See photos, flatmate profiles, and reviews. Pay securely online.</p></div><div class="hs2 an d2"><div class="hn">3</div><h3>Stay</h3><p>Check in, cook a meal, chat with flatmates. Feel at home from day one.</p></div></div></div></section>
 
-    <form class="email-form" id="emailForm" onsubmit="handleSubmit(event)">
-      <input type="email" placeholder="Enter your email for early access" required id="emailInput">
-      <button type="submit">Join Waitlist</button>
-    </form>
-    <p class="form-note">🔒 No spam. Just launch updates. First 100 users get exclusive perks.</p>
-  </section>
+<section class="sec" id="host"><div class="hban an"><div class="hc"><h2>Got a spare room?<br>Turn it into income.</h2><p>Your flatmate's going home for a month? That empty room could earn you serious money. Free to list, zero hassle. We handle payments, verification, and support.</p><a href="#download" class="bw">Start earning →</a></div><div class="he"><div class="am">₹9K – ₹25K</div><div class="lb">per month at 50–70% occupancy</div></div></div></section>
 
-  <!-- Features -->
-  <section class="features">
-    <div class="feature-card">
-      <div class="feature-icon fi-green">🏠</div>
-      <h3>Rooms, not hotels</h3>
-      <p>Stay in a furnished room in a real apartment. Queen bed, WiFi, attached bathroom — at 60% less than a hotel.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon fi-orange">🍳</div>
-      <h3>Food sorted</h3>
-      <p>Full kitchen access to cook your own meals. Or choose a local tiffin service starting ₹120/meal. No overpriced room service.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon fi-blue">🤝</div>
-      <h3>Friendly flatmates</h3>
-      <p>See who you'll be living with before you book. Real profiles, verified identities, shared interests. Like a friend's place, but anywhere.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon fi-purple">🔒</div>
-      <h3>100% verified & safe</h3>
-      <p>Every guest and host is Aadhaar-verified. Secure payments via Razorpay. 24/7 support and SOS button for peace of mind.</p>
-    </div>
-  </section>
+<section class="sec" style="background:var(--sf)"><div class="ssg"><div class="sc2 an"><div class="sn">500+</div><div class="sl">Verified rooms</div></div><div class="sc2 an d1"><div class="sn">50+</div><div class="sl">Cities across India</div></div><div class="sc2 an d2"><div class="sn">₹500</div><div class="sl">Starting price/night</div></div><div class="sc2 an d3"><div class="sn">100%</div><div class="sl">Aadhaar verified</div></div></div></section>
 
-  <!-- How it works -->
-  <section class="how-section">
-    <h2>How it works</h2>
-    <div class="how-grid">
-      <div class="how-step">
-        <div class="how-num">1</div>
-        <h3>Search</h3>
-        <p>Enter your city, dates, and budget. Filter by food, AC, gender preference, and more.</p>
-      </div>
-      <div class="how-step">
-        <div class="how-num">2</div>
-        <h3>Book</h3>
-        <p>Pick a room you love. See photos, flatmate profiles, and reviews. Pay securely online.</p>
-      </div>
-      <div class="how-step">
-        <div class="how-num">3</div>
-        <h3>Stay</h3>
-        <p>Check in, cook a meal, chat with flatmates. Feel at home from day one.</p>
-      </div>
-    </div>
-  </section>
+<section class="sec"><div class="si"><div style="text-align:center"><div class="an"><span class="st">What people say</span></div><h2 class="sh an d1">Loved by guests & hosts</h2></div><div class="tg"><div class="tc an"><div class="ts2">⭐⭐⭐⭐⭐</div><p class="tt">"Saved ₹15,000 compared to a hotel for my 2-week work trip. Kitchen access was a game-changer — cooked my own meals daily."</p><div class="ta"><div class="tv">RS</div><div><div class="tn">Rahul S.</div><div class="tr">Software Engineer, Bengaluru</div></div></div></div><div class="tc an d1"><div class="ts2">⭐⭐⭐⭐⭐</div><p class="tt">"My spare room earns me ₹12K/month now. RoomBuddy handles everything — verification, payments, support."</p><div class="ta"><div class="tv">PM</div><div><div class="tn">Priya M.</div><div class="tr">Host, Mumbai</div></div></div></div><div class="tc an d2"><div class="ts2">⭐⭐⭐⭐⭐</div><p class="tt">"Moved to Hyderabad for an internship. Found a room with amazing flatmates in 10 minutes. Way better than any PG."</p><div class="ta"><div class="tv">AJ</div><div><div class="tn">Ankit J.</div><div class="tr">Intern, Hyderabad</div></div></div></div></div></div></section>
 
-  <!-- Host CTA -->
-  <section class="host-cta">
-    <div class="host-cta-content">
-      <h2>Got a spare room?</h2>
-      <p>Your flatmate's going home for a week? Turn that empty room into income. Free to list, zero hassle. We handle payments, verification, and support.</p>
-      <a href="#emailForm" class="host-cta-btn">Start Earning →</a>
-    </div>
-    <div class="host-cta-earn">
-      <div class="amount">₹9K – ₹15K</div>
-      <div class="label">per month at 50–70% occupancy</div>
-    </div>
-  </section>
+<section class="dl" id="download"><div class="dc"><h2 class="an">Download RoomBuddy</h2><p class="an d1">Available on Android and iOS. Book your next stay in under 2 minutes.</p><div class="sb2 an d2"><a href="#" class="sb3"><span class="si2">▶</span><div class="st2"><div class="ss">GET IT ON</div><div class="sn2">Google Play</div></div></a><a href="#" class="sb3"><span class="si2">🍎</span><div class="st2"><div class="ss">DOWNLOAD ON THE</div><div class="sn2">App Store</div></div></a></div><div class="de an d3">📧 support@roombuddy.co.in</div></div></section>
 
-  <!-- Cities -->
-  <section class="cities-section">
-    <h2>Launching in Bengaluru</h2>
-    <p class="sub">Starting with the neighborhoods where you work and live</p>
-    <div class="cities-chips">
-      <div class="city-chip active"><span class="emoji">🏙️</span> Koramangala</div>
-      <div class="city-chip active"><span class="emoji">💻</span> HSR Layout</div>
-      <div class="city-chip active"><span class="emoji">🏢</span> Whitefield</div>
-      <div class="city-chip"><span class="emoji">⚡</span> Electronic City</div>
-      <div class="city-chip"><span class="emoji">🌳</span> Indiranagar</div>
-      <div class="city-chip"><span class="emoji">📍</span> BTM Layout</div>
-      <div class="city-chip"><span class="emoji">🚀</span> Marathahalli</div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-logo">Room<span>Buddy</span></div>
-    <div class="social-links">
-      <a href="#" class="social-link" title="Instagram">📸</a>
-      <a href="#" class="social-link" title="Twitter">𝕏</a>
-      <a href="#" class="social-link" title="LinkedIn">in</a>
-      <a href="#" class="social-link" title="WhatsApp">💬</a>
-    </div>
-    <p class="footer-text">Affordable short-term stays in shared homes</p>
-    <a href="mailto:support@roombuddy.co.in" class="footer-email">support@roombuddy.co.in</a>
-    <p class="footer-text" style="margin-top: 16px">© 2026 RoomBuddy Technologies Pvt Ltd. All rights reserved.</p>
-  </footer>
-</div>
+<footer><div class="fi2"><div class="fgr"><div class="fb"><div class="fl">Room<span>Buddy</span></div><p>Affordable short-term stays in shared homes. Book a room, not a hotel. Available across India.</p></div><div class="fcl"><h4>Company</h4><a href="#">About us</a><a href="#">Careers</a><a href="#">Press</a><a href="#">Blog</a></div><div class="fcl"><h4>Support</h4><a href="#">Help center</a><a href="#">Safety</a><a href="#">Cancellation</a><a href="mailto:support@roombuddy.co.in">Contact us</a></div><div class="fcl"><h4>Legal</h4><a href="#">Terms of service</a><a href="#">Privacy policy</a><a href="#">Refund policy</a></div></div><div class="fbt"><span>© 2026 RoomBuddy Technologies Pvt Ltd</span><div class="fso"><a href="#">📸</a><a href="#">𝕏</a><a href="#">in</a><a href="#">💬</a></div></div></div></footer>
 
 <script>
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwfSEkF-KCnXO0rOBV0msJSXjotC4AqpjjGgdxk7xKRs4z4jDP19zXnxCFXKzrYRBoo9A/exec";
-
-async function handleSubmit(e) {
-  e.preventDefault();
-  const email = document.getElementById('emailInput').value;
-  const button = document.querySelector('.email-form button');
-
-  // Show loading state
-  button.textContent = 'Joining...';
-  button.style.opacity = '0.7';
-  button.disabled = true;
-
-  try {
-    // Send to Google Sheets
-    await fetch(GOOGLE_SHEET_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
-    });
-
-    // Show success
-    document.getElementById('emailForm').style.display = 'none';
-    document.getElementById('successMsg').classList.add('show');
-
-  } catch (error) {
-    // Even if fetch fails due to no-cors, the request still goes through
-    document.getElementById('emailForm').style.display = 'none';
-    document.getElementById('successMsg').classList.add('show');
-  }
-}
+const o=new IntersectionObserver(e=>{e.forEach(e=>{e.isIntersecting&&e.target.classList.add('v')})},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.an').forEach(e=>o.observe(e));
+window.addEventListener('scroll',()=>{document.getElementById('nav').classList.toggle('sc',window.scrollY>50)});
 </script>
-
 </body>
 </html>
-
-
