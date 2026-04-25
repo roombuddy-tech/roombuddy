@@ -5,7 +5,6 @@ export interface User {
   email?: string;
   auth_provider: 'phone';
   is_profile_complete: boolean;
-  has_chosen_role: boolean;
   phone_verified_at?: string;
 }
 
@@ -35,7 +34,6 @@ export interface OTPVerifyResponse {
   message: string;
   is_new_user: boolean;
   is_profile_complete: boolean;
-  has_chosen_role: boolean;
   tokens: AuthTokens;
 }
 
@@ -43,9 +41,4 @@ export interface ProfileCompleteResponse {
   user_id: string;
   display_name: string;
   is_profile_complete: boolean;
-}
-
-export interface RoleChooseResponse {
-  role: 'guest' | 'host';
-  granted_at: string;
 }

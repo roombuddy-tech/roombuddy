@@ -1,7 +1,7 @@
 import api from './api';
 import { CONFIG } from '../constants/config';
 import { ENDPOINTS } from '../constants/endpoints';
-import type { OTPSendResponse, OTPVerifyResponse, ProfileCompleteResponse, RoleChooseResponse } from '../types/user';
+import type { OTPSendResponse, OTPVerifyResponse, ProfileCompleteResponse } from '../types/user';
 
 // Mock data for development
 const MOCK = {
@@ -10,11 +10,9 @@ const MOCK = {
     message: 'OTP verified',
     is_new_user: true,
     is_profile_complete: false,
-    has_chosen_role: false,
     tokens: { access: 'mock_access_token_123', refresh: 'mock_refresh_token_456' },
   },
   completeProfile: { user_id: 'mock-uuid-001', display_name: 'Mayank Kumar', is_profile_complete: true },
-  chooseRole: { role: 'host' as const, granted_at: new Date().toISOString() },
 };
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -67,12 +65,4 @@ export const authService = {
     return data;
   },
 
-  async chooseRole(role: 'guest' | 'host'): Promise<RoleChooseResponse> {
-    if (CONFIG.USE_MOCK) {
-      await delay(400);
-      return { ...MOCK.chooseRole, role };
-    }
-    const { data } = await api.post(ENDPOINTS.AUTH.CHOOSE_ROLE, { role });
-    return data;
-  },
 };

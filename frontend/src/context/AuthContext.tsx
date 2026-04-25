@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage } from '../services/storage';
 
-type UserRole = 'guest' | 'host' | null;
+type UserRole = 'guest' | 'host';
 
 interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   isProfileComplete: boolean;
-  hasChosenRole: boolean;
   userRole: UserRole;
   user: any;
 }
@@ -16,8 +15,7 @@ interface AuthContextType extends AuthState {
   login: (tokens: { access: string; refresh: string }, userData: any) => Promise<void>;
   logout: () => Promise<void>;
   completeProfile: (userData: any) => Promise<void>;
-  selectRole: (role: 'guest' | 'host') => Promise<void>;
-  switchRole: (role: 'guest' | 'host') => void;
+  switchRole: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -27,8 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
     isAuthenticated: false,
     isProfileComplete: false,
-    hasChosenRole: false,
-    userRole: null,
+    userRole: 'guest',
     user: null,
   });
 
@@ -43,8 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isLoading: false,
             isAuthenticated: true,
             isProfileComplete: userData.is_profile_complete ?? false,
-            hasChosenRole: userData.has_chosen_role ?? false,
-            userRole: userData.role ?? null,
+            userRole: 'guest',
             user: userData,
           });
         } else {
@@ -63,8 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading: false,
       isAuthenticated: true,
       isProfileComplete: userData.is_profile_complete ?? false,
-      hasChosenRole: userData.has_chosen_role ?? false,
-      userRole: userData.role ?? null,
+      userRole: 'guest',
       user: userData,
     });
   }, []);
@@ -75,8 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading: false,
       isAuthenticated: false,
       isProfileComplete: false,
-      hasChosenRole: false,
-      userRole: null,
+      userRole: 'guest',
       user: null,
     });
   }, []);
@@ -87,18 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, isProfileComplete: true, user: updated }));
   }, [state.user]);
 
-  const selectRole = useCallback(async (role: 'guest' | 'host') => {
-    const updated = { ...state.user, has_chosen_role: true, role };
-    await storage.saveUserData(updated);
-    setState((prev) => ({ ...prev, hasChosenRole: true, userRole: role, user: updated }));
-  }, [state.user]);
-
-  const switchRole = useCallback((role: 'guest' | 'host') => {
+  const switchRole = useCallback((role: UserRole) => {
     setState((prev) => ({ ...prev, userRole: role }));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, completeProfile, selectRole, switchRole }}>
+    <AuthContext.Provider value={{ ...state, login, logout, completeProfile, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

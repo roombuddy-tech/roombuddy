@@ -3,7 +3,7 @@ export const ENDPOINTS = {
     SEND_OTP: '/api/auth/otp/send/',
     VERIFY_OTP: '/api/auth/otp/verify/',
     COMPLETE_PROFILE: '/api/auth/profile/complete/',
-    CHOOSE_ROLE: '/api/auth/role/choose/',
+    REFRESH_TOKEN: '/api/auth/token/refresh/',
   },
   HOST: {
     PROPERTIES: '/api/host/properties/',

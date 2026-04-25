@@ -47,7 +47,6 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       });
 
       await completeProfile(result);
-      navigation.replace('RoleSelection');
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to save profile.');
     } finally {

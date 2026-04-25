@@ -3,7 +3,6 @@ export type AuthStackParamList = {
   Login: undefined;
   OTP: { phoneNumber: string };
   ProfileSetup: undefined;
-  RoleSelection: undefined;
 };
 
 export type GuestTabParamList = {

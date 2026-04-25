@@ -1,9 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
 import type { GuestTabParamList } from './types';
+import { useAuth } from '../context/AuthContext';
+
 
 // Placeholder screens — replace with real screens later
 function PlaceholderScreen({ title }: { title: string }) {
@@ -15,7 +17,18 @@ function PlaceholderScreen({ title }: { title: string }) {
   );
 }
 
-function HomeScreen() { return <PlaceholderScreen title="Explore Rooms" />; }
+function HomeScreen() {
+  const { logout } = useAuth();
+  return (
+    <View style={styles.placeholder}>
+      <Text style={styles.placeholderText}>Explore Rooms</Text>
+      <Text style={styles.placeholderSub}>Coming soon</Text>
+      <TouchableOpacity onPress={logout} style={{ marginTop: 20, padding: 12, backgroundColor: '#EF4444', borderRadius: 8 }}>
+        <Text style={{ color: '#fff', fontWeight: '600' }}>Logout (dev)</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 function SearchScreen() { return <PlaceholderScreen title="Search" />; }
 function MyStaysScreen() { return <PlaceholderScreen title="My Stays" />; }
 function MessagesScreen() { return <PlaceholderScreen title="Messages" />; }

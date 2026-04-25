@@ -8,7 +8,7 @@ import HostTabs from './HostTabs';
 import { COLORS } from '../constants/theme';
 
 export default function Navigation() {
-  const { isLoading, isAuthenticated, isProfileComplete, hasChosenRole, userRole } = useAuth();
+  const { isLoading, isAuthenticated, isProfileComplete, userRole } = useAuth();
 
   if (isLoading) {
     return (
@@ -20,7 +20,7 @@ export default function Navigation() {
 
   return (
     <NavigationContainer>
-      {!isAuthenticated || !isProfileComplete || !hasChosenRole ? (
+      {!isAuthenticated || !isProfileComplete ? (
         <AuthStack />
       ) : userRole === 'host' ? (
         <HostTabs />

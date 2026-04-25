@@ -29,33 +29,30 @@ export default function OTPScreen({ navigation, route }: Props) {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const handleVerify = async (otpCode: string) => {
-    setLoading(true);
-    try {
-      const response = await authService.verifyOTP(phoneNumber, otpCode);
+const handleVerify = async (otpCode: string) => {
+  setLoading(true);
+  try {
+    const response = await authService.verifyOTP(phoneNumber, otpCode);
 
-      // Login and store tokens
-      await login(response.tokens, {
-        phone_number: phoneNumber,
-        is_new_user: response.is_new_user,
-        is_profile_complete: response.is_profile_complete,
-        has_chosen_role: response.has_chosen_role,
-      });
+    // Login and store tokens
+    await login(response.tokens, {
+      phone_number: phoneNumber,
+      is_new_user: response.is_new_user,
+      is_profile_complete: response.is_profile_complete,
+    });
 
-      // Navigate based on profile status
-      if (!response.is_profile_complete) {
-        navigation.replace('ProfileSetup');
-      } else if (!response.has_chosen_role) {
-        navigation.replace('RoleSelection');
-      }
-      // If both complete, AuthContext triggers main app navigation
-    } catch (err: any) {
-      const message = err?.response?.data?.error || 'Verification failed. Please try again.';
-      Alert.alert('Error', message);
-    } finally {
-      setLoading(false);
+    // Navigate based on profile status
+    if (!response.is_profile_complete) {
+      navigation.replace('ProfileSetup');
     }
-  };
+    // If profile complete, AuthContext triggers GuestTabs
+  } catch (err: any) {
+    const message = err?.response?.data?.error || 'Verification failed. Please try again.';
+    Alert.alert('Error', message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleResend = async () => {
     try {

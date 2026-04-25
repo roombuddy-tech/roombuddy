@@ -7,7 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 type Props = NativeStackScreenProps<any, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
-  const { isLoading, isAuthenticated, isProfileComplete, hasChosenRole } = useAuth();
+  const { isLoading, isAuthenticated, isProfileComplete } = useAuth();
   const fadeAnim = new Animated.Value(0);
   const scaleAnim = new Animated.Value(0.8);
 
@@ -26,14 +26,12 @@ export default function SplashScreen({ navigation }: Props) {
         navigation.replace('Login');
       } else if (!isProfileComplete) {
         navigation.replace('ProfileSetup');
-      } else if (!hasChosenRole) {
-        navigation.replace('RoleSelection');
       }
-      // If all complete, Navigation index.tsx will show the main app
+      // If profile complete, Navigation index.tsx shows GuestTabs
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isLoading, isAuthenticated, isProfileComplete, hasChosenRole]);
+  }, [isLoading, isAuthenticated, isProfileComplete]);
 
   return (
     <View style={styles.container}>
