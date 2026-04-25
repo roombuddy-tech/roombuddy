@@ -3,7 +3,6 @@ export interface User {
   phone_number: string;
   phone_country_code: string;
   email?: string;
-  auth_provider: 'phone';
   is_profile_complete: boolean;
   phone_verified_at?: string;
 }

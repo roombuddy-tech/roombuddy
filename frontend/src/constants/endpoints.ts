@@ -1,12 +1,12 @@
 export const ENDPOINTS = {
   AUTH: {
-    SEND_OTP: '/api/auth/otp/send/',
-    VERIFY_OTP: '/api/auth/otp/verify/',
-    COMPLETE_PROFILE: '/api/auth/profile/complete/',
-    REFRESH_TOKEN: '/api/auth/token/refresh/',
+    SEND_OTP: '/api/users/auth/otp/send/',
+    VERIFY_OTP: '/api/users/auth/otp/verify/',
+    COMPLETE_PROFILE: '/api/users/auth/profile/complete/',
+    REFRESH_TOKEN: '/api/users/auth/token/refresh/',
   },
   HOST: {
-    PROPERTIES: '/api/host/properties/',
+    PROPERTIES: '/api/properties/',
     DASHBOARD: '/api/host/dashboard/',
     BOOKINGS: '/api/host/bookings/',
     EARNINGS: '/api/host/earnings/',

@@ -47,6 +47,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       });
 
       await completeProfile(result);
+      // AuthContext sets isProfileComplete=true → Navigation shows GuestTabs
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to save profile.');
     } finally {
@@ -60,7 +61,6 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         <Text style={styles.title}>Complete your profile</Text>
         <Text style={styles.subtitle}>Tell us a bit about yourself</Text>
 
-        {/* Photo placeholder */}
         <TouchableOpacity style={styles.photoSection}>
           <View style={styles.photoCircle}>
             <Text style={styles.photoIcon}>📷</Text>
@@ -68,205 +68,70 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           <Text style={styles.photoLabel}>Add photo</Text>
         </TouchableOpacity>
 
-        {/* Name row */}
         <View style={styles.row}>
           <View style={styles.halfInput}>
             <Text style={styles.label}>First name *</Text>
-            <TextInput
-              style={styles.input}
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="Mayank"
-              placeholderTextColor={COLORS.textMut}
-              autoFocus
-            />
+            <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} placeholder="Mayank" placeholderTextColor={COLORS.textMut} autoFocus />
           </View>
           <View style={styles.halfInput}>
             <Text style={styles.label}>Last name *</Text>
-            <TextInput
-              style={styles.input}
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Kumar"
-              placeholderTextColor={COLORS.textMut}
-            />
+            <TextInput style={styles.input} value={lastName} onChangeText={setLastName} placeholder="Kumar" placeholderTextColor={COLORS.textMut} />
           </View>
         </View>
 
-        {/* Email */}
         <View style={styles.field}>
           <Text style={styles.label}>Email (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="mayank@gmail.com"
-            placeholderTextColor={COLORS.textMut}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="mayank@gmail.com" placeholderTextColor={COLORS.textMut} keyboardType="email-address" autoCapitalize="none" />
         </View>
 
-        {/* Gender */}
         <View style={styles.field}>
           <Text style={styles.label}>Gender *</Text>
           <View style={styles.pillRow}>
             {GENDERS.map((g) => (
-              <TouchableOpacity
-                key={g.key}
-                style={[styles.pill, gender === g.key && styles.pillActive]}
-                onPress={() => setGender(g.key)}
-              >
+              <TouchableOpacity key={g.key} style={[styles.pill, gender === g.key && styles.pillActive]} onPress={() => setGender(g.key)}>
                 <Text style={styles.pillIcon}>{g.icon}</Text>
-                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>
-                  {g.label}
-                </Text>
+                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>{g.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* City */}
         <View style={styles.field}>
           <Text style={styles.label}>City *</Text>
-          <TextInput
-            style={styles.input}
-            value={city}
-            onChangeText={setCity}
-            placeholder="Bengaluru"
-            placeholderTextColor={COLORS.textMut}
-          />
+          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="Bengaluru" placeholderTextColor={COLORS.textMut} />
         </View>
 
-        {/* Aadhaar note */}
         <View style={styles.noteCard}>
           <Text style={styles.noteIcon}>🔒</Text>
-          <Text style={styles.noteText}>
-            Aadhaar verification will be done later. This keeps everyone safe on the platform.
-          </Text>
+          <Text style={styles.noteText}>Aadhaar verification will be done later. This keeps everyone safe on the platform.</Text>
         </View>
 
-        {/* Submit */}
-        <Button
-          title="Continue"
-          onPress={handleSubmit}
-          variant="primary"
-          size="lg"
-          loading={loading}
-          disabled={!isFormValid}
-          full
-        />
+        <Button title="Continue" onPress={handleSubmit} variant="primary" size="lg" loading={loading} disabled={!isFormValid} full />
       </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xl,
-  },
-  title: {
-    fontSize: 26,
-    ...FONTS.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.textSec,
-    marginBottom: SPACING.xl,
-  },
-  photoSection: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-  photoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primaryAlpha,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
+  container: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl },
+  title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
+  subtitle: { fontSize: 15, color: COLORS.textSec, marginBottom: SPACING.xl },
+  photoSection: { alignItems: 'center', marginBottom: SPACING.xl },
+  photoCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
   photoIcon: { fontSize: 28 },
-  photoLabel: {
-    fontSize: 13,
-    color: COLORS.primary,
-    ...FONTS.semibold,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-  },
+  photoLabel: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
+  row: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
   halfInput: { flex: 1 },
-  field: {
-    marginBottom: SPACING.md,
-  },
-  label: {
-    fontSize: 13,
-    color: COLORS.textSec,
-    ...FONTS.semibold,
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 13,
-    fontSize: 15,
-    color: COLORS.text,
-    backgroundColor: COLORS.bg,
-    ...FONTS.medium,
-  },
-  pillRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  pill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.bg,
-  },
-  pillActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryAlpha,
-  },
+  field: { marginBottom: SPACING.md },
+  label: { fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 6 },
+  input: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 13, fontSize: 15, color: COLORS.text, backgroundColor: COLORS.bg, ...FONTS.medium },
+  pillRow: { flexDirection: 'row', gap: SPACING.sm },
+  pill: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.bg },
+  pillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   pillIcon: { fontSize: 16 },
-  pillText: {
-    fontSize: 14,
-    color: COLORS.textSec,
-    ...FONTS.medium,
-  },
-  pillTextActive: {
-    color: COLORS.primary,
-    ...FONTS.semibold,
-  },
-  noteCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: SPACING.md,
-    backgroundColor: COLORS.warm,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.xl,
-    marginTop: SPACING.sm,
-  },
+  pillText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
+  pillTextActive: { color: COLORS.primary, ...FONTS.semibold },
+  noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: SPACING.md, backgroundColor: COLORS.warm, borderRadius: RADIUS.md, marginBottom: SPACING.xl, marginTop: SPACING.sm },
   noteIcon: { fontSize: 16 },
-  noteText: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.accent,
-    lineHeight: 18,
-  },
+  noteText: { flex: 1, fontSize: 13, color: COLORS.accent, lineHeight: 18 },
 });

@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
   });
 
-  // Check stored token on app launch
   useEffect(() => {
     (async () => {
       try {

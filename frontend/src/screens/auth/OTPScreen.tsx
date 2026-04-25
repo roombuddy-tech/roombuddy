@@ -5,8 +5,7 @@ import OTPInput from '../../components/forms/OTPInput';
 import Button from '../../components/ui/Button';
 import { authService } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
-import { CONFIG } from '../../constants/config';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, 'OTP'>;
@@ -19,7 +18,6 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
 
-  // Countdown timer
   useEffect(() => {
     if (countdown <= 0) {
       setCanResend(true);
@@ -29,30 +27,28 @@ export default function OTPScreen({ navigation, route }: Props) {
     return () => clearInterval(timer);
   }, [countdown]);
 
-const handleVerify = async (otpCode: string) => {
-  setLoading(true);
-  try {
-    const response = await authService.verifyOTP(phoneNumber, otpCode);
+  const handleVerify = async (otpCode: string) => {
+    setLoading(true);
+    try {
+      const response = await authService.verifyOTP(phoneNumber, otpCode);
 
-    // Login and store tokens
-    await login(response.tokens, {
-      phone_number: phoneNumber,
-      is_new_user: response.is_new_user,
-      is_profile_complete: response.is_profile_complete,
-    });
+      await login(response.tokens, {
+        phone_number: phoneNumber,
+        is_new_user: response.is_new_user,
+        is_profile_complete: response.is_profile_complete,
+      });
 
-    // Navigate based on profile status
-    if (!response.is_profile_complete) {
-      navigation.replace('ProfileSetup');
+      if (!response.is_profile_complete) {
+        navigation.replace('ProfileSetup');
+      }
+      // If profile complete, AuthContext triggers GuestTabs
+    } catch (err: any) {
+      const message = err?.response?.data?.error || 'Verification failed. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
     }
-    // If profile complete, AuthContext triggers GuestTabs
-  } catch (err: any) {
-    const message = err?.response?.data?.error || 'Verification failed. Please try again.';
-    Alert.alert('Error', message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleResend = async () => {
     try {
@@ -70,12 +66,10 @@ const handleVerify = async (otpCode: string) => {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        {/* Back button */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Verify your number</Text>
           <Text style={styles.subtitle}>
@@ -84,17 +78,14 @@ const handleVerify = async (otpCode: string) => {
           </Text>
         </View>
 
-        {/* OTP Input */}
         <View style={styles.otpSection}>
           <OTPInput onComplete={handleVerify} />
         </View>
 
-        {/* Verify button (manual fallback) */}
         {loading && (
           <Button title="Verifying..." variant="primary" size="lg" loading full onPress={() => {}} />
         )}
 
-        {/* Resend */}
         <View style={styles.resendSection}>
           {canResend ? (
             <TouchableOpacity onPress={handleResend}>
@@ -105,18 +96,6 @@ const handleVerify = async (otpCode: string) => {
               Resend OTP in <Text style={styles.timerCount}>{countdown}s</Text>
             </Text>
           )}
-        </View>
-
-        {/* Help text */}
-        <View style={styles.helpSection}>
-          <View style={styles.helpCard}>
-            <Text style={styles.helpIcon}>💡</Text>
-            <Text style={styles.helpText}>
-              {CONFIG.USE_MOCK
-                ? 'Development mode: Use OTP 123456'
-                : 'Check your SMS inbox. The code expires in 5 minutes.'}
-            </Text>
-          </View>
         </View>
       </View>
     </ScreenWrapper>

@@ -1,6 +1,8 @@
 import uuid
+import hashlib
 
 from django.db import models
+from django.utils import timezone
 
 
 class User(models.Model):
@@ -38,6 +40,61 @@ class User(models.Model):
         return f"{self.phone_country_code}{self.phone_number}"
 
 
+class OTPCode(models.Model):
+    """
+    Stores hashed OTP codes for phone verification.
+    Plain OTP is never stored — only the SHA-256 hash.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otp_codes")
+    phone = models.CharField(max_length=20, help_text="Full phone with country code, e.g. +919935361905")
+    otp_hash = models.CharField(max_length=64, help_text="SHA-256 hash of the OTP code")
+    expires_at = models.DateTimeField()
+    attempt_count = models.SmallIntegerField(default=0)
+    max_attempts = models.SmallIntegerField(default=3)
+    is_consumed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "otp_codes"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["phone", "-created_at"], name="idx_otp_phone_created"),
+        ]
+
+    @staticmethod
+    def hash_otp(otp_code: str) -> str:
+        return hashlib.sha256(otp_code.encode()).hexdigest()
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_max_attempts(self) -> bool:
+        return self.attempt_count >= self.max_attempts
+
+    @property
+    def is_valid(self) -> bool:
+        return not self.is_consumed and not self.is_expired and not self.is_max_attempts
+
+    def verify(self, otp_code: str) -> bool:
+        """Verify OTP. Increments attempt count. Marks consumed on success."""
+        self.attempt_count += 1
+        self.save(update_fields=["attempt_count"])
+
+        if not self.is_expired and not self.is_consumed and self.attempt_count <= self.max_attempts:
+            if self.otp_hash == self.hash_otp(otp_code):
+                self.is_consumed = True
+                self.save(update_fields=["is_consumed"])
+                return True
+        return False
+
+    def __str__(self):
+        return f"OTP for {self.phone} (consumed={self.is_consumed})"
+
+
 class UserSession(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sessions")
@@ -59,6 +116,14 @@ class UserSession(models.Model):
                 name="idx_sessions_active",
             ),
         ]
+
+    @property
+    def is_active(self) -> bool:
+        return self.revoked_at is None and self.expires_at > timezone.now()
+
+    def revoke(self):
+        self.revoked_at = timezone.now()
+        self.save(update_fields=["revoked_at"])
 
     def __str__(self):
         return f"Session {self.id} – {self.user}"
@@ -85,5 +150,9 @@ class UserProfile(models.Model):
     class Meta:
         db_table = "user_profiles"
 
-    def __str__(self):
+    @property
+    def display_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    def __str__(self):
+        return self.display_name

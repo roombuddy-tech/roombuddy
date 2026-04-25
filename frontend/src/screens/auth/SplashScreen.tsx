@@ -27,7 +27,6 @@ export default function SplashScreen({ navigation }: Props) {
       } else if (!isProfileComplete) {
         navigation.replace('ProfileSetup');
       }
-      // If profile complete, Navigation index.tsx shows GuestTabs
     }, 2000);
 
     return () => clearTimeout(timer);
