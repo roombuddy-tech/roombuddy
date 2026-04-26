@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
@@ -54,7 +53,6 @@ function formatStatus(status: string): string {
 }
 
 export default function BookingsScreen() {
-  const { switchRole } = useAuth();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,32 +89,6 @@ export default function BookingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <View style={styles.topLeft}>
-          <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
-        </View>
-        <View style={styles.topRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
-          </TouchableOpacity>
-          <View style={styles.avatarBtn}>
-            <Text style={styles.avatarText}>M</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Guest/Host toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity style={styles.toggleBtn} onPress={() => switchRole('guest')}>
-          <Ionicons name="search-outline" size={16} color={COLORS.textSec} />
-          <Text style={styles.toggleText}>Find a room</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.toggleBtn, styles.toggleActiveHost]}>
-          <Text style={styles.toggleEmoji}>🏠</Text>
-          <Text style={styles.toggleActiveTextHost}>Host a room</Text>
-        </TouchableOpacity>
-      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -195,13 +167,6 @@ const styles = StyleSheet.create({
   iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
   avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
-
-  toggleRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.lg },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: RADIUS.sm },
-  toggleActiveHost: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
-  toggleText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  toggleEmoji: { fontSize: 14 },
-  toggleActiveTextHost: { fontSize: 14, color: COLORS.accent, ...FONTS.semibold },
 
   sectionTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
 
