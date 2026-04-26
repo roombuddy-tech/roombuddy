@@ -5,7 +5,7 @@ import OTPInput from '../../components/forms/OTPInput';
 import Button from '../../components/ui/Button';
 import { authService } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { COLORS, FONTS, SPACING } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, 'OTP'>;
@@ -14,6 +14,7 @@ export default function OTPScreen({ navigation, route }: Props) {
   const { phoneNumber } = route.params as { phoneNumber: string };
   const { login } = useAuth();
 
+  const [otpValue, setOtpValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
@@ -28,6 +29,7 @@ export default function OTPScreen({ navigation, route }: Props) {
   }, [countdown]);
 
   const handleVerify = async (otpCode: string) => {
+    if (otpCode.length < 6) return;
     setLoading(true);
     try {
       const response = await authService.verifyOTP(phoneNumber, otpCode);
@@ -41,7 +43,6 @@ export default function OTPScreen({ navigation, route }: Props) {
       if (!response.is_profile_complete) {
         navigation.replace('ProfileSetup');
       }
-      // If profile complete, AuthContext triggers GuestTabs
     } catch (err: any) {
       const message = err?.response?.data?.error || 'Verification failed. Please try again.';
       Alert.alert('Error', message);
@@ -61,39 +62,53 @@ export default function OTPScreen({ navigation, route }: Props) {
     }
   };
 
-  const maskedPhone = `+91 ${phoneNumber.slice(0, 2)}****${phoneNumber.slice(-2)}`;
+  const maskedPhone = `+91 ${phoneNumber.slice(0, 5)} XXXXX`;
 
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Verify your number</Text>
-          <Text style={styles.subtitle}>
-            We sent a 6-digit code to{'\n'}
-            <Text style={styles.phone}>{maskedPhone}</Text>
+        {/* Brand */}
+        <View style={styles.brandRow}>
+          <Text style={styles.brand}>
+            Room<Text style={styles.brandAccent}>Buddy</Text>
           </Text>
         </View>
 
-        <View style={styles.otpSection}>
-          <OTPInput onComplete={handleVerify} />
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Verify your number</Text>
+          <Text style={styles.subtitle}>
+            We sent a 6-digit code to <Text style={styles.phone}>{maskedPhone}</Text>
+          </Text>
         </View>
 
-        {loading && (
-          <Button title="Verifying..." variant="primary" size="lg" loading full onPress={() => {}} />
-        )}
+        {/* OTP Input */}
+        <View style={styles.otpSection}>
+          <OTPInput onComplete={(code) => { setOtpValue(code); handleVerify(code); }} />
+        </View>
 
+        {/* Verify button */}
+        <Button
+          title="Verify"
+          onPress={() => handleVerify(otpValue)}
+          variant="primary"
+          size="lg"
+          loading={loading}
+          disabled={otpValue.length < 6}
+          full
+        />
+
+        {/* Resend */}
         <View style={styles.resendSection}>
           {canResend ? (
             <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendActive}>Resend OTP</Text>
+              <Text style={styles.resendText}>
+                Didn't receive? <Text style={styles.resendActive}>Resend OTP</Text>
+              </Text>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.resendTimer}>
-              Resend OTP in <Text style={styles.timerCount}>{countdown}s</Text>
+            <Text style={styles.resendText}>
+              Didn't receive? <Text style={styles.resendActive}>Resend in {countdown}s</Text>
             </Text>
           )}
         </View>
@@ -107,26 +122,31 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: SPACING.md,
   },
-  back: {
-    marginBottom: SPACING.xl,
+  brandRow: {
+    alignItems: 'flex-start',
+    marginBottom: SPACING.xxl,
   },
-  backText: {
-    fontSize: 15,
-    color: COLORS.primary,
-    ...FONTS.semibold,
+  brand: {
+    fontSize: 24,
+    ...FONTS.extrabold,
+    color: COLORS.primaryDark,
+    letterSpacing: -0.5,
+  },
+  brandAccent: {
+    color: COLORS.accent,
   },
   header: {
     alignItems: 'center',
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     ...FONTS.bold,
     color: COLORS.text,
     marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textSec,
     textAlign: 'center',
     lineHeight: 22,
@@ -142,37 +162,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: SPACING.lg,
   },
-  resendTimer: {
+  resendText: {
     fontSize: 14,
     color: COLORS.textMut,
   },
-  timerCount: {
-    color: COLORS.primary,
-    ...FONTS.semibold,
-  },
   resendActive: {
-    fontSize: 15,
     color: COLORS.primary,
     ...FONTS.semibold,
-  },
-  helpSection: {
-    marginTop: SPACING.xxl,
-  },
-  helpCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: SPACING.md,
-    backgroundColor: COLORS.warm,
-    borderRadius: RADIUS.md,
-  },
-  helpIcon: {
-    fontSize: 16,
-  },
-  helpText: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.accent,
-    lineHeight: 18,
   },
 });

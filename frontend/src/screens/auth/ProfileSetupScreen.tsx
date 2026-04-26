@@ -4,29 +4,31 @@ import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
 import { authService } from '../../services/auth';
 import { useAuth } from '../../context/AuthContext';
-import { isValidName, isValidEmail } from '../../utils/validators';
+import { isValidEmail } from '../../utils/validators';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
 
 const GENDERS = [
-  { key: 'male', label: 'Male', icon: '👨' },
-  { key: 'female', label: 'Female', icon: '👩' },
-  { key: 'non_binary', label: 'Other', icon: '🧑' },
+  { key: 'male', label: 'Male' },
+  { key: 'female', label: 'Female' },
+  { key: 'non_binary', label: 'Other' },
 ];
 
 export default function ProfileSetupScreen({ navigation }: Props) {
   const { completeProfile } = useAuth();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isFormValid = isValidName(firstName) && isValidName(lastName) && gender && city.trim().length >= 2;
+  const nameParts = fullName.trim().split(/\s+/);
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+  const isFormValid = firstName.length >= 2 && gender && city.trim().length >= 2;
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
@@ -39,15 +41,14 @@ export default function ProfileSetupScreen({ navigation }: Props) {
     setLoading(true);
     try {
       const result = await authService.completeProfile({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        first_name: firstName,
+        last_name: lastName || firstName,
         email: email.trim() || undefined,
         gender,
         city: city.trim(),
       });
 
       await completeProfile(result);
-      // AuthContext sets isProfileComplete=true → Navigation shows GuestTabs
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to save profile.');
     } finally {
@@ -58,9 +59,17 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <Text style={styles.title}>Complete your profile</Text>
-        <Text style={styles.subtitle}>Tell us a bit about yourself</Text>
+        {/* Top bar — brand only, no avatar */}
+        <View style={styles.topBar}>
+          <Text style={styles.brand}>
+            Room<Text style={styles.brandAccent}>Buddy</Text>
+          </Text>
+        </View>
 
+        <Text style={styles.title}>Complete your profile</Text>
+
+
+        {/* Photo — optional, not required */}
         <TouchableOpacity style={styles.photoSection}>
           <View style={styles.photoCircle}>
             <Text style={styles.photoIcon}>📷</Text>
@@ -68,70 +77,105 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           <Text style={styles.photoLabel}>Add photo</Text>
         </TouchableOpacity>
 
-        <View style={styles.row}>
-          <View style={styles.halfInput}>
-            <Text style={styles.label}>First name *</Text>
-            <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} placeholder="Mayank" placeholderTextColor={COLORS.textMut} autoFocus />
-          </View>
-          <View style={styles.halfInput}>
-            <Text style={styles.label}>Last name *</Text>
-            <TextInput style={styles.input} value={lastName} onChangeText={setLastName} placeholder="Kumar" placeholderTextColor={COLORS.textMut} />
-          </View>
+        {/* Full name */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Full name</Text>
+          <TextInput
+            style={styles.input}
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Mayank Kumar"
+            placeholderTextColor={COLORS.textMut}
+            autoFocus
+          />
         </View>
 
+        {/* Email */}
         <View style={styles.field}>
-          <Text style={styles.label}>Email (optional)</Text>
-          <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="mayank@gmail.com" placeholderTextColor={COLORS.textMut} keyboardType="email-address" autoCapitalize="none" />
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="mayank@gmail.com"
+            placeholderTextColor={COLORS.textMut}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
         </View>
 
+        {/* Gender */}
         <View style={styles.field}>
-          <Text style={styles.label}>Gender *</Text>
+          <Text style={styles.label}>Gender</Text>
           <View style={styles.pillRow}>
             {GENDERS.map((g) => (
-              <TouchableOpacity key={g.key} style={[styles.pill, gender === g.key && styles.pillActive]} onPress={() => setGender(g.key)}>
-                <Text style={styles.pillIcon}>{g.icon}</Text>
-                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>{g.label}</Text>
+              <TouchableOpacity
+                key={g.key}
+                style={[styles.pill, gender === g.key && styles.pillActive]}
+                onPress={() => setGender(g.key)}
+              >
+                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>
+                  {g.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
+        {/* City */}
         <View style={styles.field}>
-          <Text style={styles.label}>City *</Text>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="Bengaluru" placeholderTextColor={COLORS.textMut} />
+          <Text style={styles.label}>City</Text>
+          <TextInput
+            style={styles.input}
+            value={city}
+            onChangeText={setCity}
+            placeholder="Bengaluru"
+            placeholderTextColor={COLORS.textMut}
+          />
         </View>
 
+        {/* Aadhaar note */}
         <View style={styles.noteCard}>
           <Text style={styles.noteIcon}>🔒</Text>
-          <Text style={styles.noteText}>Aadhaar verification will be done later. This keeps everyone safe on the platform.</Text>
+          <Text style={styles.noteText}>
+            Your Aadhaar verification will be done after signup. This keeps everyone safe.
+          </Text>
         </View>
 
-        <Button title="Continue" onPress={handleSubmit} variant="primary" size="lg" loading={loading} disabled={!isFormValid} full />
+        {/* Submit */}
+        <Button
+          title="Start exploring"
+          onPress={handleSubmit}
+          variant="accent"
+          size="lg"
+          loading={loading}
+          disabled={!isFormValid}
+          full
+        />
       </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl },
-  title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
-  subtitle: { fontSize: 15, color: COLORS.textSec, marginBottom: SPACING.xl },
+  container: { paddingTop: SPACING.md, paddingBottom: SPACING.xl },
+  topBar: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: SPACING.xl },
+  brand: { fontSize: 24, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
+  brandAccent: { color: COLORS.accent },
+  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xl, textAlign: 'center' },
   photoSection: { alignItems: 'center', marginBottom: SPACING.xl },
-  photoCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
+  photoCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
   photoIcon: { fontSize: 28 },
   photoLabel: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
-  row: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
-  halfInput: { flex: 1 },
-  field: { marginBottom: SPACING.md },
-  label: { fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 6 },
-  input: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 13, fontSize: 15, color: COLORS.text, backgroundColor: COLORS.bg, ...FONTS.medium },
+  field: { marginBottom: SPACING.lg },
+  label: { fontSize: 14, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 6 },
+  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 14, fontSize: 16, color: COLORS.text, backgroundColor: COLORS.bg, ...FONTS.medium },
   pillRow: { flexDirection: 'row', gap: SPACING.sm },
-  pill: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.md, backgroundColor: COLORS.bg },
+  pill: { paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.pill, backgroundColor: COLORS.bg },
   pillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
-  pillIcon: { fontSize: 16 },
   pillText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   pillTextActive: { color: COLORS.primary, ...FONTS.semibold },
-  noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: SPACING.md, backgroundColor: COLORS.warm, borderRadius: RADIUS.md, marginBottom: SPACING.xl, marginTop: SPACING.sm },
+  noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: SPACING.md, backgroundColor: COLORS.warm, borderRadius: RADIUS.md, marginBottom: SPACING.xl },
   noteIcon: { fontSize: 16 },
   noteText: { flex: 1, fontSize: 13, color: COLORS.accent, lineHeight: 18 },
 });
