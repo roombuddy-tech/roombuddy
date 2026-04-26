@@ -9,8 +9,8 @@ export const ENDPOINTS = {
     DASHBOARD: '/api/users/host/dashboard/',
     BOOKINGS: '/api/bookings/host/',
     EARNINGS: '/api/bookings/host/earnings/',
+    LISTINGS: '/api/listings/host/',
     PROPERTIES: '/api/properties/',
-    LISTINGS: '/api/host/listings/',
   },
   GUEST: {
     SEARCH: '/api/listings/search/',

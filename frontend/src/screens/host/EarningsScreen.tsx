@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import { TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface EarningsData {
   lifetime: {
@@ -172,4 +174,12 @@ const styles = StyleSheet.create({
   payoutTitle: { fontSize: 15, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
   payoutBank: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
   payoutNext: { fontSize: 13, color: COLORS.textMut, marginTop: 4 },
+
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.sm, marginBottom: SPACING.md },
+  brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
+  brandAccent: { color: COLORS.accent },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
+  avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
 });

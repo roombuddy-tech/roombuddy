@@ -6,6 +6,7 @@ import { COLORS, FONTS } from '../constants/theme';
 import DashboardScreen from '../screens/host/DashboardScreen';
 import BookingsScreen from '../screens/host/BookingsScreen';
 import EarningsScreen from '../screens/host/EarningsScreen';
+import ListingsScreen from '../screens/host/ListingsScreen';
 import type { HostTabParamList } from './types';
 
 function PlaceholderScreen({ title }: { title: string }) {
@@ -18,7 +19,6 @@ function PlaceholderScreen({ title }: { title: string }) {
 }
 
 function CalendarScreen() { return <PlaceholderScreen title="Calendar" />; }
-function ListingScreen() { return <PlaceholderScreen title="Listing" />; }
 function SettingsScreen() { return <PlaceholderScreen title="Settings" />; }
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
@@ -50,7 +50,7 @@ export default function HostTabs() {
     >
       <Tab.Screen name="Today" component={DashboardScreen} />
       <Tab.Screen name="Calendar" component={CalendarScreen} />
-      <Tab.Screen name="Listing" component={ListingScreen} />
+      <Tab.Screen name="Listing" component={ListingsScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen name="Earnings" component={EarningsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
