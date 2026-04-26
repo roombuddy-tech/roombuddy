@@ -7,8 +7,8 @@ export const ENDPOINTS = {
   },
   HOST: {
     DASHBOARD: '/api/users/host/dashboard/',
+    BOOKINGS: '/api/bookings/host/',
     PROPERTIES: '/api/properties/',
-    BOOKINGS: '/api/host/bookings/',
     EARNINGS: '/api/host/earnings/',
     LISTINGS: '/api/host/listings/',
   },
