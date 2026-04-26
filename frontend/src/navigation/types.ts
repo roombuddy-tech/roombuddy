@@ -7,7 +7,6 @@ export type AuthStackParamList = {
 
 export type GuestTabParamList = {
   Home: undefined;
-  Search: undefined;
   MyStays: undefined;
   Messages: undefined;
   Profile: undefined;

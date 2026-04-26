@@ -47,18 +47,12 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.brand}>
             Room<Text style={styles.brandAccent}>Buddy</Text>
           </Text>
-          <View style={styles.badge}>
-            <View style={styles.dot} />
-            <Text style={styles.badgeText}>Available across India</Text>
-          </View>
         </View>
 
         {/* Main content */}
         <View style={styles.main}>
-          <Text style={styles.title}>Welcome!</Text>
-          <Text style={styles.subtitle}>
-            Enter your phone number to get started with RoomBuddy
-          </Text>
+          <Text style={styles.title}>Welcome to RoomBuddy</Text>
+          <Text style={styles.subtitle}>Enter your phone number to continue</Text>
 
           <View style={styles.form}>
             <PhoneInput
@@ -78,7 +72,10 @@ export default function LoginScreen({ navigation }: Props) {
               full
             />
           </View>
+        </View>
 
+        {/* Footer */}
+        <View style={styles.footer}>
           <Text style={styles.terms}>
             By continuing, you agree to our{' '}
             <Text style={styles.link}>Terms of Service</Text> and{' '}
@@ -107,70 +104,49 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
   },
   header: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: SPACING.xxl,
   },
   brand: {
-    fontSize: 32,
+    fontSize: 24,
     ...FONTS.extrabold,
     color: COLORS.primaryDark,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   brandAccent: {
     color: COLORS.accent,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: SPACING.sm,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: COLORS.primaryAlpha,
-    borderRadius: 20,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.accent,
-  },
-  badgeText: {
-    fontSize: 13,
-    color: COLORS.primary,
-    ...FONTS.medium,
   },
   main: {
     flex: 1,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     ...FONTS.bold,
     color: COLORS.text,
+    textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSec,
-    lineHeight: 24,
+    textAlign: 'center',
     marginBottom: SPACING.xl,
   },
   form: {
     gap: SPACING.lg,
   },
+  footer: {
+    marginTop: SPACING.xl,
+  },
   terms: {
     fontSize: 13,
     color: COLORS.textMut,
     textAlign: 'center',
-    marginTop: SPACING.lg,
     lineHeight: 20,
   },
   link: {
     color: COLORS.primary,
     ...FONTS.medium,
-  },
-  footer: {
-    marginTop: SPACING.xl,
   },
   secureRow: {
     flexDirection: 'row',
