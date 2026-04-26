@@ -6,8 +6,8 @@ export const ENDPOINTS = {
     REFRESH_TOKEN: '/api/users/auth/token/refresh/',
   },
   HOST: {
+    DASHBOARD: '/api/users/host/dashboard/',
     PROPERTIES: '/api/properties/',
-    DASHBOARD: '/api/host/dashboard/',
     BOOKINGS: '/api/host/bookings/',
     EARNINGS: '/api/host/earnings/',
     LISTINGS: '/api/host/listings/',

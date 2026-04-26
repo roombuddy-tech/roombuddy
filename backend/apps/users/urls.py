@@ -5,6 +5,7 @@ from apps.users.views import (
     VerifyOTPView,
     CompleteProfileView,
     RefreshTokenView,
+    HostDashboardView,
 )
 
 urlpatterns = [
@@ -12,4 +13,5 @@ urlpatterns = [
     path("auth/otp/verify/", VerifyOTPView.as_view(), name="verify-otp"),
     path("auth/profile/complete/", CompleteProfileView.as_view(), name="complete-profile"),
     path("auth/token/refresh/", RefreshTokenView.as_view(), name="refresh-token"),
+    path("host/dashboard/", HostDashboardView.as_view(), name="host-dashboard"),
 ]

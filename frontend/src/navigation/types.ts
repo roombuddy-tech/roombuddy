@@ -13,9 +13,10 @@ export type GuestTabParamList = {
 };
 
 export type HostTabParamList = {
-  Dashboard: undefined;
-  Listings: undefined;
+  Today: undefined;
+  Calendar: undefined;
+  Listing: undefined;
   Bookings: undefined;
-  Messages: undefined;
+  Earnings: undefined;
   Settings: undefined;
 };
