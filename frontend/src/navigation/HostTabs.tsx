@@ -4,6 +4,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
 import DashboardScreen from '../screens/host/DashboardScreen';
+import BookingsScreen from '../screens/host/BookingsScreen';
 import type { HostTabParamList } from './types';
 
 function PlaceholderScreen({ title }: { title: string }) {
@@ -17,7 +18,6 @@ function PlaceholderScreen({ title }: { title: string }) {
 
 function CalendarScreen() { return <PlaceholderScreen title="Calendar" />; }
 function ListingScreen() { return <PlaceholderScreen title="Listing" />; }
-function BookingsScreen() { return <PlaceholderScreen title="Bookings" />; }
 function EarningsScreen() { return <PlaceholderScreen title="Earnings" />; }
 function SettingsScreen() { return <PlaceholderScreen title="Settings" />; }
 
