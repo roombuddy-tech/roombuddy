@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import models
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers as s
 
@@ -384,3 +385,176 @@ class RefreshTokenView(APIView):
             {"access": new_access_token},
             status=status.HTTP_200_OK,
         )
+
+
+class HostDashboardView(APIView):
+    """
+    GET /api/users/host/dashboard/
+    Authenticated endpoint. Returns aggregated dashboard data for the host.
+    """
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Host"],
+        responses={
+            200: inline_serializer("HostDashboardResponse", fields={
+                "greeting_name": s.CharField(),
+                "this_month": inline_serializer("ThisMonth", fields={
+                    "earnings": s.DecimalField(max_digits=10, decimal_places=2),
+                    "bookings": s.IntegerField(),
+                    "occupancy_pct": s.IntegerField(),
+                    "occupancy_nights_booked": s.IntegerField(),
+                    "occupancy_nights_total": s.IntegerField(),
+                    "avg_rating": s.DecimalField(max_digits=3, decimal_places=1, allow_null=True),
+                    "review_count": s.IntegerField(),
+                    "response_rate_pct": s.IntegerField(),
+                }),
+                "today": inline_serializer("TodayActivity", fields={
+                    "check_ins": s.ListField(child=s.DictField()),
+                    "check_outs": s.ListField(child=s.DictField()),
+                    "recent_reviews": s.ListField(child=s.DictField()),
+                }),
+            }),
+        },
+    )
+    def get(self, request):
+        user = request.user
+        today = timezone.now().date()
+        month_start = today.replace(day=1)
+
+        # Import here to avoid circular imports
+        from apps.bookings.models import Booking
+        from apps.reviews.models import Review
+
+        # ── Greeting name ─────────────────────────────────
+        try:
+            greeting_name = user.profile.first_name
+        except UserProfile.DoesNotExist:
+            greeting_name = "Host"
+
+        # ── This month stats ──────────────────────────────
+        month_bookings = Booking.objects.filter(
+            host_user=user,
+            check_in_date__gte=month_start,
+        )
+
+        completed_bookings = month_bookings.filter(
+            status__in=["completed", "active"]
+        )
+
+        earnings = completed_bookings.aggregate(
+            total=models.Sum("total_host_receives")
+        )["total"] or 0
+
+        booking_count = completed_bookings.count()
+
+        # Occupancy: booked nights / days in month so far
+        days_in_month = (today - month_start).days + 1
+        booked_nights = 0
+        for b in completed_bookings:
+            start = max(b.check_in_date, month_start)
+            end = min(b.check_out_date, today)
+            if end > start:
+                booked_nights += (end - start).days
+
+        occupancy_pct = round((booked_nights / days_in_month) * 100) if days_in_month > 0 else 0
+
+        # Avg rating
+        reviews = Review.objects.filter(
+            reviewee_user=user,
+            review_type="guest_to_host",
+        )
+        review_agg = reviews.aggregate(
+            avg=models.Avg("overall_rating"),
+            count=models.Count("id"),
+        )
+        avg_rating = round(review_agg["avg"], 1) if review_agg["avg"] else None
+        review_count = review_agg["count"]
+
+        # Response rate: responded bookings / total bookings that needed response
+        total_needing_response = Booking.objects.filter(
+            host_user=user,
+            booking_mode="request",
+        ).count()
+        responded = Booking.objects.filter(
+            host_user=user,
+            booking_mode="request",
+            host_responded_at__isnull=False,
+        ).count()
+        response_rate = round((responded / total_needing_response) * 100) if total_needing_response > 0 else 100
+
+        # ── Today activity ────────────────────────────────
+        todays_check_ins = Booking.objects.filter(
+            host_user=user,
+            check_in_date=today,
+            status__in=["accepted", "active"],
+        ).select_related("guest_user")
+
+        check_ins = []
+        for b in todays_check_ins:
+            guest_name = "Guest"
+            try:
+                guest_name = f"{b.guest_user.profile.first_name} {b.guest_user.profile.last_name[0]}."
+            except Exception:
+                pass
+            check_ins.append({
+                "booking_code": b.booking_code,
+                "guest_name": guest_name,
+                "nights": b.nights,
+                "check_in_time": "3 PM",
+            })
+
+        todays_check_outs = Booking.objects.filter(
+            host_user=user,
+            check_out_date=today,
+            status="active",
+        ).select_related("guest_user")
+
+        check_outs = []
+        for b in todays_check_outs:
+            guest_name = "Guest"
+            try:
+                guest_name = f"{b.guest_user.profile.first_name} {b.guest_user.profile.last_name[0]}."
+            except Exception:
+                pass
+            check_outs.append({
+                "booking_code": b.booking_code,
+                "guest_name": guest_name,
+            })
+
+        # Recent reviews
+        recent_reviews_qs = reviews.order_by("-submitted_at")[:3]
+        recent_reviews = []
+        for r in recent_reviews_qs:
+            reviewer_name = "Guest"
+            try:
+                reviewer_name = f"{r.reviewer_user.profile.first_name} {r.reviewer_user.profile.last_name[0]}."
+            except Exception:
+                pass
+            recent_reviews.append({
+                "reviewer_name": reviewer_name,
+                "rating": r.overall_rating,
+                "body": (r.body or "")[:100],
+                "submitted_at": r.submitted_at.isoformat(),
+            })
+
+        return Response({
+            "greeting_name": greeting_name,
+            "this_month": {
+                "earnings": float(earnings),
+                "bookings": booking_count,
+                "occupancy_pct": occupancy_pct,
+                "occupancy_nights_booked": booked_nights,
+                "occupancy_nights_total": days_in_month,
+                "avg_rating": float(avg_rating) if avg_rating else None,
+                "review_count": review_count,
+                "response_rate_pct": response_rate,
+            },
+            "today": {
+                "check_ins": check_ins,
+                "check_outs": check_outs,
+                "recent_reviews": recent_reviews,
+            },
+        })

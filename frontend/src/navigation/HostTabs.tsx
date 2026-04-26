@@ -1,9 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
+import { COLORS, FONTS } from '../constants/theme';
+import DashboardScreen from '../screens/host/DashboardScreen';
 import type { HostTabParamList } from './types';
 
 function PlaceholderScreen({ title }: { title: string }) {
@@ -15,59 +15,20 @@ function PlaceholderScreen({ title }: { title: string }) {
   );
 }
 
-function DashboardScreen() {
-  const { logout, switchRole } = useAuth();
-
-  return (
-    <View style={styles.homeContainer}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
-        <View style={styles.topRight}>
-          <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
-          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-            <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Guest/Host toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity style={styles.toggleBtn} onPress={() => switchRole('guest')}>
-          <Ionicons name="search-outline" size={16} color={COLORS.textSec} />
-          <Text style={styles.toggleText}>Find a room</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.toggleBtn, styles.toggleActive]}>
-          <Ionicons name="home-outline" size={16} color={COLORS.accent} />
-          <Text style={styles.toggleActiveTextHost}>Host a room</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <View style={styles.contentArea}>
-        <Text style={styles.sectionTitle}>Host Dashboard</Text>
-        <Text style={styles.sectionSub}>Manage your listings and bookings</Text>
-        <View style={styles.comingSoonCard}>
-          <Text style={styles.comingSoonIcon}>📊</Text>
-          <Text style={styles.comingSoonText}>Dashboard coming soon</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function ListingsScreen() { return <PlaceholderScreen title="My Listings" />; }
+function CalendarScreen() { return <PlaceholderScreen title="Calendar" />; }
+function ListingScreen() { return <PlaceholderScreen title="Listing" />; }
 function BookingsScreen() { return <PlaceholderScreen title="Bookings" />; }
-function MessagesScreen() { return <PlaceholderScreen title="Messages" />; }
+function EarningsScreen() { return <PlaceholderScreen title="Earnings" />; }
 function SettingsScreen() { return <PlaceholderScreen title="Settings" />; }
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
 
 const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
-  Dashboard: { active: 'grid', inactive: 'grid-outline' },
-  Listings: { active: 'home', inactive: 'home-outline' },
-  Bookings: { active: 'calendar', inactive: 'calendar-outline' },
-  Messages: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
+  Today: { active: 'home', inactive: 'home-outline' },
+  Calendar: { active: 'calendar', inactive: 'calendar-outline' },
+  Listing: { active: 'document-text', inactive: 'document-text-outline' },
+  Bookings: { active: 'book', inactive: 'book-outline' },
+  Earnings: { active: 'cash', inactive: 'cash-outline' },
   Settings: { active: 'settings', inactive: 'settings-outline' },
 };
 
@@ -87,10 +48,11 @@ export default function HostTabs() {
         },
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Listings" component={ListingsScreen} />
+      <Tab.Screen name="Today" component={DashboardScreen} />
+      <Tab.Screen name="Calendar" component={CalendarScreen} />
+      <Tab.Screen name="Listing" component={ListingScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen name="Earnings" component={EarningsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
@@ -100,21 +62,4 @@ const styles = StyleSheet.create({
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   placeholderText: { fontSize: 24, ...FONTS.bold, color: COLORS.text },
   placeholderSub: { fontSize: 14, color: COLORS.textMut, marginTop: 8 },
-  homeContainer: { flex: 1, backgroundColor: COLORS.bg, paddingTop: 60, paddingHorizontal: SPACING.lg },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
-  brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoutBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF0F0', justifyContent: 'center', alignItems: 'center' },
-  toggleRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.xl },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: RADIUS.sm },
-  toggleActive: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
-  toggleText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  toggleActiveTextHost: { fontSize: 14, color: COLORS.accent, ...FONTS.semibold },
-  contentArea: { flex: 1 },
-  sectionTitle: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
-  sectionSub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.xl },
-  comingSoonCard: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: SPACING.xl },
-  comingSoonIcon: { fontSize: 48, marginBottom: SPACING.md },
-  comingSoonText: { fontSize: 16, color: COLORS.textMut, ...FONTS.medium },
 });
