@@ -5,6 +5,8 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers as s
 
 from apps.users.models import User, OTPCode, UserSession, UserProfile
 from apps.users.serializers import (
@@ -39,6 +41,21 @@ class SendOTPView(APIView):
     permission_classes = []
     serializer_class = SendOTPSerializer
 
+    @extend_schema(
+        tags=["Auth"],
+        request=SendOTPSerializer,
+        responses={
+            200: inline_serializer("SendOTPResponse", fields={
+                "message": s.CharField(),
+                "phone": s.CharField(),
+                "expires_in_seconds": s.IntegerField(),
+            }),
+            429: inline_serializer("RateLimitError", fields={
+                "error": s.CharField(),
+                "code": s.CharField(),
+            }),
+        },
+    )
     def post(self, request):
         serializer = SendOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -84,7 +101,7 @@ class SendOTPView(APIView):
             expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES),
         )
 
-        # Send OTP via configured provider (console in dev, MSG91 in prod)
+        # Send OTP via configured provider
         sent = send_otp(full_phone, otp_code)
         if not sent:
             return Response(
@@ -112,7 +129,26 @@ class VerifyOTPView(APIView):
     permission_classes = []
     serializer_class = VerifyOTPSerializer
 
-
+    @extend_schema(
+        tags=["Auth"],
+        request=VerifyOTPSerializer,
+        responses={
+            200: inline_serializer("VerifyOTPResponse", fields={
+                "message": s.CharField(),
+                "tokens": inline_serializer("TokenPair", fields={
+                    "access": s.CharField(),
+                    "refresh": s.CharField(),
+                }),
+                "is_new_user": s.BooleanField(),
+                "is_profile_complete": s.BooleanField(),
+            }),
+            400: inline_serializer("OTPError", fields={
+                "error": s.CharField(),
+                "code": s.CharField(),
+                "attempts_remaining": s.IntegerField(required=False),
+            }),
+        },
+    )
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -226,6 +262,17 @@ class CompleteProfileView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CompleteProfileSerializer
 
+    @extend_schema(
+        tags=["Auth"],
+        request=CompleteProfileSerializer,
+        responses={
+            200: inline_serializer("ProfileResponse", fields={
+                "user_id": s.UUIDField(),
+                "display_name": s.CharField(),
+                "is_profile_complete": s.BooleanField(),
+            }),
+        },
+    )
     def post(self, request):
         serializer = CompleteProfileSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -268,6 +315,19 @@ class RefreshTokenView(APIView):
     permission_classes = []
     serializer_class = RefreshTokenSerializer
 
+    @extend_schema(
+        tags=["Auth"],
+        request=RefreshTokenSerializer,
+        responses={
+            200: inline_serializer("RefreshResponse", fields={
+                "access": s.CharField(),
+            }),
+            401: inline_serializer("RefreshError", fields={
+                "error": s.CharField(),
+                "code": s.CharField(),
+            }),
+        },
+    )
     def post(self, request):
         serializer = RefreshTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
