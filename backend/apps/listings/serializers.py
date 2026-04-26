@@ -1,11 +1,19 @@
 from rest_framework import serializers
 
 
-class HostListingItemSerializer(serializers.Serializer):
+class ListingItemSerializer(serializers.Serializer):
     listing_id = serializers.UUIDField()
     title = serializers.CharField()
     area_name = serializers.CharField()
-    host_price_per_night = serializers.DecimalField(max_digits=10, decimal_places=2)
+    host_price_per_night = serializers.FloatField()
+    guest_price_per_night = serializers.FloatField()
     status = serializers.CharField()
-    average_rating = serializers.DecimalField(max_digits=3, decimal_places=1, allow_null=True)
+    average_rating = serializers.FloatField(allow_null=True)
+    review_count = serializers.IntegerField()
     total_bookings = serializers.IntegerField()
+    cover_photo_url = serializers.CharField(allow_null=True)
+
+
+class HostListingsResponseSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = ListingItemSerializer(many=True)
