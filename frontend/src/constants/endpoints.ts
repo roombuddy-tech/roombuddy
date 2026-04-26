@@ -8,8 +8,8 @@ export const ENDPOINTS = {
   HOST: {
     DASHBOARD: '/api/users/host/dashboard/',
     BOOKINGS: '/api/bookings/host/',
+    EARNINGS: '/api/bookings/host/earnings/',
     PROPERTIES: '/api/properties/',
-    EARNINGS: '/api/host/earnings/',
     LISTINGS: '/api/host/listings/',
   },
   GUEST: {
