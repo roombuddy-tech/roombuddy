@@ -1,2 +1,2 @@
 # RoomBuddy
-Affordable stays in real homes
+Affordable stays in real homes  
