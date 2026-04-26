@@ -1,6 +1,8 @@
 import jwt
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
+
 
 from apps.users.models import User
 from common.jwt_utils import decode_token
@@ -46,3 +48,14 @@ class JWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed("User not found or inactive.")
 
         return (user, payload)
+    
+class JWTAuthenticationScheme(OpenApiAuthenticationExtension):
+    target_class = "common.authentication.JWTAuthentication"
+    name = "BearerAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }

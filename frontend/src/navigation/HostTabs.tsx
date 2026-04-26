@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants/theme';
 import DashboardScreen from '../screens/host/DashboardScreen';
 import BookingsScreen from '../screens/host/BookingsScreen';
+import EarningsScreen from '../screens/host/EarningsScreen';
 import type { HostTabParamList } from './types';
 
 function PlaceholderScreen({ title }: { title: string }) {
@@ -18,7 +19,6 @@ function PlaceholderScreen({ title }: { title: string }) {
 
 function CalendarScreen() { return <PlaceholderScreen title="Calendar" />; }
 function ListingScreen() { return <PlaceholderScreen title="Listing" />; }
-function EarningsScreen() { return <PlaceholderScreen title="Earnings" />; }
 function SettingsScreen() { return <PlaceholderScreen title="Settings" />; }
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
