@@ -17,3 +17,8 @@ export type HostTabParamList = {
   Bookings: undefined;
   Earnings: undefined;
 };
+
+export type HostStackParamList = {
+  HostTabs: undefined;
+  ListingEditor: { listingId?: string } | undefined;
+};

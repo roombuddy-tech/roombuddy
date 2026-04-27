@@ -9,6 +9,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Registered by AuthProvider so the interceptor can force-logout the user
+let _onAuthFailure: (() => void) | null = null;
+export function setAuthFailureHandler(handler: () => void) {
+  _onAuthFailure = handler;
+}
+
+async function forceLogout() {
+  await storage.clearTokens();
+  _onAuthFailure?.();
+}
+
 // Attach JWT token to every request
 api.interceptors.request.use(async (config) => {
   const token = await storage.getAccessToken();
@@ -36,21 +47,29 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Handle 401 — try refreshing the token before logging out
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
 
-    // Only handle 401 errors, and don't retry the refresh endpoint itself
-    if (
-      error.response?.status !== 401 ||
-      originalRequest._retry ||
-      originalRequest.url === ENDPOINTS.AUTH.REFRESH_TOKEN
-    ) {
-      if (error.response?.status === 401 && originalRequest.url === ENDPOINTS.AUTH.REFRESH_TOKEN) {
-        await storage.clearTokens();
+    // If the refresh endpoint itself fails → force logout immediately
+    if (originalRequest.url === ENDPOINTS.AUTH.REFRESH_TOKEN) {
+      await forceLogout();
+      return Promise.reject(error);
+    }
+
+    // 403 with no token in storage means tokens were already cleared → force logout
+    if (status === 403 && !originalRequest._retry) {
+      const token = await storage.getAccessToken();
+      if (!token) {
+        await forceLogout();
+        return Promise.reject(error);
       }
+    }
+
+    // Only attempt refresh on 401
+    if (status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 
@@ -73,7 +92,9 @@ api.interceptors.response.use(
     try {
       const refreshToken = await storage.getRefreshToken();
       if (!refreshToken) {
-        throw new Error('No refresh token');
+        processQueue(new Error('No refresh token'), null);
+        await forceLogout();
+        return Promise.reject(error);
       }
 
       const { data } = await api.post(ENDPOINTS.AUTH.REFRESH_TOKEN, {
@@ -89,7 +110,7 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      await storage.clearTokens();
+      await forceLogout();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

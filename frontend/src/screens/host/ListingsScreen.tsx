@@ -2,9 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import type { HostTabParamList, HostStackParamList } from '../../navigation/types';
+
+type NavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<HostTabParamList, 'Listing'>,
+  NativeStackNavigationProp<HostStackParamList>
+>;
 
 interface ListingItem {
   listing_id: string;
@@ -28,6 +38,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function ListingsScreen() {
+  const navigation = useNavigation<NavProp>();
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,7 +73,7 @@ export default function ListingsScreen() {
         {/* Header row */}
         <View style={styles.headerRow}>
           <Text style={styles.pageTitle}>My listings</Text>
-          <TouchableOpacity style={styles.addBtn}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('ListingEditor')}>
             <Ionicons name="add" size={18} color="#fff" />
             <Text style={styles.addBtnText}>Add listing</Text>
           </TouchableOpacity>

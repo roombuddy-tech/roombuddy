@@ -13,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "RoomBuddy needs access to your photos to upload room photos for your listing."
+      }
     },
     "android": {
       "adaptiveIcon": {

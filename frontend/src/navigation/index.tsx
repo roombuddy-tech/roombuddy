@@ -4,7 +4,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import AuthStack from './AuthStack';
 import GuestTabs from './GuestTabs';
-import HostTabs from './HostTabs';
+import HostStack from './HostStack';
 import { COLORS } from '../constants/theme';
 
 export default function Navigation() {
@@ -23,7 +23,7 @@ export default function Navigation() {
       {!isAuthenticated || !isProfileComplete ? (
         <AuthStack />
       ) : userRole === 'host' ? (
-        <HostTabs />
+        <HostStack />
       ) : (
         <GuestTabs />
       )}

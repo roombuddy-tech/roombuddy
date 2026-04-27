@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage } from '../services/storage';
+import { setAuthFailureHandler } from '../services/api';
 
 type UserRole = 'guest' | 'host';
 
@@ -28,6 +29,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userRole: 'guest',
     user: null,
   });
+
+  const forceLogout = useCallback(() => {
+    setState({
+      isLoading: false,
+      isAuthenticated: false,
+      isProfileComplete: false,
+      userRole: 'guest',
+      user: null,
+    });
+  }, []);
+
+  useEffect(() => {
+    setAuthFailureHandler(forceLogout);
+  }, [forceLogout]);
 
   useEffect(() => {
     (async () => {

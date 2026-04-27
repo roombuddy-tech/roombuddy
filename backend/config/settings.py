@@ -15,8 +15,8 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me-in-produc
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
-
+# ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -159,7 +159,7 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 ).split(",")
 
 # ── JWT Configuration ─────────────────────────────────────────
-ACCESS_TOKEN_LIFETIME_MINUTES = int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", "30"))
+ACCESS_TOKEN_LIFETIME_MINUTES = int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", "10080"))  # 7 days default for dev
 REFRESH_TOKEN_LIFETIME_DAYS = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "30"))
 
 # ── Logging ───────────────────────────────────────────────────

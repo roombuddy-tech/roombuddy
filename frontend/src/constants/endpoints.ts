@@ -18,6 +18,7 @@ export const ENDPOINTS = {
     EARNINGS: '/api/bookings/host/earnings/',
     LISTINGS: '/api/listings/host/',
     PROPERTIES: '/api/properties/',
+    CREATE_LISTING: '/api/listings/',
   },
   GUEST: {
     SEARCH: '/api/listings/search/',
