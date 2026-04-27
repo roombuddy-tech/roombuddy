@@ -2,12 +2,15 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
+from apps.users.serializers import UserProfileResponseSerializer
+from apps.users.services import get_user_profile
 
 from apps.users.serializers import (
     SendOTPSerializer,
     VerifyOTPSerializer,
     CompleteProfileSerializer,
     RefreshTokenSerializer,
+    UserProfileResponseSerializer,
     OTPSentResponseSerializer,
     OTPVerifiedResponseSerializer,
     ProfileResponseSerializer,
@@ -20,6 +23,7 @@ from apps.users.services import (
     complete_user_profile,
     refresh_access_token,
     get_host_dashboard,
+    get_user_profile,
     AuthServiceError,
 )
 from common.authentication import JWTAuthentication
@@ -121,4 +125,13 @@ class HostDashboardView(APIView):
     @extend_schema(tags=["Host"], responses={200: DashboardResponseSerializer})
     def get(self, request):
         result = get_host_dashboard(request.user)
+        return Response(result, status=status.HTTP_200_OK)
+
+class UserProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Auth"], responses={200: UserProfileResponseSerializer})
+    def get(self, request):
+        result = get_user_profile(request.user)
         return Response(result, status=status.HTTP_200_OK)

@@ -6,6 +6,7 @@ from apps.users.views import (
     CompleteProfileView,
     RefreshTokenView,
     HostDashboardView,
+    UserProfileView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path("auth/profile/complete/", CompleteProfileView.as_view(), name="complete-profile"),
     path("auth/token/refresh/", RefreshTokenView.as_view(), name="refresh-token"),
     path("host/dashboard/", HostDashboardView.as_view(), name="host-dashboard"),
+    path("profile/me/", UserProfileView.as_view(), name="user-profile"),
 ]

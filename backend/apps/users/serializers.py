@@ -118,3 +118,17 @@ class DashboardResponseSerializer(serializers.Serializer):
     greeting_name = serializers.CharField()
     this_month = MonthStatsSerializer()
     today = TodayActivitySerializer()
+
+# ─── Profile DTOs ─────────────────────────────────────────────
+
+class UserProfileResponseSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    display_name = serializers.CharField()
+    initials = serializers.CharField()
+    city = serializers.CharField(allow_blank=True)
+    gender = serializers.CharField(allow_blank=True)
+    phone_verified = serializers.BooleanField()
+    aadhaar_verified = serializers.BooleanField()
+    member_since = serializers.CharField()

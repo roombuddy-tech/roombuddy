@@ -218,7 +218,38 @@ def refresh_access_token(refresh_token_str: str) -> dict:
 
     return {"access": new_access_token}
 
+def get_user_profile(user: User) -> dict:
+    """Returns full profile data for the profile menu."""
+    try:
+        profile = user.profile
+        first_name = profile.first_name
+        last_name = profile.last_name
+        city = profile.city
+        gender = profile.gender
+    except UserProfile.DoesNotExist:
+        first_name = ""
+        last_name = ""
+        city = ""
+        gender = ""
 
+    display_name = f"{first_name} {last_name}".strip() or "User"
+    initials = (
+        f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper() or "U"
+    )
+    member_since = user.created_at.strftime("%b %Y") if user.created_at else ""
+
+    return {
+        "user_id": str(user.id),
+        "first_name": first_name,
+        "last_name": last_name,
+        "display_name": display_name,
+        "initials": initials,
+        "city": city,
+        "gender": gender,
+        "phone_verified": user.phone_verified_at is not None,
+        "aadhaar_verified": False,
+        "member_since": member_since,
+    }
 # ─── Dashboard services ──────────────────────────────────────
 
 def get_host_dashboard(user: User) -> dict:

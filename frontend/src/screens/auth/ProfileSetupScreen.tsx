@@ -59,17 +59,14 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        {/* Top bar — brand only, no avatar */}
+        {/* Top bar */}
         <View style={styles.topBar}>
-          <Text style={styles.brand}>
-            Room<Text style={styles.brandAccent}>Buddy</Text>
-          </Text>
+          <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
         </View>
 
         <Text style={styles.title}>Complete your profile</Text>
 
-
-        {/* Photo — optional, not required */}
+        {/* Photo — optional */}
         <TouchableOpacity style={styles.photoSection}>
           <View style={styles.photoCircle}>
             <Text style={styles.photoIcon}>📷</Text>
@@ -84,7 +81,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             style={styles.input}
             value={fullName}
             onChangeText={setFullName}
-            placeholder="Mayank Kumar"
+            placeholder="Enter your full name"
             placeholderTextColor={COLORS.textMut}
             autoFocus
           />
@@ -97,7 +94,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             style={styles.input}
             value={email}
             onChangeText={setEmail}
-            placeholder="mayank@gmail.com"
+            placeholder="Enter your email address"
             placeholderTextColor={COLORS.textMut}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -114,9 +111,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
                 style={[styles.pill, gender === g.key && styles.pillActive]}
                 onPress={() => setGender(g.key)}
               >
-                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>
-                  {g.label}
-                </Text>
+                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>{g.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -129,7 +124,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
             style={styles.input}
             value={city}
             onChangeText={setCity}
-            placeholder="Bengaluru"
+            placeholder="Enter your city"
             placeholderTextColor={COLORS.textMut}
           />
         </View>
@@ -137,21 +132,11 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         {/* Aadhaar note */}
         <View style={styles.noteCard}>
           <Text style={styles.noteIcon}>🔒</Text>
-          <Text style={styles.noteText}>
-            Your Aadhaar verification will be done after signup. This keeps everyone safe.
-          </Text>
+          <Text style={styles.noteText}>Your Aadhaar verification will be done after signup. This keeps everyone safe.</Text>
         </View>
 
         {/* Submit */}
-        <Button
-          title="Start exploring"
-          onPress={handleSubmit}
-          variant="accent"
-          size="lg"
-          loading={loading}
-          disabled={!isFormValid}
-          full
-        />
+        <Button title="Start exploring" onPress={handleSubmit} variant="accent" size="lg" loading={loading} disabled={!isFormValid} full />
       </View>
     </ScreenWrapper>
   );
