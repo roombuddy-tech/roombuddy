@@ -9,27 +9,13 @@ import EarningsScreen from '../screens/host/EarningsScreen';
 import ListingsScreen from '../screens/host/ListingsScreen';
 import type { HostTabParamList } from './types';
 
-function PlaceholderScreen({ title }: { title: string }) {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>{title}</Text>
-      <Text style={styles.placeholderSub}>Coming soon</Text>
-    </View>
-  );
-}
-
-function CalendarScreen() { return <PlaceholderScreen title="Calendar" />; }
-function SettingsScreen() { return <PlaceholderScreen title="Settings" />; }
-
 const Tab = createBottomTabNavigator<HostTabParamList>();
 
 const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Today: { active: 'home', inactive: 'home-outline' },
-  Calendar: { active: 'calendar', inactive: 'calendar-outline' },
   Listing: { active: 'document-text', inactive: 'document-text-outline' },
   Bookings: { active: 'book', inactive: 'book-outline' },
   Earnings: { active: 'cash', inactive: 'cash-outline' },
-  Settings: { active: 'settings', inactive: 'settings-outline' },
 };
 
 export default function HostTabs() {
@@ -49,11 +35,9 @@ export default function HostTabs() {
       })}
     >
       <Tab.Screen name="Today" component={DashboardScreen} />
-      <Tab.Screen name="Calendar" component={CalendarScreen} />
       <Tab.Screen name="Listing" component={ListingsScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen name="Earnings" component={EarningsScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import ProfileMenu from '../screens/shared/ProfileMenu';
 import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
 import type { GuestTabParamList } from './types';
 
@@ -16,19 +17,18 @@ function PlaceholderScreen({ title }: { title: string }) {
 }
 
 function HomeScreen() {
-  const { logout, switchRole } = useAuth();
+  const { switchRole, user } = useAuth();
+  const [showProfile, setShowProfile] = useState(false);
+  const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
   return (
     <View style={styles.homeContainer}>
       {/* Top bar */}
       <View style={styles.topBar}>
         <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
-        <View style={styles.topRight}>
-          <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
-          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-            <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
+          <Text style={styles.avatarText}>{initial.toUpperCase()}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Guest/Host toggle */}
@@ -52,13 +52,14 @@ function HomeScreen() {
           <Text style={styles.comingSoonText}>Listings coming soon</Text>
         </View>
       </View>
+
+      <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />
     </View>
   );
 }
 
 function MyStaysScreen() { return <PlaceholderScreen title="My Stays" />; }
 function MessagesScreen() { return <PlaceholderScreen title="Messages" />; }
-function ProfileScreen() { return <PlaceholderScreen title="Profile" />; }
 
 const Tab = createBottomTabNavigator<GuestTabParamList>();
 
@@ -66,7 +67,6 @@ const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: 
   Home: { active: 'search', inactive: 'search-outline' },
   MyStays: { active: 'calendar', inactive: 'calendar-outline' },
   Messages: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
-  Profile: { active: 'person', inactive: 'person-outline' },
 };
 
 export default function GuestTabs() {
@@ -88,7 +88,6 @@ export default function GuestTabs() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Explore' }} />
       <Tab.Screen name="MyStays" component={MyStaysScreen} options={{ tabBarLabel: 'My Stays' }} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -101,8 +100,8 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
   brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
   brandAccent: { color: COLORS.accent },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoutBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF0F0', justifyContent: 'center', alignItems: 'center' },
+  avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
   toggleRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.xl },
   toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: RADIUS.sm },
   toggleActive: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },

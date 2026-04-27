@@ -5,6 +5,9 @@ export const ENDPOINTS = {
     COMPLETE_PROFILE: '/api/users/auth/profile/complete/',
     REFRESH_TOKEN: '/api/users/auth/token/refresh/',
   },
+  USER: {
+    PROFILE: '/api/users/profile/me/',
+  },
   HOST: {
     DASHBOARD: '/api/users/host/dashboard/',
     BOOKINGS: '/api/bookings/host/',

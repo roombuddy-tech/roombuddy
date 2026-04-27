@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import ProfileMenu from '../../screens/shared/ProfileMenu';
 
 interface DashboardData {
   greeting_name: string;
@@ -27,10 +28,14 @@ interface DashboardData {
 }
 
 export default function DashboardScreen() {
-  const { logout, switchRole } = useAuth();
+  const { switchRole, user } = useAuth();
+  const [showProfile, setShowProfile] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Same avatar logic as GuestTabs — uses AuthContext user data only
+  const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
   const fetchDashboard = async () => {
     try {
@@ -67,7 +72,7 @@ export default function DashboardScreen() {
   }
 
   const d = data;
-  const name = d?.greeting_name || 'Host';
+  const name = d?.greeting_name || user?.first_name || 'Host';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -78,14 +83,9 @@ export default function DashboardScreen() {
         {/* Top bar */}
         <View style={styles.topBar}>
           <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
-          <View style={styles.topRight}>
-            <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.avatarBtn} onPress={logout}>
-              <Text style={styles.avatarText}>{name[0]}</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Guest/Host toggle */}
@@ -187,6 +187,8 @@ export default function DashboardScreen() {
 
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />
     </SafeAreaView>
   );
 }
@@ -194,33 +196,25 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
   brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
   brandAccent: { color: COLORS.accent },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
   avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
-
   toggleRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.lg },
   toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: RADIUS.sm },
   toggleActiveHost: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
   toggleText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   toggleEmoji: { fontSize: 14 },
   toggleActiveTextHost: { fontSize: 14, color: COLORS.accent, ...FONTS.semibold },
-
   greeting: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   name: { fontSize: 28, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.lg },
-
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },
   statCard: { width: '48%', borderRadius: RADIUS.md, padding: SPACING.md, ...SHADOW.sm },
   statLabel: { fontSize: 12, ...FONTS.semibold, marginBottom: 4 },
   statValue: { fontSize: 26, ...FONTS.bold, marginBottom: 2 },
   statSub: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
-
   sectionTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
-
   activityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, gap: 12 },
   activityIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   activityContent: { flex: 1 },
@@ -228,9 +222,4 @@ const styles = StyleSheet.create({
   activitySub: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
   viewBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.pill },
   viewBtnText: { color: '#fff', fontSize: 13, ...FONTS.semibold },
-
-  quickActions: { flexDirection: 'row', gap: 12, marginTop: SPACING.lg },
-  quickActionBtn: { flex: 1, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingVertical: SPACING.lg },
-  quickActionIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
-  quickActionText: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
 });
