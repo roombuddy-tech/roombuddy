@@ -127,8 +127,54 @@ class UserProfileResponseSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     display_name = serializers.CharField()
     initials = serializers.CharField()
+    email = serializers.CharField(allow_blank=True)
     city = serializers.CharField(allow_blank=True)
     gender = serializers.CharField(allow_blank=True)
+    date_of_birth = serializers.DateField(allow_null=True)
     phone_verified = serializers.BooleanField()
+    email_verified = serializers.BooleanField()
     aadhaar_verified = serializers.BooleanField()
     member_since = serializers.CharField()
+
+# ─── Edit Profile DTOs ────────────────────────────────────────
+
+class UpdateProfileSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=100, min_length=2, required=False)
+    last_name = serializers.CharField(max_length=100, required=False)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    gender = serializers.ChoiceField(choices=UserProfile.Gender.choices, required=False)
+    city = serializers.CharField(max_length=100, min_length=2, required=False)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+
+
+class UpdateProfileResponseSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    display_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField(allow_blank=True, allow_null=True)
+    gender = serializers.CharField()
+    city = serializers.CharField()
+    date_of_birth = serializers.DateField(allow_null=True)
+
+
+# ─── Email Verification DTOs ─────────────────────────────────
+
+class SendEmailVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class VerifyEmailSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+
+class EmailVerificationResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    email = serializers.CharField()
+
+
+class VerificationStatusResponseSerializer(serializers.Serializer):
+    phone_verified = serializers.BooleanField()
+    email_verified = serializers.BooleanField()
+    email = serializers.CharField(allow_null=True)
+    aadhaar_verified = serializers.BooleanField()

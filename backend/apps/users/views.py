@@ -16,6 +16,12 @@ from apps.users.serializers import (
     ProfileResponseSerializer,
     RefreshResponseSerializer,
     DashboardResponseSerializer,
+    UpdateProfileSerializer,
+    UpdateProfileResponseSerializer,
+    SendEmailVerificationSerializer,
+    VerifyEmailSerializer,
+    EmailVerificationResponseSerializer,
+    VerificationStatusResponseSerializer,
 )
 from apps.users.services import (
     send_otp_to_phone,
@@ -24,6 +30,10 @@ from apps.users.services import (
     refresh_access_token,
     get_host_dashboard,
     get_user_profile,
+    update_user_profile,
+    send_email_verification,
+    verify_email_token,
+    get_verification_status,
     AuthServiceError,
 )
 from common.authentication import JWTAuthentication
@@ -134,4 +144,62 @@ class UserProfileView(APIView):
     @extend_schema(tags=["Auth"], responses={200: UserProfileResponseSerializer})
     def get(self, request):
         result = get_user_profile(request.user)
+        return Response(result, status=status.HTTP_200_OK)
+    
+
+class UpdateProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = UpdateProfileSerializer
+
+    @extend_schema(tags=["Profile"], request=UpdateProfileSerializer, responses={200: UpdateProfileResponseSerializer})
+    def patch(self, request):
+        serializer = UpdateProfileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = update_user_profile(request.user, serializer.validated_data)
+        except AuthServiceError as e:
+            return _error_response(e)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class SendEmailVerificationView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = SendEmailVerificationSerializer
+
+    @extend_schema(tags=["Profile"], request=SendEmailVerificationSerializer, responses={200: EmailVerificationResponseSerializer})
+    def post(self, request):
+        serializer = SendEmailVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = send_email_verification(request.user, serializer.validated_data["email"])
+        except AuthServiceError as e:
+            return _error_response(e)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class VerifyEmailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = VerifyEmailSerializer
+
+    @extend_schema(tags=["Profile"], request=VerifyEmailSerializer, responses={200: EmailVerificationResponseSerializer})
+    def post(self, request):
+        serializer = VerifyEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = verify_email_token(request.user, serializer.validated_data["token"])
+        except AuthServiceError as e:
+            return _error_response(e)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class VerificationStatusView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Profile"], responses={200: VerificationStatusResponseSerializer})
+    def get(self, request):
+        result = get_verification_status(request.user)
         return Response(result, status=status.HTTP_200_OK)

@@ -7,6 +7,10 @@ export const ENDPOINTS = {
   },
   USER: {
     PROFILE: '/api/users/profile/me/',
+    UPDATE_PROFILE: '/api/users/profile/update/',
+    SEND_EMAIL_VERIFICATION: '/api/users/profile/email/send-verification/',
+    VERIFY_EMAIL: '/api/users/profile/email/verify/',
+    VERIFICATION_STATUS: '/api/users/profile/verification-status/',
   },
   HOST: {
     DASHBOARD: '/api/users/host/dashboard/',
