@@ -80,10 +80,8 @@ class OTPCode(models.Model):
         return not self.is_consumed and not self.is_expired and not self.is_max_attempts
 
     def verify(self, otp_code: str) -> bool:
-        """Verify OTP. Increments attempt count. Marks consumed on success."""
         self.attempt_count += 1
         self.save(update_fields=["attempt_count"])
-
         if not self.is_expired and not self.is_consumed and self.attempt_count <= self.max_attempts:
             if self.otp_hash == self.hash_otp(otp_code):
                 self.is_consumed = True
@@ -139,7 +137,6 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name="profile")
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=255, null=True, blank=True)
     gender = models.CharField(max_length=20, choices=Gender.choices)
     profile_photo_url = models.URLField(max_length=2048, null=True, blank=True)
     city = models.CharField(max_length=100)
@@ -156,3 +153,39 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.display_name
+
+
+class EmailVerification(models.Model):
+    """Stores email verification tokens."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_verifications")
+    email = models.EmailField(max_length=255)
+    token_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    is_consumed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "email_verifications"
+        ordering = ["-created_at"]
+
+    @staticmethod
+    def hash_token(token: str) -> str:
+        return hashlib.sha256(token.encode()).hexdigest()
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() > self.expires_at
+
+    def verify(self, token: str) -> bool:
+        if self.is_consumed or self.is_expired:
+            return False
+        if self.token_hash == self.hash_token(token):
+            self.is_consumed = True
+            self.save(update_fields=["is_consumed"])
+            return True
+        return False
+
+    def __str__(self):
+        return f"Email verification for {self.email}"

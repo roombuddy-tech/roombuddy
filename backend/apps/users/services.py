@@ -1,9 +1,11 @@
 from datetime import timedelta
+import secrets
+
 
 from django.db.models import Sum, Avg, Count
 from django.utils import timezone
 
-from apps.users.models import User, OTPCode, UserSession, UserProfile
+from apps.users.models import User, OTPCode, UserSession, UserProfile, EmailVerification
 from apps.bookings.models import Booking
 from apps.reviews.models import Review
 from common.jwt_utils import (
@@ -161,19 +163,24 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
 
 
 def complete_user_profile(user: User, data: dict) -> dict:
-    """Creates or updates user profile. Returns response dict."""
+    """Creates or updates user profile. Email saved to users table."""
+    email = data.get("email") or None
+
     profile, _ = UserProfile.objects.update_or_create(
         user=user,
         defaults={
             "first_name": data["first_name"],
             "last_name": data["last_name"],
-            "email": data.get("email") or None,
             "gender": data["gender"],
             "city": data["city"],
         },
     )
 
-    if not user.is_profile_complete:
+    if email:
+        user.email = email
+        user.is_profile_complete = True
+        user.save(update_fields=["email", "is_profile_complete", "updated_at"])
+    elif not user.is_profile_complete:
         user.is_profile_complete = True
         user.save(update_fields=["is_profile_complete", "updated_at"])
 
@@ -226,6 +233,7 @@ def get_user_profile(user: User) -> dict:
         last_name = profile.last_name
         city = profile.city
         gender = profile.gender
+        date_of_birth = profile.date_of_birth.isoformat() if profile.date_of_birth else None
     except UserProfile.DoesNotExist:
         first_name = ""
         last_name = ""
@@ -244,12 +252,118 @@ def get_user_profile(user: User) -> dict:
         "last_name": last_name,
         "display_name": display_name,
         "initials": initials,
+        "email": user.email or "",
         "city": city,
         "gender": gender,
+        "date_of_birth": date_of_birth,
         "phone_verified": user.phone_verified_at is not None,
+        "email_verified": user.email_verified_at is not None,
         "aadhaar_verified": False,
         "member_since": member_since,
     }
+
+def update_user_profile(user: User, data: dict) -> dict:
+    """Updates profile fields. Email saved to users table."""
+    try:
+        profile = user.profile
+    except UserProfile.DoesNotExist:
+        raise AuthServiceError("Profile not found. Please complete your profile first.", "PROFILE_NOT_FOUND", 404)
+
+    if "first_name" in data:
+        profile.first_name = data["first_name"]
+    if "last_name" in data:
+        profile.last_name = data["last_name"]
+    if "gender" in data:
+        profile.gender = data["gender"]
+    if "city" in data:
+        profile.city = data["city"]
+    if "date_of_birth" in data:
+        profile.date_of_birth = data["date_of_birth"]
+    profile.save()
+
+    if "email" in data:
+        new_email = data["email"] or None
+        if new_email != user.email:
+            user.email = new_email
+            user.email_verified_at = None  # Reset verification when email changes
+            user.save(update_fields=["email", "email_verified_at", "updated_at"])
+
+    return {
+        "user_id": str(user.id),
+        "display_name": profile.display_name,
+        "first_name": profile.first_name,
+        "last_name": profile.last_name,
+        "email": user.email or "",
+        "gender": profile.gender,
+        "city": profile.city,
+        "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+
+    }
+
+def send_email_verification(user: User, email: str) -> dict:
+    """Generates a verification token and sends it to the email."""
+
+    # Rate limit: max 3 per email per hour
+    one_hour_ago = timezone.now() - timedelta(hours=1)
+    recent_count = EmailVerification.objects.filter(
+        user=user, email=email, created_at__gte=one_hour_ago
+    ).count()
+
+    if recent_count >= 3:
+        raise AuthServiceError("Too many verification requests. Try again later.", "RATE_LIMITED", 429)
+
+    # Generate token
+    token = secrets.token_urlsafe(32)
+
+    EmailVerification.objects.create(
+        user=user,
+        email=email,
+        token_hash=EmailVerification.hash_token(token),
+        expires_at=timezone.now() + timedelta(hours=24),
+    )
+
+    # In production: send email via SES/SendGrid
+    # For now: print to console
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[EMAIL VERIFY] Email: {email} | Token: {token}")
+    print(f"\n{'='*50}")
+    print(f"  Email Verification for {email}")
+    print(f"  Token: {token}")
+    print(f"{'='*50}\n")
+
+    return {
+        "message": "Verification email sent",
+        "email": email,
+    }
+
+
+def verify_email_token(user: User, token: str) -> dict:
+    """Verifies the email token. Updates users.email only."""
+    record = EmailVerification.objects.filter(user=user, is_consumed=False).order_by("-created_at").first()
+
+    if not record:
+        raise AuthServiceError("No pending verification found.", "NOT_FOUND", 404)
+    if record.is_expired:
+        raise AuthServiceError("Verification link has expired. Please request a new one.", "EXPIRED", 400)
+    if not record.verify(token):
+        raise AuthServiceError("Invalid verification token.", "INVALID_TOKEN", 400)
+
+    user.email = record.email
+    user.email_verified_at = timezone.now()
+    user.save(update_fields=["email", "email_verified_at", "updated_at"])
+
+    return {"message": "Email verified successfully", "email": record.email}
+
+def get_verification_status(user: User) -> dict:
+    """Returns verification status. Email read from users table."""
+    return {
+        "phone_verified": user.phone_verified_at is not None,
+        "email_verified": user.email_verified_at is not None,
+        "email": user.email or "",
+        "aadhaar_verified": False,
+    }
+
 # ─── Dashboard services ──────────────────────────────────────
 
 def get_host_dashboard(user: User) -> dict:
