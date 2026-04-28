@@ -3,7 +3,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 from apps.users.serializers import UserProfileResponseSerializer
+from django.template.loader import render_to_string
 from apps.users.services import get_user_profile
+from django.http import HttpResponse
+from apps.users.services import verify_email_token
+from apps.users.models import User
 
 from apps.users.serializers import (
     SendOTPSerializer,
@@ -203,3 +207,36 @@ class VerificationStatusView(APIView):
     def get(self, request):
         result = get_verification_status(request.user)
         return Response(result, status=status.HTTP_200_OK)
+    
+class VerifyEmailWebView(APIView):
+    """
+    GET /api/users/profile/email/verify-link/?token=xxx&user_id=xxx
+    Public endpoint. Called when user clicks the verification link in their email.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        token = request.query_params.get("token", "")
+        user_id = request.query_params.get("user_id", "")
+
+        if not token or not user_id:
+            return self._render("emails/verify_error.html", {"message": "Missing verification parameters."})
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return self._render("emails/verify_error.html", {"message": "User not found."})
+
+        try:
+            
+            result = verify_email_token(user, token)
+            return self._render("emails/verify_success.html", {"email": result["email"]})
+        except Exception as e:
+            return self._render("emails/verify_error.html", {"message": str(e)})
+
+    @staticmethod
+    def _render(template_name: str, context: dict) -> HttpResponse:
+        html = render_to_string(template_name, context)
+        return HttpResponse(html, content_type="text/html")

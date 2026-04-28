@@ -1,0 +1,9 @@
+Hi there,
+
+Please verify your email address for RoomBuddy by clicking this link:
+
+{{ verify_link }}
+
+This link expires in 24 hours. If you didn't request this, you can safely ignore this email.
+
+— RoomBuddy

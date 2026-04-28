@@ -8,6 +8,8 @@ from django.utils import timezone
 from apps.users.models import User, OTPCode, UserSession, UserProfile, EmailVerification
 from apps.bookings.models import Booking
 from apps.reviews.models import Review
+from third_party.email import send_verification_email
+
 from common.jwt_utils import (
     generate_access_token,
     generate_refresh_token,
@@ -301,41 +303,24 @@ def update_user_profile(user: User, data: dict) -> dict:
     }
 
 def send_email_verification(user: User, email: str) -> dict:
-    """Generates a verification token and sends it to the email."""
-
-    # Rate limit: max 3 per email per hour
+    """Generates a verification token and sends it via email."""
     one_hour_ago = timezone.now() - timedelta(hours=1)
-    recent_count = EmailVerification.objects.filter(
-        user=user, email=email, created_at__gte=one_hour_ago
-    ).count()
+    recent_count = EmailVerification.objects.filter(user=user, email=email, created_at__gte=one_hour_ago).count()
 
     if recent_count >= 3:
         raise AuthServiceError("Too many verification requests. Try again later.", "RATE_LIMITED", 429)
 
-    # Generate token
     token = secrets.token_urlsafe(32)
-
     EmailVerification.objects.create(
-        user=user,
-        email=email,
+        user=user, email=email,
         token_hash=EmailVerification.hash_token(token),
         expires_at=timezone.now() + timedelta(hours=24),
     )
 
-    # In production: send email via SES/SendGrid
-    # For now: print to console
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"[EMAIL VERIFY] Email: {email} | Token: {token}")
-    print(f"\n{'='*50}")
-    print(f"  Email Verification for {email}")
-    print(f"  Token: {token}")
-    print(f"{'='*50}\n")
+    if not send_verification_email(email, token, str(user.id)):
+        raise AuthServiceError("Failed to send verification email. Please try again.", "EMAIL_SEND_FAILED", 500)
 
-    return {
-        "message": "Verification email sent",
-        "email": email,
-    }
+    return {"message": "Verification email sent", "email": email}
 
 
 def verify_email_token(user: User, token: str) -> dict:
