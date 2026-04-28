@@ -22,13 +22,15 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
   const [status, setStatus] = useState<VerificationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [emailInput, setEmailInput] = useState('');
-  const [tokenInput, setTokenInput] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [verifyingEmail, setVerifyingEmail] = useState(false);
-  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
-    if (visible) fetchStatus();
+    if (visible) {
+      fetchStatus();
+      setEmailSent(false);
+    }
   }, [visible]);
 
   const fetchStatus = async () => {
@@ -52,31 +54,29 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
     setSendingEmail(true);
     try {
       await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, { email: emailInput.trim() });
-      Alert.alert('Sent', 'Verification token sent. Check your backend terminal for the token.');
-      setShowTokenInput(true);
+      setEmailSent(true);
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to send verification.');
+      Alert.alert('Error', err?.response?.data?.error || 'Failed to send verification email.');
     } finally {
       setSendingEmail(false);
     }
   };
 
-  const handleVerifyToken = async () => {
-    if (!tokenInput.trim()) {
-      Alert.alert('Error', 'Please enter the verification token.');
-      return;
-    }
-    setVerifyingEmail(true);
+  const handleCheckStatus = async () => {
+    setCheckingStatus(true);
     try {
-      await api.post(ENDPOINTS.USER.VERIFY_EMAIL, { token: tokenInput.trim() });
-      Alert.alert('Success', 'Email verified successfully!');
-      setShowTokenInput(false);
-      setTokenInput('');
-      fetchStatus();
-    } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Verification failed.');
+      const res = await api.get(ENDPOINTS.USER.VERIFICATION_STATUS);
+      setStatus(res.data);
+      if (res.data.email_verified) {
+        Alert.alert('Verified!', 'Your email has been verified successfully.');
+        setEmailSent(false);
+      } else {
+        Alert.alert('Not yet', 'Email not verified yet. Please check your inbox and click the verification link.');
+      }
+    } catch (err) {
+      console.log('Check status error:', err);
     } finally {
-      setVerifyingEmail(false);
+      setCheckingStatus(false);
     }
   };
 
@@ -131,33 +131,42 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
 
             {!status?.email_verified && (
               <View style={styles.emailSection}>
-                <TextInput
-                  style={styles.input}
-                  value={emailInput}
-                  onChangeText={setEmailInput}
-                  placeholder="Enter email address"
-                  placeholderTextColor={COLORS.textMut}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity style={styles.sendBtn} onPress={handleSendVerification} disabled={sendingEmail}>
-                  <Text style={styles.sendBtnText}>{sendingEmail ? 'Sending...' : 'Send verification'}</Text>
-                </TouchableOpacity>
-
-                {showTokenInput && (
+                {!emailSent ? (
                   <>
                     <TextInput
-                      style={[styles.input, { marginTop: SPACING.sm }]}
-                      value={tokenInput}
-                      onChangeText={setTokenInput}
-                      placeholder="Paste verification token"
+                      style={styles.input}
+                      value={emailInput}
+                      onChangeText={setEmailInput}
+                      placeholder="Enter email address"
                       placeholderTextColor={COLORS.textMut}
+                      keyboardType="email-address"
                       autoCapitalize="none"
                     />
-                    <TouchableOpacity style={[styles.sendBtn, { backgroundColor: COLORS.accent }]} onPress={handleVerifyToken} disabled={verifyingEmail}>
-                      <Text style={styles.sendBtnText}>{verifyingEmail ? 'Verifying...' : 'Verify email'}</Text>
+                    <TouchableOpacity style={styles.sendBtn} onPress={handleSendVerification} disabled={sendingEmail}>
+                      <Text style={styles.sendBtnText}>{sendingEmail ? 'Sending...' : 'Send verification email'}</Text>
                     </TouchableOpacity>
                   </>
+                ) : (
+                  <View style={styles.sentSection}>
+                    <View style={styles.sentIcon}>
+                      <Ionicons name="mail-open-outline" size={32} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.sentTitle}>Check your inbox</Text>
+                    <Text style={styles.sentText}>
+                      We sent a verification link to{'\n'}
+                      <Text style={styles.sentEmail}>{emailInput}</Text>
+                    </Text>
+                    <Text style={styles.sentHint}>Click the link in the email, then tap the button below.</Text>
+
+                    <TouchableOpacity style={styles.checkBtn} onPress={handleCheckStatus} disabled={checkingStatus}>
+                      <Ionicons name="refresh-outline" size={18} color="#fff" />
+                      <Text style={styles.checkBtnText}>{checkingStatus ? 'Checking...' : 'I\'ve verified — check status'}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.resendBtn} onPress={handleSendVerification} disabled={sendingEmail}>
+                      <Text style={styles.resendText}>{sendingEmail ? 'Sending...' : 'Resend email'}</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             )}
@@ -193,15 +202,31 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md },
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   content: { marginTop: SPACING.md },
+
   verifyCard: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   verifyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   verifyContent: { flex: 1 },
   verifyLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   verifyStatus: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
+
   emailSection: { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: 15, color: COLORS.text, ...FONTS.medium, marginBottom: SPACING.sm },
   sendBtn: { backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center' },
   sendBtnText: { color: '#fff', fontSize: 14, ...FONTS.semibold },
+
+  sentSection: { alignItems: 'center', paddingVertical: SPACING.md },
+  sentIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
+  sentTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
+  sentText: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
+  sentEmail: { color: COLORS.text, ...FONTS.semibold },
+  sentHint: { fontSize: 13, color: COLORS.textMut, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.lg },
+
+  checkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: RADIUS.md },
+  checkBtnText: { color: '#fff', fontSize: 14, ...FONTS.semibold },
+
+  resendBtn: { marginTop: SPACING.md },
+  resendText: { fontSize: 14, color: COLORS.primary, ...FONTS.semibold },
+
   infoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: SPACING.md, backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md, marginTop: SPACING.md },
   infoText: { flex: 1, fontSize: 13, color: COLORS.primary, lineHeight: 18 },
 });
