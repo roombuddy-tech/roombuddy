@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ENDPOINTS } from '../../constants/endpoints';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import { ENDPOINTS } from '../../constants/endpoints';
 import EditProfileScreen from './EditProfileScreen';
-import VerificationScreen from './VerificationScreen';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
-import PaymentMethodsScreen from './PaymentMethodsScreen';
 import HelpSupportScreen from './HelpSupportScreen';
+import PaymentMethodsScreen from './PaymentMethodsScreen';
 import TermsPrivacyScreen from './TermsPrivacyScreen';
+import VerificationScreen from './VerificationScreen';
 
 interface ProfileMenuProps {
   visible: boolean;
@@ -29,6 +30,7 @@ interface ProfileData {
   email_verified: boolean;
   aadhaar_verified: boolean;
   member_since: string;
+  profile_photo_url: string | null;
 }
 
 type SubScreen = 'none' | 'edit_profile' | 'verification' | 'payment' | 'help' | 'terms';
@@ -57,6 +59,60 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
       setLoading(false);
     }
   };
+
+const handlePickPhoto = async () => {
+    Alert.alert('Profile photo', 'Choose an option', [
+      {
+        text: 'Take photo',
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) {
+            Alert.alert('Permission needed', 'Go to Settings and enable camera access for Expo Go.');
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled) uploadPhoto(result.assets[0].uri);
+        },
+      },
+      {
+        text: 'Choose from gallery',
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled) uploadPhoto(result.assets[0].uri);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const uploadPhoto = async (uri: string) => {
+    const formData = new FormData();
+    formData.append('image', {
+      uri,
+      type: 'image/jpeg',
+      name: 'profile.jpg',
+    } as any);
+
+    try {
+      await api.post(ENDPOINTS.USER.UPLOAD_PHOTO, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      fetchProfile();
+      Alert.alert('Success', 'Profile photo updated.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.error || 'Failed to upload photo.');
+    }
+  };
+
 
   const handleLogout = () => {
     onClose();
@@ -104,10 +160,14 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
 
             <View style={styles.profileHeader}>
               <View style={styles.avatarWrapper}>
-                <View style={styles.avatar}>
+               <View style={styles.avatar}>
+                {profile?.profile_photo_url ? (
+                  <Image source={{ uri: profile.profile_photo_url }} style={styles.avatarImage} />
+                ) : (
                   <Text style={styles.avatarInitials}>{profile?.initials || 'U'}</Text>
-                </View>
-                <TouchableOpacity style={styles.editBadge}>
+                )}
+              </View>
+                <TouchableOpacity style={styles.editBadge} onPress={handlePickPhoto}>
                   <Ionicons name="camera" size={14} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -210,6 +270,7 @@ const styles = StyleSheet.create({
   avatarWrapper: { position: 'relative', marginBottom: SPACING.md },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.border },
   avatarInitials: { fontSize: 28, ...FONTS.bold, color: COLORS.primary },
+  avatarImage: { width: 76, height: 76, borderRadius: 38 },
   editBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
   userName: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
   userMeta: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.md },

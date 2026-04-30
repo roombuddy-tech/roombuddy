@@ -17,6 +17,7 @@ from apps.users.views import (
     AddUPIView,
     DeletePayoutAccountView,
     SetPrimaryPayoutView,
+    UploadProfilePhotoView,
 )
 
 urlpatterns = [
@@ -29,6 +30,7 @@ urlpatterns = [
     # Profile
     path("profile/me/", UserProfileView.as_view(), name="user-profile"),
     path("profile/update/", UpdateProfileView.as_view(), name="update-profile"),
+    path("profile/upload-photo/", UploadProfilePhotoView.as_view(), name="upload-profile-photo"),
     path("profile/email/send-verification/", SendEmailVerificationView.as_view(), name="send-email-verification"),
     path("profile/email/verify/", VerifyEmailView.as_view(), name="verify-email"),
     path("profile/email/verify-link/", VerifyEmailWebView.as_view(), name="verify-email-web"),

@@ -8,6 +8,7 @@ from apps.users.services import get_user_profile
 from django.http import HttpResponse
 from apps.users.services import verify_email_token
 from apps.users.models import User
+from rest_framework.parsers import MultiPartParser
 
 from apps.users.serializers import (
     SendOTPSerializer,
@@ -30,6 +31,7 @@ from apps.users.serializers import (
     AddUPISerializer,
     PayoutAccountsListResponseSerializer,
     PayoutAccountResponseSerializer,
+    UploadProfilePhotoResponseSerializer,
 )
 from apps.users.services import (
     send_otp_to_phone,
@@ -48,6 +50,7 @@ from apps.users.services import (
     add_upi_account,
     delete_payout_account,
     set_primary_payout_account,
+    upload_profile_photo,
 )
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
@@ -310,3 +313,25 @@ class SetPrimaryPayoutView(APIView):
         except AuthServiceError as e:
             return _error_response(e)
         return Response(result)
+    
+class UploadProfilePhotoView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(tags=["Profile"], responses={200: UploadProfilePhotoResponseSerializer})
+    def post(self, request):
+        if "image" not in request.FILES:
+            return Response(
+                {"error": "No image file provided. Send as 'image' in form-data.", "code": "NO_FILE"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        image_file = request.FILES["image"]
+
+        try:
+            result = upload_profile_photo(request.user, image_file)
+        except AuthServiceError as e:
+            return _error_response(e)
+
+        return Response(result, status=status.HTTP_200_OK)

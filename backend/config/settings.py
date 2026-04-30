@@ -179,3 +179,6 @@ LOGGING = {
         "third_party": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

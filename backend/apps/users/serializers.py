@@ -128,6 +128,7 @@ class UserProfileResponseSerializer(serializers.Serializer):
     display_name = serializers.CharField()
     initials = serializers.CharField()
     email = serializers.CharField(allow_blank=True)
+    profile_photo_url = serializers.CharField(allow_null=True)
     city = serializers.CharField(allow_blank=True)
     gender = serializers.CharField(allow_blank=True)
     date_of_birth = serializers.DateField(allow_null=True)
@@ -223,3 +224,9 @@ class PayoutAccountResponseSerializer(serializers.Serializer):
 class PayoutAccountsListResponseSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     results = PayoutAccountResponseSerializer(many=True)
+
+# ─── Photo Upload DTOs ────────────────────────────────────────
+
+class UploadProfilePhotoResponseSerializer(serializers.Serializer):
+    profile_photo_url = serializers.CharField()
+    thumbnail_url = serializers.CharField()
