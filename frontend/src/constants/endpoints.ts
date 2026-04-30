@@ -11,6 +11,9 @@ export const ENDPOINTS = {
     SEND_EMAIL_VERIFICATION: '/api/users/profile/email/send-verification/',
     VERIFY_EMAIL: '/api/users/profile/email/verify/',
     VERIFICATION_STATUS: '/api/users/profile/verification-status/',
+    PAYOUT_ACCOUNTS: '/api/users/profile/payout-accounts/',
+    ADD_BANK: '/api/users/profile/payout-accounts/add-bank/',
+    ADD_UPI: '/api/users/profile/payout-accounts/add-upi/',
   },
   HOST: {
     DASHBOARD: '/api/users/host/dashboard/',
@@ -18,7 +21,6 @@ export const ENDPOINTS = {
     EARNINGS: '/api/bookings/host/earnings/',
     LISTINGS: '/api/listings/host/',
     PROPERTIES: '/api/properties/',
-    CREATE_LISTING: '/api/listings/',
   },
   GUEST: {
     SEARCH: '/api/listings/search/',

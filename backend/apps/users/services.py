@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.users.models import User, OTPCode, UserSession, UserProfile, EmailVerification
 from apps.bookings.models import Booking
 from apps.reviews.models import Review
+from apps.users.models import PayoutAccount
 from third_party.email import send_verification_email
 
 from common.jwt_utils import (
@@ -466,4 +467,97 @@ def _get_today_activity(user: User, today) -> dict:
         "check_ins": check_ins,
         "check_outs": check_outs,
         "recent_reviews": recent_reviews,
+    }
+
+# ─── Payout Account services ─────────────────────────────────
+
+def get_payout_accounts(user: User) -> list[dict]:
+    """Returns all payout accounts for a user."""
+
+    accounts = PayoutAccount.objects.filter(user=user)
+    return [_payout_to_dict(a) for a in accounts]
+
+
+def add_bank_account(user: User, data: dict) -> dict:
+    """Adds a bank account for payouts."""
+    
+
+    # If first account, make it primary
+    has_accounts = PayoutAccount.objects.filter(user=user).exists()
+
+    account = PayoutAccount.objects.create(
+        user=user,
+        account_type=PayoutAccount.AccountType.BANK,
+        account_holder_name=data["account_holder_name"],
+        account_number=data["account_number"],
+        ifsc_code=data["ifsc_code"].upper(),
+        bank_name=data["bank_name"],
+        is_primary=not has_accounts,
+    )
+    return _payout_to_dict(account)
+
+
+def add_upi_account(user: User, data: dict) -> dict:
+    """Adds a UPI ID for payouts."""
+
+    has_accounts = PayoutAccount.objects.filter(user=user).exists()
+
+    account = PayoutAccount.objects.create(
+        user=user,
+        account_type=PayoutAccount.AccountType.UPI,
+        upi_id=data["upi_id"].lower(),
+        is_primary=not has_accounts,
+    )
+    return _payout_to_dict(account)
+
+
+def delete_payout_account(user: User, account_id: str) -> None:
+    """Deletes a payout account."""
+
+    try:
+        account = PayoutAccount.objects.get(id=account_id, user=user)
+    except PayoutAccount.DoesNotExist:
+        raise AuthServiceError("Account not found.", "NOT_FOUND", 404)
+
+    was_primary = account.is_primary
+    account.delete()
+
+    # If deleted the primary, make the next one primary
+    if was_primary:
+        next_account = PayoutAccount.objects.filter(user=user).first()
+        if next_account:
+            next_account.is_primary = True
+            next_account.save(update_fields=["is_primary"])
+
+
+def set_primary_payout_account(user: User, account_id: str) -> dict:
+    """Sets a payout account as primary."""
+
+    try:
+        account = PayoutAccount.objects.get(id=account_id, user=user)
+    except PayoutAccount.DoesNotExist:
+        raise AuthServiceError("Account not found.", "NOT_FOUND", 404)
+
+    # Unset all, then set this one
+    PayoutAccount.objects.filter(user=user).update(is_primary=False)
+    account.is_primary = True
+    account.save(update_fields=["is_primary"])
+    return _payout_to_dict(account)
+
+
+def _payout_to_dict(account) -> dict:
+    """Convert PayoutAccount to response dict."""
+    masked = ""
+    if account.account_number and len(account.account_number) >= 4:
+        masked = "****" + account.account_number[-4:]
+
+    return {
+        "id": str(account.id),
+        "account_type": account.account_type,
+        "is_primary": account.is_primary,
+        "account_holder_name": account.account_holder_name,
+        "account_number_masked": masked,
+        "ifsc_code": account.ifsc_code,
+        "bank_name": account.bank_name,
+        "upi_id": account.upi_id,
     }
