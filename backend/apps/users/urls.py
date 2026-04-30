@@ -10,8 +10,13 @@ from apps.users.views import (
     UpdateProfileView,
     SendEmailVerificationView,
     VerifyEmailView,
-    VerificationStatusView,
     VerifyEmailWebView,
+    VerificationStatusView,
+    PayoutAccountsListView,
+    AddBankAccountView,
+    AddUPIView,
+    DeletePayoutAccountView,
+    SetPrimaryPayoutView,
 )
 
 urlpatterns = [
@@ -28,6 +33,13 @@ urlpatterns = [
     path("profile/email/verify/", VerifyEmailView.as_view(), name="verify-email"),
     path("profile/email/verify-link/", VerifyEmailWebView.as_view(), name="verify-email-web"),
     path("profile/verification-status/", VerificationStatusView.as_view(), name="verification-status"),
+
+    # Payout accounts
+    path("profile/payout-accounts/", PayoutAccountsListView.as_view(), name="payout-accounts-list"),
+    path("profile/payout-accounts/add-bank/", AddBankAccountView.as_view(), name="add-bank-account"),
+    path("profile/payout-accounts/add-upi/", AddUPIView.as_view(), name="add-upi"),
+    path("profile/payout-accounts/<uuid:account_id>/delete/", DeletePayoutAccountView.as_view(), name="delete-payout-account"),
+    path("profile/payout-accounts/<uuid:account_id>/set-primary/", SetPrimaryPayoutView.as_view(), name="set-primary-payout"),
 
     # Host
     path("host/dashboard/", HostDashboardView.as_view(), name="host-dashboard"),

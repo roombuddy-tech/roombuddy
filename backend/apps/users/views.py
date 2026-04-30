@@ -26,6 +26,10 @@ from apps.users.serializers import (
     VerifyEmailSerializer,
     EmailVerificationResponseSerializer,
     VerificationStatusResponseSerializer,
+    AddBankAccountSerializer,
+    AddUPISerializer,
+    PayoutAccountsListResponseSerializer,
+    PayoutAccountResponseSerializer,
 )
 from apps.users.services import (
     send_otp_to_phone,
@@ -39,6 +43,11 @@ from apps.users.services import (
     verify_email_token,
     get_verification_status,
     AuthServiceError,
+    get_payout_accounts,
+    add_bank_account,
+    add_upi_account,
+    delete_payout_account,
+    set_primary_payout_account,
 )
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
@@ -241,3 +250,63 @@ class VerifyEmailWebView(APIView):
     def _render(template_name: str, context: dict) -> HttpResponse:
         html = render_to_string(template_name, context)
         return HttpResponse(html, content_type="text/html")
+    
+
+class PayoutAccountsListView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Profile"], responses={200: PayoutAccountsListResponseSerializer})
+    def get(self, request):
+        results = get_payout_accounts(request.user)
+        return Response({"count": len(results), "results": results})
+
+
+class AddBankAccountView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = AddBankAccountSerializer
+
+    @extend_schema(tags=["Profile"], request=AddBankAccountSerializer, responses={201: PayoutAccountResponseSerializer})
+    def post(self, request):
+        serializer = AddBankAccountSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = add_bank_account(request.user, serializer.validated_data)
+        return Response(result, status=status.HTTP_201_CREATED)
+
+class AddUPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = AddUPISerializer
+
+    @extend_schema(tags=["Profile"], request=AddUPISerializer, responses={201: PayoutAccountResponseSerializer})
+    def post(self, request):
+        serializer = AddUPISerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = add_upi_account(request.user, serializer.validated_data)
+        return Response(result, status=status.HTTP_201_CREATED)
+
+
+class DeletePayoutAccountView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Profile"])
+    def delete(self, request, account_id):
+        try:
+            delete_payout_account(request.user, account_id)
+        except AuthServiceError as e:
+            return _error_response(e)
+        return Response({"message": "Account deleted"}, status=status.HTTP_200_OK)
+
+class SetPrimaryPayoutView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Profile"], responses={200: PayoutAccountResponseSerializer})
+    def post(self, request, account_id):
+        try:
+            result = set_primary_payout_account(request.user, account_id)
+        except AuthServiceError as e:
+            return _error_response(e)
+        return Response(result)

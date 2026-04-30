@@ -8,6 +8,9 @@ import { ENDPOINTS } from '../../constants/endpoints';
 import EditProfileScreen from './EditProfileScreen';
 import VerificationScreen from './VerificationScreen';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
+import PaymentMethodsScreen from './PaymentMethodsScreen';
+import HelpSupportScreen from './HelpSupportScreen';
+import TermsPrivacyScreen from './TermsPrivacyScreen';
 
 interface ProfileMenuProps {
   visible: boolean;
@@ -28,7 +31,7 @@ interface ProfileData {
   member_since: string;
 }
 
-type SubScreen = 'none' | 'edit_profile' | 'verification';
+type SubScreen = 'none' | 'edit_profile' | 'verification' | 'payment' | 'help' | 'terms';
 
 export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
   const { logout } = useAuth();
@@ -73,6 +76,19 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
     if (activeScreen === 'verification') {
       return <VerificationScreen visible={true} onClose={handleSubScreenClose} />;
     }
+
+    if (activeScreen === 'payment') {
+      return <PaymentMethodsScreen visible={true} onClose={handleSubScreenClose} />;
+    }
+
+    if (activeScreen === 'help') {
+      return <HelpSupportScreen visible={true} onClose={handleSubScreenClose} />;
+    }
+
+    if (activeScreen === 'terms') {
+      return <TermsPrivacyScreen visible={true} onClose={handleSubScreenClose} />;
+    }
+
 
     return (
       <SafeAreaView style={styles.container}>
@@ -145,7 +161,7 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
                 <Ionicons name="chevron-forward" size={18} color={COLORS.textMut} />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Coming soon', 'Payment methods will be available soon.')}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setActiveScreen('payment')}>
                 <View style={styles.menuLeft}>
                   <Ionicons name="card-outline" size={22} color={COLORS.primary} />
                   <Text style={styles.menuLabel}>Payment methods</Text>
@@ -153,7 +169,7 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
                 <Ionicons name="chevron-forward" size={18} color={COLORS.textMut} />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Help & support', 'Email us at support@roombuddy.co.in')}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setActiveScreen('help')}>
                 <View style={styles.menuLeft}>
                   <Ionicons name="help-circle-outline" size={22} color={COLORS.accent} />
                   <Text style={styles.menuLabel}>Help & support</Text>
@@ -161,7 +177,7 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
                 <Ionicons name="chevron-forward" size={18} color={COLORS.textMut} />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Terms & privacy', 'Terms of Service and Privacy Policy will be available on our website.')}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setActiveScreen('terms')}>
                 <View style={styles.menuLeft}>
                   <Ionicons name="document-text-outline" size={22} color={COLORS.primary} />
                   <Text style={styles.menuLabel}>Terms & privacy</Text>

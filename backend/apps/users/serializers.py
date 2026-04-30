@@ -178,3 +178,48 @@ class VerificationStatusResponseSerializer(serializers.Serializer):
     email_verified = serializers.BooleanField()
     email = serializers.CharField(allow_null=True)
     aadhaar_verified = serializers.BooleanField()
+
+# ─── Payout Account DTOs ──────────────────────────────────────
+
+class AddBankAccountSerializer(serializers.Serializer):
+    account_holder_name = serializers.CharField(max_length=200, min_length=2)
+    account_number = serializers.CharField(max_length=20, min_length=8)
+    confirm_account_number = serializers.CharField(max_length=20)
+    ifsc_code = serializers.CharField(max_length=11, min_length=11)
+    bank_name = serializers.CharField(max_length=100)
+
+    def validate_ifsc_code(self, value):
+        value = value.upper()
+        if len(value) != 11 or not value[:4].isalpha() or value[4] != '0':
+            raise serializers.ValidationError("Enter a valid 11-character IFSC code (e.g. SBIN0001234).")
+        return value
+
+    def validate(self, data):
+        if data["account_number"] != data["confirm_account_number"]:
+            raise serializers.ValidationError({"confirm_account_number": "Account numbers do not match."})
+        return data
+
+
+class AddUPISerializer(serializers.Serializer):
+    upi_id = serializers.CharField(max_length=100)
+
+    def validate_upi_id(self, value):
+        if '@' not in value:
+            raise serializers.ValidationError("Enter a valid UPI ID (e.g. name@upi or name@bank).")
+        return value.lower()
+
+
+class PayoutAccountResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    account_type = serializers.CharField()
+    is_primary = serializers.BooleanField()
+    account_holder_name = serializers.CharField(allow_null=True)
+    account_number_masked = serializers.CharField()
+    ifsc_code = serializers.CharField(allow_null=True)
+    bank_name = serializers.CharField(allow_null=True)
+    upi_id = serializers.CharField(allow_null=True)
+
+
+class PayoutAccountsListResponseSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = PayoutAccountResponseSerializer(many=True)
