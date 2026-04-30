@@ -217,6 +217,7 @@ class VerifyEmailWebView(APIView):
     authentication_classes = []
     permission_classes = []
 
+    @extend_schema(tags=["Profile"])
     def get(self, request):
         token = request.query_params.get("token", "")
         user_id = request.query_params.get("user_id", "")
