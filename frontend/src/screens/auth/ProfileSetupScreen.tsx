@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Image } from 'react-native';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
 import { authService } from '../../services/auth';
@@ -7,6 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { isValidEmail } from '../../utils/validators';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
+import api from '../../services/api';
+
 
 type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
 
@@ -24,13 +27,14 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const [gender, setGender] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const nameParts = fullName.trim().split(/\s+/);
   const firstName = nameParts[0] || '';
   const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
   const isFormValid = firstName.length >= 2 && gender && city.trim().length >= 2;
 
-  const handleSubmit = async () => {
+ const handleSubmit = async () => {
     if (!isFormValid) return;
 
     if (email && !isValidEmail(email)) {
@@ -48,12 +52,69 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         city: city.trim(),
       });
 
-      await completeProfile(result);
+      // Upload photo if selected
+      if (photoUri) {
+        try {
+          const formData = new FormData();
+          formData.append('image', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'profile.jpg',
+          } as any);
+          await api.post('/api/users/profile/upload-photo/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        } catch (photoErr) {
+          console.log('Photo upload error (non-blocking):', photoErr);
+        }
+      }
+
+      await completeProfile({
+        first_name: firstName,
+        last_name: lastName || firstName,
+        display_name: `${firstName} ${lastName || firstName}`.trim(),
+        city: city.trim(),
+        gender,
+      });
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to save profile.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePickPhoto = () => {
+    Alert.alert('Profile photo', 'Choose an option', [
+      {
+        text: 'Take photo',
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) {
+            Alert.alert('Permission needed', 'Go to Settings and enable camera access for Expo Go.');
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled) setPhotoUri(result.assets[0].uri);
+        },
+      },
+      {
+        text: 'Choose from gallery',
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled) setPhotoUri(result.assets[0].uri);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   return (
@@ -67,11 +128,15 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         <Text style={styles.title}>Complete your profile</Text>
 
         {/* Photo — optional */}
-        <TouchableOpacity style={styles.photoSection}>
+        <TouchableOpacity style={styles.photoSection} onPress={handlePickPhoto}>
           <View style={styles.photoCircle}>
-            <Text style={styles.photoIcon}>📷</Text>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.photoImage} />
+            ) : (
+              <Text style={styles.photoIcon}>📷</Text>
+            )}
           </View>
-          <Text style={styles.photoLabel}>Add photo</Text>
+          <Text style={styles.photoLabel}>{photoUri ? 'Change photo' : 'Add photo'}</Text>
         </TouchableOpacity>
 
         {/* Full name */}
@@ -163,4 +228,6 @@ const styles = StyleSheet.create({
   noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: SPACING.md, backgroundColor: COLORS.warm, borderRadius: RADIUS.md, marginBottom: SPACING.xl },
   noteIcon: { fontSize: 16 },
   noteText: { flex: 1, fontSize: 13, color: COLORS.accent, lineHeight: 18 },
+  photoImage: { width: 78, height: 78, borderRadius: 39 },
+
 });

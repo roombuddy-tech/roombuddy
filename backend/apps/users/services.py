@@ -10,6 +10,8 @@ from apps.bookings.models import Booking
 from apps.reviews.models import Review
 from apps.users.models import PayoutAccount
 from third_party.email import send_verification_email
+from third_party.storage import upload_image, delete_image, StorageError
+
 
 from common.jwt_utils import (
     generate_access_token,
@@ -256,6 +258,7 @@ def get_user_profile(user: User) -> dict:
         "display_name": display_name,
         "initials": initials,
         "email": user.email or "",
+        "profile_photo_url": profile.profile_photo_url if first_name else None,
         "city": city,
         "gender": gender,
         "date_of_birth": date_of_birth,
@@ -560,4 +563,37 @@ def _payout_to_dict(account) -> dict:
         "ifsc_code": account.ifsc_code,
         "bank_name": account.bank_name,
         "upi_id": account.upi_id,
+    }
+
+def upload_profile_photo(user: User, image_file) -> dict:
+    """Upload user profile photo to storage. Returns URLs."""
+
+    # Delete old photo if exists
+    try:
+        profile = user.profile
+        if profile.profile_photo_url:
+            old_key = profile.profile_photo_url.split("/media/")[-1] if "/media/" in profile.profile_photo_url else None
+            if not old_key and "s3" in profile.profile_photo_url:
+                old_key = "/".join(profile.profile_photo_url.split("/")[4:])
+            if old_key:
+                delete_image(old_key)
+    except UserProfile.DoesNotExist:
+        raise AuthServiceError("Profile not found. Complete your profile first.", "PROFILE_NOT_FOUND", 404)
+
+    try:
+        result = upload_image(
+            file_obj=image_file,
+            folder=f"profiles/{user.id}",
+            max_width=800,
+        )
+    except StorageError as e:
+        raise AuthServiceError(e.message, "UPLOAD_FAILED", 400)
+
+    # Update profile
+    profile.profile_photo_url = result["url"]
+    profile.save(update_fields=["profile_photo_url", "updated_at"])
+
+    return {
+        "profile_photo_url": result["url"],
+        "thumbnail_url": result["thumbnail_url"],
     }
