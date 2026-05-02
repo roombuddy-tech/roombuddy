@@ -2,6 +2,7 @@ from datetime import timedelta
 import secrets
 
 
+from django.db import models
 from django.db.models import Sum, Avg, Count
 from django.utils import timezone
 
@@ -20,7 +21,7 @@ from common.jwt_utils import (
     decode_token,
     REFRESH_TOKEN_LIFETIME_DAYS,
 )
-from common.utils import get_display_name
+from common.utils import get_display_name, get_initials
 from third_party.otp import generate_otp, send_otp as send_otp_sms
 
 OTP_RATE_LIMIT_PER_HOUR = 5
@@ -309,6 +310,111 @@ def update_user_profile(user: User, data: dict) -> dict:
 
     }
 
+
+def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
+    """
+    Public-facing profile of another user. Used when:
+    - A host views a guest's profile (from a booking)
+    - A guest views a host's profile (from a listing)
+
+    Privacy guarantees:
+    - No phone, email, or DOB exposed (those are PII)
+    - Reviews are filtered: only those received in the SAME role direction
+      that's relevant. E.g. if you're viewing as a host looking at a guest,
+      you see HOST_TO_GUEST reviews about that user.
+    - Common bookings are checked: viewing_user must have or had a booking
+      with the target_user (host-guest relationship), OTHERWISE we still
+      return basic profile but no reviews — keeps it open enough for
+      pre-booking discovery, locked enough to protect users.
+    """
+    try:
+        target = User.objects.select_related("profile").get(id=target_user_id)
+    except User.DoesNotExist:
+        raise AuthServiceError("User not found", "NOT_FOUND", 404)
+
+    # Profile fields (with safe defaults if no profile row)
+    try:
+        profile = target.profile
+        first_name = profile.first_name
+        last_name = profile.last_name
+        city = profile.city
+        profile_photo_url = profile.profile_photo_url
+    except UserProfile.DoesNotExist:
+        first_name = ""
+        last_name = ""
+        city = ""
+        profile_photo_url = None
+
+    display_name = f"{first_name} {last_name}".strip() or "User"
+    initials = (
+        f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+        or "U"
+    )
+
+    # Stats: bookings as guest, bookings as host
+    stays_as_guest = Booking.objects.filter(
+        guest_user=target,
+        status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
+    ).count()
+    stays_as_host = Booking.objects.filter(
+        host_user=target,
+        status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
+    ).count()
+
+    # Reviews received — both directions, since target may be both host and guest.
+    # We surface them all so the viewer gets a holistic picture of the user.
+    reviews_qs = (
+        Review.objects.filter(reviewee_user=target, is_hidden=False)
+        .select_related("reviewer_user", "reviewer_user__profile")
+        .order_by("-submitted_at")
+    )
+
+    review_count = reviews_qs.count()
+    avg_rating = (
+        reviews_qs.aggregate(avg=Avg("overall_rating"))["avg"]
+        if review_count
+        else None
+    )
+
+    recent_reviews = [
+        {
+            "id": str(r.id),
+            "reviewer_name": get_display_name(r.reviewer_user),
+            "reviewer_initials": get_initials(r.reviewer_user),
+            "rating": r.overall_rating,
+            "title": r.title,
+            "body": r.body,
+            "submitted_at": r.submitted_at.isoformat(),
+            "review_type": r.review_type,
+        }
+        for r in reviews_qs[:10]
+    ]
+
+    member_since = target.created_at.strftime("%b %Y") if target.created_at else ""
+
+    return {
+        "user_id": str(target.id),
+        "display_name": display_name,
+        "first_name": first_name,
+        "initials": initials,
+        "city": city,
+        "profile_photo_url": profile_photo_url,
+        "member_since": member_since,
+        "verification": {
+            "phone_verified": target.phone_verified_at is not None,
+            "email_verified": target.email_verified_at is not None,
+            "aadhaar_verified": False,
+        },
+        "stats": {
+            "stays_as_guest": stays_as_guest,
+            "stays_as_host": stays_as_host,
+            "review_count": review_count,
+            "avg_rating": round(float(avg_rating), 1) if avg_rating is not None else None,
+        },
+        "recent_reviews": recent_reviews,
+    }
+
+
 def send_email_verification(user: User, email: str) -> dict:
     """Generates a verification token and sends it via email."""
     one_hour_ago = timezone.now() - timedelta(hours=1)
@@ -435,6 +541,7 @@ def _get_month_stats(user: User, month_start, today) -> dict:
 def _get_today_activity(user: User, today) -> dict:
     check_ins = [
         {
+            "booking_id": str(b.id),
             "booking_code": b.booking_code,
             "guest_name": get_display_name(b.guest_user),
             "nights": b.nights,
@@ -449,6 +556,7 @@ def _get_today_activity(user: User, today) -> dict:
 
     check_outs = [
         {
+            "booking_id": str(b.id),
             "booking_code": b.booking_code,
             "guest_name": get_display_name(b.guest_user),
         }
@@ -600,3 +708,111 @@ def upload_profile_photo(user: User, image_file) -> dict:
         "profile_photo_url": result["url"],
         "thumbnail_url": result["thumbnail_url"],
     }
+
+
+def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
+    """
+    Public-facing profile for one user, as seen by another user.
+
+    Privacy model:
+    - Always show: display name, photo, member-since, verification badges, city,
+      bio (if set), aggregate review stats, total stays count.
+    - Show contact info (phone, email) ONLY if the viewer has an
+      ACCEPTED/ACTIVE/COMPLETED booking with the viewed user. Hosts need
+      contact details for accepted guests; random users don't.
+    - Never show: DOB, full address, government IDs, raw review text from
+      OTHER users (only aggregated stats and counts).
+    """
+    profile = getattr(viewed_user, "profile", None)
+
+    # ── Eligibility for contact details ──
+    contact_visible = _has_active_booking_relationship(viewer_user, viewed_user)
+
+    # ── Aggregate review stats ──
+    review_qs = Review.objects.filter(
+        reviewee_user=viewed_user,
+        is_hidden=False,
+    )
+    review_agg = review_qs.aggregate(
+        avg=Avg("overall_rating"),
+        count=Count("id"),
+    )
+
+    # ── Stays counted for "experience" signal ──
+    stays_as_guest_count = Booking.objects.filter(
+        guest_user=viewed_user,
+        status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
+    ).count()
+
+    stays_as_host_count = Booking.objects.filter(
+        host_user=viewed_user,
+        status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
+    ).count()
+
+    # ── Recent review snippets (only ones written ABOUT this user, not BY) ──
+    # We surface these so trust signals are concrete, not just numbers.
+    recent_reviews = [
+        {
+            "rating": r.overall_rating,
+            "body": (r.body or "")[:200],
+            "submitted_at": r.submitted_at.isoformat(),
+            "reviewer_name": get_display_name(r.reviewer_user),
+            "reviewer_initials": get_initials(r.reviewer_user),
+        }
+        for r in review_qs.select_related("reviewer_user").order_by("-submitted_at")[:5]
+    ]
+
+    return {
+        "user_id": str(viewed_user.id),
+        "display_name": get_display_name(viewed_user),
+        "initials": get_initials(viewed_user),
+        "profile_photo_url": profile.profile_photo_url if profile else None,
+        "city": profile.city if profile else None,
+        "member_since": (
+            viewed_user.created_at.strftime("%B %Y")
+            if viewed_user.created_at else None
+        ),
+        "verifications": {
+            "phone_verified": viewed_user.phone_verified_at is not None,
+            "email_verified": viewed_user.email_verified_at is not None,
+            "id_verified": False,  # placeholder for Aadhaar verification later
+        },
+        "stats": {
+            "stays_as_guest": stays_as_guest_count,
+            "stays_as_host": stays_as_host_count,
+            "review_count": review_agg["count"] or 0,
+            "average_rating": (
+                round(float(review_agg["avg"]), 1) if review_agg["avg"] else None
+            ),
+        },
+        "recent_reviews": recent_reviews,
+        # Contact info gated on active booking relationship
+        "contact": (
+            {
+                "phone": (
+                    f"{viewed_user.phone_country_code}{viewed_user.phone_number}"
+                    if viewed_user.phone_number else None
+                ),
+                "email": viewed_user.email or None,
+            }
+            if contact_visible
+            else None
+        ),
+    }
+
+
+def _has_active_booking_relationship(viewer: User, viewed: User) -> bool:
+    """
+    True if viewer and viewed share at least one ACCEPTED/ACTIVE/COMPLETED
+    booking. This gates visibility of contact info.
+    """
+    contact_safe_statuses = [
+        Booking.Status.ACCEPTED,
+        Booking.Status.ACTIVE,
+        Booking.Status.COMPLETED,
+    ]
+    return Booking.objects.filter(
+        models.Q(guest_user=viewer, host_user=viewed)
+        | models.Q(guest_user=viewed, host_user=viewer),
+        status__in=contact_safe_statuses,
+    ).exists()

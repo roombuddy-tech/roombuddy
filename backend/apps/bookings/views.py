@@ -18,6 +18,7 @@ from apps.bookings.services import (
     BookingConflictError,
     cancel_booking,
     create_booking,
+    get_booking_detail,
     get_host_bookings,
     get_host_earnings,
     quote_booking,
@@ -118,6 +119,38 @@ class CancelBookingView(APIView):
             "payment_status": booking.payment_status,
             "refund_amount": float(booking.refund_amount or 0),
         })
+
+
+class BookingDetailView(APIView):
+    """
+    GET full details of a single booking.
+
+    Authorisation: only the booking's guest or host can fetch.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Booking"], responses={200: dict})
+    def get(self, request, booking_id):
+        try:
+            booking = (
+                Booking.objects
+                .select_related("guest_user", "host_user", "listing")
+                .get(id=booking_id)
+            )
+        except Booking.DoesNotExist:
+            return Response(
+                {"error": "Booking not found", "code": ErrorCode.NOT_FOUND},
+                status=http_status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.user.id not in (booking.guest_user_id, booking.host_user_id):
+            return Response(
+                {"error": "Not allowed", "code": ErrorCode.FORBIDDEN},
+                status=http_status.HTTP_403_FORBIDDEN,
+            )
+
+        return Response(get_booking_detail(booking))
 
 
 class HostBookingsListView(APIView):

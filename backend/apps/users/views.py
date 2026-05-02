@@ -51,6 +51,7 @@ from apps.users.services import (
     delete_payout_account,
     set_primary_payout_account,
     upload_profile_photo,
+    get_public_profile,
 )
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
@@ -161,7 +162,29 @@ class UserProfileView(APIView):
     def get(self, request):
         result = get_user_profile(request.user)
         return Response(result, status=status.HTTP_200_OK)
-    
+
+
+class PublicProfileView(APIView):
+    """
+    Returns the public-facing profile of any user, viewable by any authenticated
+    caller. Contact info (phone, email) is only included when the viewer has
+    an active booking relationship with the viewed user.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Profile"], responses={200: dict})
+    def get(self, request, user_id):
+        try:
+            viewed = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found", "code": "NOT_FOUND"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        result = get_public_profile(viewed_user=viewed, viewer_user=request.user)
+        return Response(result, status=status.HTTP_200_OK)
+
 
 class UpdateProfileView(APIView):
     authentication_classes = [JWTAuthentication]
