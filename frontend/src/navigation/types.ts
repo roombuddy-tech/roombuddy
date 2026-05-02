@@ -1,3 +1,4 @@
+
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
@@ -49,4 +50,5 @@ export type HostStackParamList = {
   HostTabs: undefined;
   ListingEditor: { listingId?: string } | undefined;
   BookingDetail: { bookingId: string };
+  GuestProfile: { userId: string };
 };

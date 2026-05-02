@@ -7,6 +7,7 @@ from apps.users.views import (
     RefreshTokenView,
     HostDashboardView,
     UserProfileView,
+    PublicProfileView,
     UpdateProfileView,
     SendEmailVerificationView,
     VerifyEmailView,
@@ -35,6 +36,9 @@ urlpatterns = [
     path("profile/email/verify/", VerifyEmailView.as_view(), name="verify-email"),
     path("profile/email/verify-link/", VerifyEmailWebView.as_view(), name="verify-email-web"),
     path("profile/verification-status/", VerificationStatusView.as_view(), name="verification-status"),
+
+    # Public profile (host viewing guest, guest viewing host)
+    path("<uuid:user_id>/public-profile/", PublicProfileView.as_view(), name="public-profile"),
 
     # Payout accounts
     path("profile/payout-accounts/", PayoutAccountsListView.as_view(), name="payout-accounts-list"),

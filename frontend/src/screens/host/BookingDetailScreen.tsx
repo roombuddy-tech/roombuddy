@@ -1,14 +1,23 @@
+/**
+ * BookingDetailScreen — host view of a single booking.
+ *
+ * Reached from:
+ * - Today screen "View" button (today's check-ins/check-outs)
+ * - Bookings list card tap
+ *
+ * Backend: GET /api/bookings/<id>/  (auth: must be guest or host of booking)
+ */
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -153,9 +162,16 @@ export default function BookingDetailScreen() {
           <Text style={styles.code}>{booking.booking_code}</Text>
         </View>
 
-        {/* Guest */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Guest</Text>
+        {/* Guest — tap to see full profile */}
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('GuestProfile', { userId: booking.guest.id })}
+        >
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>Guest</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textMut} />
+          </View>
           <View style={styles.guestRow}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{booking.guest.initials}</Text>
@@ -168,9 +184,10 @@ export default function BookingDetailScreen() {
               {booking.guest.email && (
                 <Text style={styles.guestSub}>{booking.guest.email}</Text>
               )}
+              <Text style={styles.viewProfileHint}>View profile</Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Stay */}
         <View style={styles.card}>
@@ -291,6 +308,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15, ...FONTS.semibold, color: COLORS.text,
     marginBottom: SPACING.md,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  viewProfileHint: {
+    fontSize: 12, color: COLORS.primary, ...FONTS.semibold,
+    marginTop: 6,
   },
 
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
