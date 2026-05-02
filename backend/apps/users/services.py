@@ -435,6 +435,7 @@ def _get_month_stats(user: User, month_start, today) -> dict:
 def _get_today_activity(user: User, today) -> dict:
     check_ins = [
         {
+            "booking_id": str(b.id),
             "booking_code": b.booking_code,
             "guest_name": get_display_name(b.guest_user),
             "nights": b.nights,
@@ -449,6 +450,7 @@ def _get_today_activity(user: User, today) -> dict:
 
     check_outs = [
         {
+            "booking_id": str(b.id),
             "booking_code": b.booking_code,
             "guest_name": get_display_name(b.guest_user),
         }

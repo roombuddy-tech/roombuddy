@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
+import type { HostStackParamList } from '../../navigation/types';
 import ProfileMenu from '../../screens/shared/ProfileMenu';
+import api from '../../services/api';
+
+type Nav = NativeStackNavigationProp<HostStackParamList>;
 
 interface DashboardData {
   greeting_name: string;
@@ -21,13 +27,14 @@ interface DashboardData {
     response_rate_pct: number;
   };
   today: {
-    check_ins: Array<{ booking_code: string; guest_name: string; nights: number; check_in_time: string }>;
-    check_outs: Array<{ booking_code: string; guest_name: string }>;
+    check_ins: Array<{ booking_id: string; booking_code: string; guest_name: string; nights: number; check_in_time: string }>;
+    check_outs: Array<{ booking_id: string; booking_code: string; guest_name: string }>;
     recent_reviews: Array<{ reviewer_name: string; rating: number; body: string; submitted_at: string }>;
   };
 }
 
 export default function DashboardScreen() {
+  const navigation = useNavigation<Nav>();
   const { switchRole, user } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
@@ -61,6 +68,10 @@ export default function DashboardScreen() {
     if (hour < 12) return 'Good morning,';
     if (hour < 17) return 'Good afternoon,';
     return 'Good evening,';
+  };
+
+  const openBooking = (bookingId: string) => {
+    navigation.navigate('BookingDetail', { bookingId });
   };
 
   if (loading) {
@@ -133,7 +144,12 @@ export default function DashboardScreen() {
 
         {d?.today.check_ins && d.today.check_ins.length > 0 ? (
           d.today.check_ins.map((ci, i) => (
-            <View key={i} style={styles.activityCard}>
+            <TouchableOpacity
+              key={ci.booking_id || i}
+              style={styles.activityCard}
+              activeOpacity={0.7}
+              onPress={() => openBooking(ci.booking_id)}
+            >
               <View style={[styles.activityIcon, { backgroundColor: '#FFF8E6' }]}>
                 <Text style={{ fontSize: 20 }}>🔑</Text>
               </View>
@@ -141,10 +157,10 @@ export default function DashboardScreen() {
                 <Text style={styles.activityTitle}>{ci.guest_name} checks in today</Text>
                 <Text style={styles.activitySub}>{ci.nights}-day stay · {ci.check_in_time}</Text>
               </View>
-              <TouchableOpacity style={styles.viewBtn}>
+              <View style={styles.viewBtn}>
                 <Text style={styles.viewBtnText}>View</Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            </TouchableOpacity>
           ))
         ) : (
           <View style={styles.activityCard}>
@@ -160,14 +176,19 @@ export default function DashboardScreen() {
 
         {d?.today.check_outs && d.today.check_outs.length > 0 && (
           d.today.check_outs.map((co, i) => (
-            <View key={`co-${i}`} style={styles.activityCard}>
+            <TouchableOpacity
+              key={`co-${co.booking_id || i}`}
+              style={styles.activityCard}
+              activeOpacity={0.7}
+              onPress={() => openBooking(co.booking_id)}
+            >
               <View style={[styles.activityIcon, { backgroundColor: '#E6F5F0' }]}>
                 <Text style={{ fontSize: 20 }}>👋</Text>
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>{co.guest_name} checks out today</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
 

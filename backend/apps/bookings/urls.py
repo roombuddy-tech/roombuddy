@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.bookings.views import (
+    BookingDetailView,
     BookingQuoteView,
     CancelBookingView,
     CreateBookingView,
@@ -12,6 +13,7 @@ urlpatterns = [
     # Guest-facing endpoints
     path("quote/", BookingQuoteView.as_view(), name="booking-quote"),
     path("create/", CreateBookingView.as_view(), name="booking-create"),
+    path("<uuid:booking_id>/", BookingDetailView.as_view(), name="booking-detail"),
     path("<uuid:booking_id>/cancel/", CancelBookingView.as_view(), name="booking-cancel"),
 
     # Host-facing endpoints

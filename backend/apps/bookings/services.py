@@ -14,7 +14,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.listings.models import Listing
 from apps.payments.services import initiate_refund_for_cancelled_booking
-from apps.users.models import User
+from apps.users.models import User, PayoutAccount
 from common.constants import (
     BOOKING_CODE_LENGTH,
     BOOKING_CODE_PREFIX,
@@ -388,14 +388,104 @@ def get_host_earnings(user: User) -> dict:
             "total_nights": total_nights,
         },
         "monthly": monthly,
-        "payout": {
+        "payout": _get_primary_payout(user),
+    }
+
+
+def _get_primary_payout(user: User) -> dict:
+    """
+    Returns the host's primary payout account in the shape expected by the
+    earnings endpoint. Falls back to all-nulls if no account is configured.
+
+    The model is `apps.users.models.PayoutAccount` with `is_primary=True`. If
+    no primary is set, the most-recently-created account is used.
+    """
+
+    account = (
+        PayoutAccount.objects
+        .filter(user=user)
+        .order_by("-is_primary", "-created_at")
+        .first()
+    )
+
+    if not account:
+        return {
             "bank_name": None,
             "account_last4": None,
             "payout_schedule": None,
             "next_payout_amount": None,
             "next_payout_date": None,
-        },
+        }
+
+    if account.account_type == PayoutAccount.AccountType.BANK:
+        bank_name = account.bank_name
+        last4 = account.account_number[-4:] if account.account_number else None
+    else:
+        bank_name = "UPI"
+        last4 = account.upi_id 
+
+    return {
+        "bank_name": bank_name,
+        "account_last4": last4,
+        "payout_schedule": "Weekly",
+        "next_payout_amount": None,
+        "next_payout_date": None,
     }
+
+
+def get_booking_detail(booking: Booking) -> dict:
+    """Full booking details for the detail screen — for guest or host view."""
+    return {
+        "booking_id": str(booking.id),
+        "booking_code": booking.booking_code,
+        "status": booking.status,
+        "payment_status": booking.payment_status,
+        "booking_mode": booking.booking_mode,
+        "check_in_date": booking.check_in_date.isoformat(),
+        "check_out_date": booking.check_out_date.isoformat(),
+        "nights": booking.nights,
+        "number_of_guests": booking.number_of_guests,
+        "guest_purpose": booking.guest_purpose,
+        "special_requests": booking.special_requests,
+        "guest": {
+            "id": str(booking.guest_user_id),
+            "name": get_display_name(booking.guest_user),
+            "initials": get_initials(booking.guest_user),
+            "phone": (
+                f"{booking.guest_user.phone_country_code}"
+                f"{booking.guest_user.phone_number}"
+                if booking.guest_user.phone_number else None
+            ),
+            "email": booking.guest_user.email or None,
+        },
+        "host": {
+            "id": str(booking.host_user_id),
+            "name": get_display_name(booking.host_user),
+        },
+        "listing": {
+            "id": str(booking.listing_id),
+            "title": booking.listing.title if booking.listing else None,
+        },
+        "pricing": {
+            "host_nightly_price": float(booking.host_nightly_price),
+            "guest_nightly_price": float(booking.guest_nightly_price),
+            "subtotal": float(booking.subtotal),
+            "gst_amount": float(booking.gst_amount),
+            "platform_fee": float(booking.platform_fee),
+            "security_deposit": float(booking.security_deposit),
+            "total_guest_pays": float(booking.total_guest_pays),
+            "total_host_receives": float(booking.total_host_receives),
+            "currency": booking.currency,
+        },
+        "cancellation_policy": booking.cancellation_policy,
+        "cancelled_at": booking.cancelled_at.isoformat() if booking.cancelled_at else None,
+        "cancellation_reason": booking.cancellation_reason,
+        "refund_amount": (
+            float(booking.refund_amount) if booking.refund_amount is not None else None
+        ),
+        "created_at": booking.created_at.isoformat(),
+    }
+
 
 
 def _booking_to_dict(b: Booking) -> dict:
