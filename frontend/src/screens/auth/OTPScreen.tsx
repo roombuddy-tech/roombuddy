@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import ScreenWrapper from '../../components/layout/ScreenWrapper';
-import OTPInput from '../../components/forms/OTPInput';
-import Button from '../../components/ui/Button';
-import { authService } from '../../services/auth';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import OTPInput from '../../components/forms/OTPInput';
+import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import Button from '../../components/ui/Button';
+import { COLORS, FONTS, SPACING } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/auth';
+import { getErrorMessage } from '../../utils/errors';
 
 type Props = NativeStackScreenProps<any, 'OTP'>;
 
@@ -45,8 +46,7 @@ export default function OTPScreen({ navigation, route }: Props) {
         navigation.replace('ProfileSetup');
       }
     } catch (err: any) {
-      const message = err?.response?.data?.error || 'Verification failed. Please try again.';
-      Alert.alert('Error', message);
+      Alert.alert('Error', getErrorMessage(err, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }

@@ -8,7 +8,7 @@ POST /api/payments/webhook/         : called by Razorpay servers (async, public)
 import json
 import logging
 
-from rest_framework import status
+from rest_framework import status as http_status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,6 +27,8 @@ from apps.payments.services import (
     verify_and_capture,
 )
 from common.authentication import JWTAuthentication
+from common.constants import WEBHOOK_DEFAULT_EVENT_TYPE
+from common.error_codes import ErrorCode
 from common.permissions import IsAuthenticated
 
 logger = logging.getLogger(__name__)
@@ -49,18 +51,18 @@ class CreateOrderView(APIView):
             booking = Booking.objects.get(id=s.validated_data["booking_id"])
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found", "code": "NOT_FOUND"},
-                status=status.HTTP_404_NOT_FOUND,
+                {"error": "Booking not found", "code": ErrorCode.NOT_FOUND},
+                status=http_status.HTTP_404_NOT_FOUND,
             )
 
         if booking.guest_user_id != request.user.id:
             return Response(
-                {"error": "Not allowed", "code": "FORBIDDEN"},
-                status=status.HTTP_403_FORBIDDEN,
+                {"error": "Not allowed", "code": ErrorCode.FORBIDDEN},
+                status=http_status.HTTP_403_FORBIDDEN,
             )
 
         result = create_order_for_booking(booking)
-        return Response(result, status=status.HTTP_201_CREATED)
+        return Response(result, status=http_status.HTTP_201_CREATED)
 
 
 class VerifyPaymentView(APIView):
@@ -96,8 +98,8 @@ class RazorpayWebhookView(APIView):
     """
     Public endpoint called by Razorpay servers for async events.
 
-    Note: AllowAny + signature check. Authentication is via the X-Razorpay-Signature
-    header, NOT a JWT. The webhook handler verifies the HMAC against the raw body.
+    Authentication is via the X-Razorpay-Signature header (HMAC verified
+    against the raw body inside `handle_webhook`), NOT a JWT.
     """
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -111,15 +113,18 @@ class RazorpayWebhookView(APIView):
             payload = json.loads(raw_body)
         except json.JSONDecodeError:
             logger.warning("Webhook: invalid JSON")
-            return Response({"status": "bad_request"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"status": "bad_request"},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
 
         event_id = payload.get("id") or request.headers.get("X-Razorpay-Event-Id", "")
-        event_type = payload.get("event", "unknown")
+        event_type = payload.get("event", WEBHOOK_DEFAULT_EVENT_TYPE)
 
         if not event_id:
             logger.warning("Webhook: missing event id")
-            return Response({"status": "ignored"}, status=status.HTTP_200_OK)
+            return Response({"status": "ignored"}, status=http_status.HTTP_200_OK)
 
         handle_webhook(event_type, event_id, payload, raw_body, signature)
         # Always return 200 quickly so Razorpay doesn't keep retrying
-        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+        return Response({"status": "ok"}, status=http_status.HTTP_200_OK)

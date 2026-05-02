@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import api from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import api from '../../services/api';
+import { getErrorMessage } from '../../utils/errors';
 
 interface VerificationScreenProps {
   visible: boolean;
@@ -56,7 +57,7 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
       await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, { email: emailInput.trim() });
       setEmailSent(true);
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to send verification email.');
+      Alert.alert('Error', getErrorMessage(err, 'Failed to send verification email.'));
     } finally {
       setSendingEmail(false);
     }

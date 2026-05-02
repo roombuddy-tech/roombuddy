@@ -197,3 +197,21 @@ PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "console")
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
 RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
+
+# ── Booking & payment timing ──────────────────────────────────
+# How long the guest has to complete payment after creating a booking. After
+# this window, the booking auto-expires and the dates become available again.
+PAYMENT_WINDOW_MINUTES = int(os.getenv("PAYMENT_WINDOW_MINUTES", "15"))
+
+# How long the host has to accept/reject a booking in REQUEST mode.
+HOST_RESPONSE_DEADLINE_HOURS = int(os.getenv("HOST_RESPONSE_DEADLINE_HOURS", "24"))
+
+# Distributed-lock TTL covering the booking-creation critical section. Acts as
+# a safety net — if the process crashes inside the lock, it auto-releases.
+BOOKING_LOCK_TTL_SECONDS = int(os.getenv("BOOKING_LOCK_TTL_SECONDS", "120"))
+
+# How long webhook idempotency keys live in Redis. Must outlast Razorpay's
+# longest possible retry window.
+WEBHOOK_IDEMPOTENCY_TTL_SECONDS = int(
+    os.getenv("WEBHOOK_IDEMPOTENCY_TTL_SECONDS", str(7 * 24 * 3600))
+)

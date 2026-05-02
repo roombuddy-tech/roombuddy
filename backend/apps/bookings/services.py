@@ -1,19 +1,30 @@
-from datetime import date, timedelta
-from decimal import Decimal
 import logging
 import secrets
 import string
+from datetime import date, timedelta
+from decimal import Decimal
 
+from django.conf import settings
 from django.db import transaction
-from django.db.models import Sum, Count, Q
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
-from apps.payments.services import initiate_refund_for_cancelled_booking
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.listings.models import Listing
+from apps.payments.services import initiate_refund_for_cancelled_booking
 from apps.users.models import User
+from common.constants import (
+    BOOKING_CODE_LENGTH,
+    BOOKING_CODE_PREFIX,
+    DEFAULT_CANCELLATION_POLICY,
+    MONEY_PRECISION,
+    PERCENT_DENOMINATOR,
+    REFUND_SCHEDULES,
+    StatusChangeReason,
+)
+from common.error_codes import ErrorCode
 from common.redis_utils import distributed_lock
 from common.utils import get_display_name, get_initials
 
@@ -28,65 +39,105 @@ def _generate_booking_code() -> str:
     """RB-ABC123XY style code, unique."""
     alphabet = string.ascii_uppercase + string.digits
     while True:
-        code = "RB-" + "".join(secrets.choice(alphabet) for _ in range(8))
+        suffix = "".join(secrets.choice(alphabet) for _ in range(BOOKING_CODE_LENGTH))
+        code = f"{BOOKING_CODE_PREFIX}{suffix}"
         if not Booking.objects.filter(booking_code=code).exists():
             return code
 
 
 def _has_overlap(listing_id, check_in: date, check_out: date) -> bool:
     """
-    A booking blocks others if:
+    A booking blocks new bookings if:
     - It's accepted/active (paid, real booking) → always blocks
     - It's pending AND not yet expired → blocks (someone might still pay)
-    - It's pending AND expired → DOESN'T block (treated as abandoned)
+    - It's pending AND has no expires_at → blocks (legacy/safety)
 
-    A booking overlaps if existing.check_in < new.check_out AND existing.check_out > new.check_in.
+    A pending+expired booking does NOT block (treated as abandoned). The query
+    naturally ignores stale rows even before the cleanup cron runs.
+
+    A booking overlaps if existing.check_in < new.check_out
+                       AND existing.check_out > new.check_in.
     """
-
     now = timezone.now()
     return Booking.objects.filter(
         listing_id=listing_id,
         check_in_date__lt=check_out,
         check_out_date__gt=check_in,
     ).filter(
-        Q(status__in=[Booking.Status.ACCEPTED, Booking.Status.ACTIVE]) |
+        Q(status__in=Booking.BLOCKING_STATUSES) |
         Q(status=Booking.Status.PENDING, expires_at__gt=now) |
-        # Edge case: pending bookings created before this feature (no expires_at) — block them
         Q(status=Booking.Status.PENDING, expires_at__isnull=True)
     ).exists()
 
 
+def _validate_dates(check_in: date, check_out: date, *, allow_past: bool = False) -> None:
+    """Raise ValidationError if dates are invalid."""
+    if check_out <= check_in:
+        raise ValidationError({
+            "error": "check_out_date must be after check_in_date",
+            "code": ErrorCode.INVALID_DATES,
+        })
+    if not allow_past and check_in < date.today():
+        raise ValidationError({
+            "error": "check_in_date cannot be in the past",
+            "code": ErrorCode.PAST_DATE,
+        })
+
+
+def _get_cancellation_policy(listing: Listing) -> str:
+    """Return the listing's cancellation policy or default."""
+    if hasattr(listing, "house_rules") and listing.house_rules:
+        return listing.house_rules.cancellation_policy
+    return DEFAULT_CANCELLATION_POLICY
+
+
+def _quantize(value: Decimal) -> Decimal:
+    """Round a Decimal to two decimal places (paise)."""
+    return value.quantize(MONEY_PRECISION)
+
+
+# ─── Quote ───────────────────────────────────────────────────────────────
+
 def quote_booking(listing_id, check_in: date, check_out: date) -> dict:
     """
-    Return a price breakdown for the given listing/dates without creating anything.
-    Used by the app to show the guest what they'll pay before confirming.
+    Return a price breakdown for the given listing/dates without creating
+    anything. Used by the app to show the guest what they'll pay before
+    confirming.
     """
-    if check_out <= check_in:
-        raise ValidationError({"error": "check_out_date must be after check_in_date", "code": "INVALID_DATES"})
+    _validate_dates(check_in, check_out, allow_past=True)
 
     try:
         listing = Listing.objects.get(id=listing_id, status=Listing.Status.LIVE)
     except Listing.DoesNotExist:
-        raise NotFound({"error": "Listing not found or not available", "code": "LISTING_NOT_FOUND"})
+        raise NotFound({
+            "error": "Listing not found or not available",
+            "code": ErrorCode.LISTING_NOT_FOUND,
+        })
 
     nights = (check_out - check_in).days
     if nights < listing.min_nights:
-        raise ValidationError({"error": f"Minimum stay is {listing.min_nights} nights", "code": "MIN_NIGHTS"})
+        raise ValidationError({
+            "error": f"Minimum stay is {listing.min_nights} nights",
+            "code": ErrorCode.MIN_NIGHTS,
+        })
     if nights > listing.max_nights:
-        raise ValidationError({"error": f"Maximum stay is {listing.max_nights} nights", "code": "MAX_NIGHTS"})
+        raise ValidationError({
+            "error": f"Maximum stay is {listing.max_nights} nights",
+            "code": ErrorCode.MAX_NIGHTS,
+        })
 
     host_nightly = listing.host_price_per_night
-    gst_per_night = (host_nightly * listing.gst_pct / Decimal(100)).quantize(Decimal("0.01"))
-    fee_per_night = (host_nightly * listing.platform_fee_pct / Decimal(100)).quantize(Decimal("0.01"))
+    gst_per_night = _quantize(host_nightly * listing.gst_pct / PERCENT_DENOMINATOR)
+    fee_per_night = _quantize(host_nightly * listing.platform_fee_pct / PERCENT_DENOMINATOR)
     guest_nightly = host_nightly + gst_per_night + fee_per_night
 
-    subtotal = (host_nightly * nights).quantize(Decimal("0.01"))
-    gst_amount = (gst_per_night * nights).quantize(Decimal("0.01"))
-    platform_fee = (fee_per_night * nights).quantize(Decimal("0.01"))
+    subtotal = _quantize(host_nightly * nights)
+    gst_amount = _quantize(gst_per_night * nights)
+    platform_fee = _quantize(fee_per_night * nights)
     security_deposit = listing.security_deposit
-    total_guest_pays = (subtotal + gst_amount + platform_fee + security_deposit).quantize(Decimal("0.01"))
+    total_guest_pays = _quantize(subtotal + gst_amount + platform_fee + security_deposit)
     total_host_receives = subtotal
-    platform_revenue = (platform_fee + gst_amount).quantize(Decimal("0.01"))
+    platform_revenue = _quantize(platform_fee + gst_amount)
 
     return {
         "listing_id": str(listing.id),
@@ -105,6 +156,8 @@ def quote_booking(listing_id, check_in: date, check_out: date) -> dict:
     }
 
 
+# ─── Create ──────────────────────────────────────────────────────────────
+
 def create_booking(
     user: User,
     listing_id,
@@ -118,34 +171,35 @@ def create_booking(
     Create a booking row in `pending` state.
 
     Wrapped in a Redis distributed lock to prevent two guests from booking the
-    same dates at the same time. Also enforces a DB-level overlap check.
+    same dates at the same time. Also enforces a DB-level overlap check inside
+    the lock (defense in depth).
     """
-    if check_out <= check_in:
-        raise ValidationError({"error": "check_out_date must be after check_in_date", "code": "INVALID_DATES"})
-
-    if check_in < date.today():
-        raise ValidationError({"error": "check_in_date cannot be in the past", "code": "PAST_DATE"})
+    _validate_dates(check_in, check_out)
 
     quote = quote_booking(listing_id, check_in, check_out)
     listing = Listing.objects.select_related("house_rules").get(id=listing_id)
 
     if listing.host_user_id == user.id:
-        raise PermissionDenied({"error": "You cannot book your own listing", "code": "SELF_BOOKING"})
+        raise PermissionDenied({
+            "error": "You cannot book your own listing",
+            "code": ErrorCode.SELF_BOOKING,
+        })
 
     lock_key = f"book:{listing_id}:{check_in.isoformat()}:{check_out.isoformat()}"
 
-    with distributed_lock(lock_key, ttl_seconds=120) as acquired:
+    with distributed_lock(lock_key) as acquired:
         if not acquired:
             raise BookingConflictError("Another guest is currently booking these dates")
 
-        # Double-check at DB level inside the lock
         if _has_overlap(listing_id, check_in, check_out):
             raise BookingConflictError("These dates are no longer available")
 
-        cancellation_policy = (
-            listing.house_rules.cancellation_policy
-            if hasattr(listing, "house_rules") and listing.house_rules
-            else Booking.CancellationPolicy.MODERATE
+        cancellation_policy = _get_cancellation_policy(listing)
+
+        host_response_deadline = (
+            timezone.now() + timedelta(hours=settings.HOST_RESPONSE_DEADLINE_HOURS)
+            if listing.booking_mode == Listing.BookingMode.REQUEST
+            else None
         )
 
         with transaction.atomic():
@@ -173,12 +227,7 @@ def create_booking(
                 platform_revenue=Decimal(str(quote["platform_revenue"])),
                 currency=quote["currency"],
                 cancellation_policy=cancellation_policy,
-                # If REQUEST mode, host has 24h to respond
-                host_response_deadline=(
-                    timezone.now() + timedelta(hours=24)
-                    if listing.booking_mode == Listing.BookingMode.REQUEST
-                    else None
-                ),
+                host_response_deadline=host_response_deadline,
             )
 
             BookingStatusHistory.objects.create(
@@ -186,7 +235,7 @@ def create_booking(
                 from_status=None,
                 to_status=Booking.Status.PENDING,
                 changed_by_user=user,
-                reason="Booking created",
+                reason=StatusChangeReason.BOOKING_CREATED,
             )
 
         logger.info(f"Booking {booking.booking_code} created for guest {user.id}")
@@ -195,63 +244,57 @@ def create_booking(
 
 # ─── Cancellation & refund ───────────────────────────────────────────────
 
-def compute_refund_amount(booking: Booking, who_cancelled: str) -> Decimal:
+def compute_refund_amount(booking: Booking, cancelled_by: str) -> Decimal:
     """
     Compute refund amount based on cancellation policy and time-to-check-in.
 
-    who_cancelled = 'guest' | 'host' | 'system'
+    `cancelled_by` is one of `Booking.CancelledBy` values.
 
-    - If host cancels: full refund (including platform fee).
-    - If system cancels (host didn't respond, etc.): full refund.
-    - If guest cancels: depends on policy and how close to check-in.
+    - If host or system cancels: full refund (including platform fee).
+    - If guest cancels: per `REFUND_SCHEDULES[policy]`. Platform fee is
+      non-refundable on guest cancellation.
     """
-    if who_cancelled in ("host", "system"):
+    if cancelled_by in (Booking.CancelledBy.HOST, Booking.CancelledBy.SYSTEM):
         return booking.total_guest_pays
 
-    # Guest cancellation: depends on policy
+    # Guest cancellation: depends on policy + how close to check-in
     days_to_checkin = (booking.check_in_date - date.today()).days
 
     base_refundable = booking.subtotal + booking.gst_amount + booking.security_deposit
-    # Platform fee is non-refundable on guest cancellation
+    policy = booking.cancellation_policy or DEFAULT_CANCELLATION_POLICY
+    schedule = REFUND_SCHEDULES.get(policy, REFUND_SCHEDULES[DEFAULT_CANCELLATION_POLICY])
 
-    policy = booking.cancellation_policy or Booking.CancellationPolicy.MODERATE
+    # Walk thresholds (sorted desc by days remaining); first match wins.
+    for threshold_days, percent in schedule:
+        if days_to_checkin >= threshold_days:
+            return _quantize(base_refundable * percent)
 
-    if policy == Booking.CancellationPolicy.FLEXIBLE:
-        if days_to_checkin >= 2:
-            return base_refundable                # 100%
-        return (base_refundable * Decimal("0.50")).quantize(Decimal("0.01"))   # 50%
-    elif policy == Booking.CancellationPolicy.MODERATE:
-        if days_to_checkin >= 7:
-            return base_refundable                # 100%
-        elif days_to_checkin >= 2:
-            return (base_refundable * Decimal("0.50")).quantize(Decimal("0.01"))
-        return Decimal("0")                       # 0%
-    else:  # STRICT
-        if days_to_checkin >= 7:
-            return (base_refundable * Decimal("0.50")).quantize(Decimal("0.01"))
-        return Decimal("0")
+    return Decimal("0")
 
 
 def cancel_booking(booking: Booking, user: User, reason: str = "") -> Booking:
     """Cancel a booking and trigger refund if applicable."""
-    if booking.status in (
-        Booking.Status.CANCELLED_BY_GUEST,
-        Booking.Status.CANCELLED_BY_HOST,
-        Booking.Status.COMPLETED,
-        Booking.Status.NO_SHOW,
-    ):
-        raise ValidationError({"error": "Booking cannot be cancelled", "code": "INVALID_STATE"})
+    if booking.status in Booking.NON_CANCELLABLE_STATUSES:
+        raise ValidationError({
+            "error": "Booking cannot be cancelled",
+            "code": ErrorCode.INVALID_STATE,
+        })
 
     if user.id == booking.guest_user_id:
-        who = "guest"
+        cancelled_by = Booking.CancelledBy.GUEST
         new_status = Booking.Status.CANCELLED_BY_GUEST
+        default_reason = StatusChangeReason.CANCELLED_BY_GUEST
     elif user.id == booking.host_user_id:
-        who = "host"
+        cancelled_by = Booking.CancelledBy.HOST
         new_status = Booking.Status.CANCELLED_BY_HOST
+        default_reason = StatusChangeReason.CANCELLED_BY_HOST
     else:
-        raise PermissionDenied({"error": "Not allowed to cancel this booking", "code": "FORBIDDEN"})
+        raise PermissionDenied({
+            "error": "Not allowed to cancel this booking",
+            "code": ErrorCode.FORBIDDEN,
+        })
 
-    refund_amount = compute_refund_amount(booking, who)
+    refund_amount = compute_refund_amount(booking, cancelled_by)
 
     with transaction.atomic():
         from_status = booking.status
@@ -268,29 +311,46 @@ def cancel_booking(booking: Booking, user: User, reason: str = "") -> Booking:
             from_status=from_status,
             to_status=new_status,
             changed_by_user=user,
-            reason=reason or f"Cancelled by {who}",
+            reason=reason or default_reason,
         )
 
-    # If a payment exists, kick off the actual refund via the payment service.
     if booking.payment_status == Booking.PaymentStatus.REFUND_PENDING:
-        initiate_refund_for_cancelled_booking(booking, refund_amount, who)
+        initiate_refund_for_cancelled_booking(booking, refund_amount, cancelled_by)
 
-    logger.info(f"Booking {booking.booking_code} cancelled by {who}; refund=₹{refund_amount}")
+    logger.info(
+        f"Booking {booking.booking_code} cancelled by {cancelled_by}; "
+        f"refund=₹{refund_amount}",
+    )
     return booking
 
 
-def get_host_bookings(user: User, status_filter: str = "all") -> list[dict]:
-    """Returns list of bookings for a host, optionally filtered by status."""
-    queryset = Booking.objects.filter(
-        host_user=user
-    ).select_related("guest_user").order_by("-created_at")
+# ─── Host queries ────────────────────────────────────────────────────────
 
-    if status_filter == "active":
-        queryset = queryset.filter(status__in=[Booking.Status.ACTIVE, Booking.Status.ACCEPTED])
-    elif status_filter == "upcoming":
-        queryset = queryset.filter(status__in=[Booking.Status.PENDING, Booking.Status.ACCEPTED])
-    elif status_filter == "completed":
-        queryset = queryset.filter(status=Booking.Status.COMPLETED)
+# Maps a public filter value to the list of booking statuses it includes.
+_HOST_BOOKING_FILTERS: dict[str, tuple[str, ...]] = {
+    Booking.HostBookingFilter.ACTIVE: (
+        Booking.Status.ACTIVE, Booking.Status.ACCEPTED,
+    ),
+    Booking.HostBookingFilter.UPCOMING: (
+        Booking.Status.PENDING, Booking.Status.ACCEPTED,
+    ),
+    Booking.HostBookingFilter.COMPLETED: (
+        Booking.Status.COMPLETED,
+    ),
+}
+
+
+def get_host_bookings(user: User, status_filter: str = Booking.HostBookingFilter.ALL) -> list[dict]:
+    """Returns list of bookings for a host, optionally filtered by status."""
+    queryset = (
+        Booking.objects.filter(host_user=user)
+        .select_related("guest_user")
+        .order_by("-created_at")
+    )
+
+    statuses = _HOST_BOOKING_FILTERS.get(status_filter)
+    if statuses:
+        queryset = queryset.filter(status__in=statuses)
 
     return [_booking_to_dict(b) for b in queryset]
 
@@ -302,14 +362,12 @@ def get_host_earnings(user: User) -> dict:
         status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
     )
 
-    # Lifetime
     lifetime_agg = completed.aggregate(
         total_earnings=Sum("total_host_receives"),
         total_bookings=Count("id"),
     )
     total_nights = sum(b.nights for b in completed)
 
-    # Monthly
     monthly = [
         {
             "month": row["month"].strftime("%b %Y"),

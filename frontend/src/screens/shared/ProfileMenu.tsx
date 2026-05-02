@@ -7,11 +7,13 @@ import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { getErrorMessage } from '../../utils/errors';
 import EditProfileScreen from './EditProfileScreen';
 import HelpSupportScreen from './HelpSupportScreen';
 import PaymentMethodsScreen from './PaymentMethodsScreen';
 import TermsPrivacyScreen from './TermsPrivacyScreen';
 import VerificationScreen from './VerificationScreen';
+
 
 interface ProfileMenuProps {
   visible: boolean;
@@ -109,7 +111,7 @@ const handlePickPhoto = async () => {
       fetchProfile();
       Alert.alert('Success', 'Profile photo updated.');
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to upload photo.');
+      Alert.alert('Error', getErrorMessage(err, 'Failed to upload photo.'));
     }
   };
 

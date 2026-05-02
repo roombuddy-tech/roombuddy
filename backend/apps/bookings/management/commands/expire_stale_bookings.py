@@ -2,12 +2,12 @@
 Backup cleanup for stale pending bookings.
 
 When a guest creates a booking but doesn't complete payment within the window
-(15 minutes by default), the booking sits in PENDING state with an expired
+(`PAYMENT_WINDOW_MINUTES`), the booking sits in PENDING with an expired
 `expires_at` timestamp.
 
-Even though our `_has_overlap` query correctly ignores these stale bookings
-when checking availability, the database row's status field still says
-"pending". This command flips them to "expired" so:
+Even though `_has_overlap` correctly ignores stale bookings when checking
+availability, the database row's status field still says "pending". This
+command flips them to "expired" so:
 
 1. Admin dashboards show clean state
 2. Hosts don't see phantom pending bookings
@@ -23,6 +23,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.bookings.models import Booking, BookingStatusHistory
+from common.constants import StatusChangeReason
 
 
 class Command(BaseCommand):
@@ -47,7 +48,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("✅ Expired 0 stale booking(s)"))
             return
 
-        # Update each stale booking
         for booking in stale:
             from_status = booking.status
             booking.status = Booking.Status.EXPIRED
@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 from_status=from_status,
                 to_status=Booking.Status.EXPIRED,
                 changed_by_user=None,
-                reason="Payment not completed within window (auto-expired by cron)",
+                reason=StatusChangeReason.PAYMENT_WINDOW_EXPIRED,
             )
 
             self.stdout.write(

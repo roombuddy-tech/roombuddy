@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Image } from 'react-native';
-import ScreenWrapper from '../../components/layout/ScreenWrapper';
-import Button from '../../components/ui/Button';
-import { authService } from '../../services/auth';
-import { useAuth } from '../../context/AuthContext';
-import { isValidEmail } from '../../utils/validators';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import Button from '../../components/ui/Button';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { authService } from '../../services/auth';
+import { getErrorMessage } from '../../utils/errors';
+import { isValidEmail } from '../../utils/validators';
 
 
 type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
@@ -77,7 +78,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         gender,
       });
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to save profile.');
+      Alert.alert('Error', getErrorMessage(err, 'Failed to save profile.'));
     } finally {
       setLoading(false);
     }

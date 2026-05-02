@@ -11,6 +11,24 @@ import uuid
 from django.db import models
 
 
+class PaymentProvider(models.TextChoices):
+    """Available payment gateway providers. Selected via PAYMENT_PROVIDER env var."""
+    CONSOLE = "console"      # local dev fake gateway
+    RAZORPAY = "razorpay"    # real Razorpay (test or live mode)
+
+
+class WebhookEventType(models.TextChoices):
+    """
+    Razorpay webhook event types we handle.
+    Reference: https://razorpay.com/docs/webhooks/events/
+    """
+    PAYMENT_CAPTURED = "payment.captured"
+    PAYMENT_FAILED = "payment.failed"
+    REFUND_PROCESSED = "refund.processed"
+    REFUND_FAILED = "refund.failed"
+    ORDER_PAID = "order.paid"
+
+
 class Payment(models.Model):
     class Status(models.TextChoices):
         CREATED = "created"          # order created, awaiting checkout

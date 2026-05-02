@@ -33,6 +33,29 @@ class Booking(models.Model):
         PARTIALLY_REFUNDED = "partially_refunded"
         FAILED = "failed"
 
+    class CancelledBy(models.TextChoices):
+        GUEST = "guest"
+        HOST = "host"
+        SYSTEM = "system"
+
+    class HostBookingFilter(models.TextChoices):
+        ALL = "all"
+        ACTIVE = "active"
+        UPCOMING = "upcoming"
+        COMPLETED = "completed"
+
+    # Statuses considered "blocking" when checking date availability
+    BLOCKING_STATUSES = ("accepted", "active")
+
+    # Statuses that prevent further cancellation (terminal states)
+    NON_CANCELLABLE_STATUSES = (
+        "cancelled_by_guest",
+        "cancelled_by_host",
+        "completed",
+        "no_show",
+        "expired",
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking_code = models.CharField(max_length=20, unique=True)
     listing = models.ForeignKey(
