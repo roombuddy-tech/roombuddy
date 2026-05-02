@@ -24,6 +24,15 @@ class Booking(models.Model):
         MODERATE = "moderate"
         STRICT = "strict"
 
+    class PaymentStatus(models.TextChoices):
+        UNPAID = "unpaid"
+        PAYMENT_PENDING = "payment_pending"
+        PAID = "paid"
+        REFUND_PENDING = "refund_pending"
+        REFUNDED = "refunded"
+        PARTIALLY_REFUNDED = "partially_refunded"
+        FAILED = "failed"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking_code = models.CharField(max_length=20, unique=True)
     listing = models.ForeignKey(
@@ -43,6 +52,11 @@ class Booking(models.Model):
     guest_purpose = models.CharField(max_length=50, null=True, blank=True)
     booking_mode = models.CharField(max_length=20, choices=BookingMode.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    payment_status = models.CharField(
+        max_length=25, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID,
+    )
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
 
     # Price snapshot
     host_nightly_price = models.DecimalField(max_digits=10, decimal_places=2)

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import ProfileMenu from '../screens/shared/ProfileMenu';
-import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
-import type { GuestTabParamList } from './types';
+import type { GuestStackParamList, GuestTabParamList } from './types';
 
 function PlaceholderScreen({ title }: { title: string }) {
   return (
@@ -20,6 +22,8 @@ function HomeScreen() {
   const { switchRole, user } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
+  const navigation = useNavigation<NativeStackNavigationProp<GuestStackParamList>>();
+
 
   return (
     <View style={styles.homeContainer}>
@@ -48,8 +52,24 @@ function HomeScreen() {
         <Text style={styles.sectionTitle}>Find your next stay</Text>
         <Text style={styles.sectionSub}>Short-term rooms in shared homes</Text>
         <View style={styles.comingSoonCard}>
-          <Text style={styles.comingSoonIcon}>🏠</Text>
-          <Text style={styles.comingSoonText}>Listings coming soon</Text>
+        <Text style={styles.comingSoonIcon}>🏠</Text>
+        <Text style={styles.comingSoonText}>Listings coming soon</Text>
+
+        {/* DEV ONLY — remove when search/listing screens exist */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            paddingVertical: 10, paddingHorizontal: 18,
+            backgroundColor: COLORS.accentAlpha, borderRadius: RADIUS.pill,
+            marginTop: SPACING.md,
+          }}
+          onPress={() => navigation.navigate('BookTest' as never)}
+        >
+          <Ionicons name="construct-outline" size={16} color={COLORS.accent} />
+          <Text style={{ color: COLORS.accent, ...FONTS.semibold, fontSize: 13 }}>
+            Book a stay (test)
+          </Text>
+        </TouchableOpacity>
         </View>
       </View>
 

@@ -1,5 +1,59 @@
 from rest_framework import serializers
 
+class CreateBookingRequestSerializer(serializers.Serializer):
+    listing_id = serializers.UUIDField()
+    check_in_date = serializers.DateField()
+    check_out_date = serializers.DateField()
+    number_of_guests = serializers.IntegerField(min_value=1, default=1)
+    guest_purpose = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    special_requests = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class QuoteRequestSerializer(serializers.Serializer):
+    listing_id = serializers.UUIDField()
+    check_in_date = serializers.DateField()
+    check_out_date = serializers.DateField()
+
+
+class QuoteResponseSerializer(serializers.Serializer):
+    listing_id = serializers.UUIDField()
+    nights = serializers.IntegerField()
+    host_nightly_price = serializers.FloatField()
+    guest_nightly_price = serializers.FloatField()
+    subtotal = serializers.FloatField()
+    gst_amount = serializers.FloatField()
+    platform_fee = serializers.FloatField()
+    security_deposit = serializers.FloatField()
+    total_guest_pays = serializers.FloatField()
+    total_host_receives = serializers.FloatField()
+    platform_revenue = serializers.FloatField()
+    currency = serializers.CharField()
+    booking_mode = serializers.CharField()
+
+
+class BookingDetailSerializer(serializers.Serializer):
+    booking_id = serializers.UUIDField()
+    booking_code = serializers.CharField()
+    status = serializers.CharField()
+    payment_status = serializers.CharField()
+    check_in_date = serializers.DateField()
+    check_out_date = serializers.DateField()
+    nights = serializers.IntegerField()
+    total_guest_pays = serializers.FloatField()
+    total_host_receives = serializers.FloatField()
+    cancellation_policy = serializers.CharField(allow_null=True)
+
+
+class CancelBookingRequestSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class CancelBookingResponseSerializer(serializers.Serializer):
+    booking_id = serializers.UUIDField()
+    status = serializers.CharField()
+    payment_status = serializers.CharField()
+    refund_amount = serializers.FloatField()
+
 
 class BookingItemSerializer(serializers.Serializer):
     booking_id = serializers.UUIDField()
