@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.amenities",
     "apps.listings",
     "apps.bookings",
+    "apps.payments",
     "apps.reviews",
 ]
 
@@ -182,3 +183,17 @@ LOGGING = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# ── Redis ─────────────────────────────────────────────────────
+# Used for distributed locking on bookings + idempotency on webhooks.
+# Falls back to in-memory store if not configured (single-process dev only).
+REDIS_URL = os.getenv("REDIS_URL", "")
+
+# ── Payments / Razorpay ───────────────────────────────────────
+# PAYMENT_PROVIDER:
+#   "console"  = local dev fake gateway (no Razorpay account needed)
+#   "razorpay" = real Razorpay (test or live mode)
+PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "console")
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")

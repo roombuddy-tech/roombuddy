@@ -28,6 +28,15 @@ export const ENDPOINTS = {
     LISTING_DETAIL: '/api/listings/',
     BOOKINGS: '/api/bookings/',
   },
+  BOOKING: {
+    QUOTE: '/api/bookings/quote/',
+    CREATE: '/api/bookings/create/',
+    CANCEL: (bookingId: string) => `/api/bookings/${bookingId}/cancel/`,
+  },
+  PAYMENT: {
+    CREATE_ORDER: '/api/payments/create-order/',
+    VERIFY: '/api/payments/verify/',
+  },
   CHAT: {
     CONVERSATIONS: '/api/conversations/',
   },

@@ -1,11 +1,11 @@
-import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import AuthStack from './AuthStack';
-import GuestTabs from './GuestTabs';
+import GuestStack from './GuestStack';
 import HostStack from './HostStack';
-import { COLORS } from '../constants/theme';
 
 export default function Navigation() {
   const { isLoading, isAuthenticated, isProfileComplete, userRole } = useAuth();
@@ -25,7 +25,7 @@ export default function Navigation() {
       ) : userRole === 'host' ? (
         <HostStack />
       ) : (
-        <GuestTabs />
+        <GuestStack />
       )}
     </NavigationContainer>
   );

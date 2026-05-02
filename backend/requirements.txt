@@ -10,3 +10,5 @@ PyJWT==2.9.0
 requests==2.32.3
 boto3==1.35.0
 Pillow==11.2.1
+redis==5.2.1
+razorpay==1.4.2

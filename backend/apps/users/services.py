@@ -239,11 +239,14 @@ def get_user_profile(user: User) -> dict:
         city = profile.city
         gender = profile.gender
         date_of_birth = profile.date_of_birth.isoformat() if profile.date_of_birth else None
+        profile_photo_url = profile.profile_photo_url
     except UserProfile.DoesNotExist:
         first_name = ""
         last_name = ""
         city = ""
         gender = ""
+        date_of_birth = None
+        profile_photo_url = None
 
     display_name = f"{first_name} {last_name}".strip() or "User"
     initials = (
@@ -258,7 +261,7 @@ def get_user_profile(user: User) -> dict:
         "display_name": display_name,
         "initials": initials,
         "email": user.email or "",
-        "profile_photo_url": profile.profile_photo_url if first_name else None,
+        "profile_photo_url": profile_photo_url,
         "city": city,
         "gender": gender,
         "date_of_birth": date_of_birth,
