@@ -1,7 +1,7 @@
-from rest_framework import status
+from rest_framework import status as http_status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 
 from apps.bookings.models import Booking
 from apps.bookings.serializers import (
@@ -23,6 +23,7 @@ from apps.bookings.services import (
     quote_booking,
 )
 from common.authentication import JWTAuthentication
+from common.error_codes import ErrorCode
 from common.permissions import IsAuthenticated
 
 
@@ -72,8 +73,8 @@ class CreateBookingView(APIView):
             )
         except BookingConflictError as e:
             return Response(
-                {"error": str(e), "code": "BOOKING_CONFLICT"},
-                status=status.HTTP_409_CONFLICT,
+                {"error": str(e), "code": ErrorCode.BOOKING_CONFLICT},
+                status=http_status.HTTP_409_CONFLICT,
             )
 
         return Response({
@@ -87,7 +88,7 @@ class CreateBookingView(APIView):
             "total_guest_pays": float(booking.total_guest_pays),
             "total_host_receives": float(booking.total_host_receives),
             "cancellation_policy": booking.cancellation_policy,
-        }, status=status.HTTP_201_CREATED)
+        }, status=http_status.HTTP_201_CREATED)
 
 
 class CancelBookingView(APIView):
@@ -105,8 +106,8 @@ class CancelBookingView(APIView):
             booking = Booking.objects.get(id=booking_id)
         except Booking.DoesNotExist:
             return Response(
-                {"error": "Booking not found", "code": "NOT_FOUND"},
-                status=status.HTTP_404_NOT_FOUND,
+                {"error": "Booking not found", "code": ErrorCode.NOT_FOUND},
+                status=http_status.HTTP_404_NOT_FOUND,
             )
         s = CancelBookingRequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -126,12 +127,21 @@ class HostBookingsListView(APIView):
     @extend_schema(
         tags=["Host"],
         parameters=[
-            OpenApiParameter(name="status", description="Filter: all, active, upcoming, completed", required=False, type=str, default="all"),
+            OpenApiParameter(
+                name="status",
+                description="Filter by status group",
+                required=False,
+                type=str,
+                enum=Booking.HostBookingFilter.values,
+                default=Booking.HostBookingFilter.ALL,
+            ),
         ],
         responses={200: HostBookingsResponseSerializer},
     )
     def get(self, request):
-        status_filter = request.query_params.get("status", "all").lower()
+        status_filter = request.query_params.get(
+            "status", Booking.HostBookingFilter.ALL,
+        ).lower()
         results = get_host_bookings(request.user, status_filter)
         return Response({"count": len(results), "results": results})
 

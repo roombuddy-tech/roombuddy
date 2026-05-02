@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import ScreenWrapper from '../../components/layout/ScreenWrapper';
-import PhoneInput from '../../components/forms/PhoneInput';
-import Button from '../../components/ui/Button';
-import { authService } from '../../services/auth';
-import { isValidIndianPhone } from '../../utils/validators';
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import PhoneInput from '../../components/forms/PhoneInput';
+import ScreenWrapper from '../../components/layout/ScreenWrapper';
+import Button from '../../components/ui/Button';
+import { COLORS, FONTS, SPACING } from '../../constants/theme';
+import { authService } from '../../services/auth';
+import { getErrorMessage } from '../../utils/errors';
+import { isValidIndianPhone } from '../../utils/validators';
 
 type Props = NativeStackScreenProps<any, 'Login'>;
 
@@ -32,8 +33,8 @@ export default function LoginScreen({ navigation }: Props) {
       await authService.sendOTP(phone);
       navigation.navigate('OTP', { phoneNumber: phone });
     } catch (err: any) {
-      const message = err?.response?.data?.error || 'Failed to send OTP. Please try again.';
-      Alert.alert('Error', message);
+      Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP. Please try again.'));
+
     } finally {
       setLoading(false);
     }

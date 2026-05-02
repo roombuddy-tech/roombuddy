@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import api from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
+import api from '../../services/api';
+import { getErrorMessage } from '../../utils/errors';
 
 interface EditProfileProps {
   visible: boolean;
@@ -104,7 +105,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
       Alert.alert('Success', 'Profile updated successfully.');
       onClose();
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to update profile.');
+      Alert.alert('Error', getErrorMessage(err, 'Failed to update profile.'));
     } finally {
       setSaving(false);
     }

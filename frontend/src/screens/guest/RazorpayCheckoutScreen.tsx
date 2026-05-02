@@ -3,7 +3,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
 import {
-    ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 

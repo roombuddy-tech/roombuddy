@@ -3,24 +3,21 @@ Redis utilities for distributed locking and idempotency.
 
 Two utilities used by the booking + payment service:
 - distributed_lock(): prevents two guests from booking the same dates simultaneously
-- idempotency_check(): prevents the same Razorpay event being processed twice
+- idempotency_seen(): prevents the same Razorpay event being processed twice
 
-ENV
-───
-REDIS_URL = redis://localhost:6379/0   (default for local dev)
-
-If REDIS_URL is not set or Redis is unreachable, an in-memory fallback is used.
-This is safe for local single-process dev only and logs a warning.
+Configuration: `REDIS_URL` in settings (loaded from .env). If empty or Redis is
+unreachable, an in-memory fallback is used. The fallback is single-process only
+and is intended for local dev — a warning is logged on startup.
 """
-import os
-import time
 import logging
 import threading
+import time
 from contextlib import contextmanager
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-REDIS_URL = os.getenv("REDIS_URL", "")
 
 # Single shared client built lazily
 _redis_client = None
@@ -30,16 +27,20 @@ _redis_lock = threading.Lock()
 _memory_store: dict[str, tuple[str, float]] = {}
 _memory_lock = threading.Lock()
 
-print(f"🔍 REDIS_URL from env: {os.getenv('REDIS_URL', 'NOT SET')}")
+
+# Internal Redis client connection timeout. Higher than typical to allow for
+# managed-service cold starts (ElastiCache Serverless can take a moment).
+_REDIS_SOCKET_TIMEOUT_SECONDS = 2
 
 
 def _get_client():
-    """Lazy-init shared redis client. Returns None if Redis is unavailable."""
+    """Lazy-init shared Redis client. Returns None if Redis is unavailable."""
     global _redis_client
     if _redis_client is not None:
         return _redis_client
 
-    if not REDIS_URL:
+    redis_url = settings.REDIS_URL
+    if not redis_url:
         return None
 
     with _redis_lock:
@@ -47,10 +48,14 @@ def _get_client():
             return _redis_client
         try:
             import redis
-            client = redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=2)
+            client = redis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_timeout=_REDIS_SOCKET_TIMEOUT_SECONDS,
+            )
             client.ping()
             _redis_client = client
-            logger.info(f"Connected to Redis at {REDIS_URL}")
+            logger.info(f"Connected to Redis at {redis_url}")
         except Exception as e:
             logger.warning(f"Redis unavailable ({e}); using in-memory fallback")
             _redis_client = None
@@ -69,7 +74,6 @@ def _set_nx(key: str, value: str, ttl_seconds: int) -> bool:
     # Fallback: in-memory
     now = time.monotonic()
     with _memory_lock:
-        # Garbage-collect expired keys lazily
         existing = _memory_store.get(key)
         if existing and existing[1] > now:
             return False
@@ -109,7 +113,7 @@ def _delete(key: str) -> None:
 # ─── Public API ────────────────────────────────────────────────────────
 
 @contextmanager
-def distributed_lock(key: str, ttl_seconds: int = 300):
+def distributed_lock(key: str, ttl_seconds: int | None = None):
     """
     Context manager for a distributed lock.
 
@@ -119,8 +123,12 @@ def distributed_lock(key: str, ttl_seconds: int = 300):
                 raise SomeoneElseIsBookingError
             ... safe section ...
 
-    The lock auto-expires after ttl_seconds even if the process crashes.
+    The lock auto-expires after `ttl_seconds` (or `BOOKING_LOCK_TTL_SECONDS`
+    from settings) even if the process crashes.
     """
+    if ttl_seconds is None:
+        ttl_seconds = settings.BOOKING_LOCK_TTL_SECONDS
+
     token = f"lock_{time.time_ns()}"
     acquired = _set_nx(f"lock:{key}", token, ttl_seconds)
     try:
@@ -133,7 +141,7 @@ def distributed_lock(key: str, ttl_seconds: int = 300):
                 _delete(f"lock:{key}")
 
 
-def idempotency_seen(event_id: str, ttl_seconds: int = 7 * 24 * 3600) -> bool:
+def idempotency_seen(event_id: str, ttl_seconds: int | None = None) -> bool:
     """
     Check whether we've already processed this event_id; mark as seen if not.
 
@@ -141,8 +149,11 @@ def idempotency_seen(event_id: str, ttl_seconds: int = 7 * 24 * 3600) -> bool:
     Returns False if this is the first time and we just recorded it.
 
     Used by the webhook handler to prevent duplicate Razorpay events from
-    being processed twice.
+    being processed twice. TTL must outlast the gateway's longest retry window.
     """
+    if ttl_seconds is None:
+        ttl_seconds = settings.WEBHOOK_IDEMPOTENCY_TTL_SECONDS
+
     key = f"idem:{event_id}"
     was_set = _set_nx(key, "1", ttl_seconds)
     return not was_set

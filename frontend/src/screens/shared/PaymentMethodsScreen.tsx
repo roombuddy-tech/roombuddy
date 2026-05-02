@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import api from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import api from '../../services/api';
+import { getErrorMessage } from '../../utils/errors';
 
 interface PaymentMethodsScreenProps {
   visible: boolean;
@@ -87,7 +88,7 @@ export default function PaymentMethodsScreen({ visible, onClose }: PaymentMethod
       resetForm();
       fetchAccounts();
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to add bank account.');
+      Alert.alert('Error', getErrorMessage(err, 'Failed to add bank account.'));
     } finally {
       setSaving(false);
     }
@@ -104,7 +105,7 @@ export default function PaymentMethodsScreen({ visible, onClose }: PaymentMethod
       resetForm();
       fetchAccounts();
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error || 'Failed to add UPI.');
+      Alert.alert('Error', getErrorMessage(err, 'Failed to add UPI.'));
     } finally {
       setSaving(false);
     }

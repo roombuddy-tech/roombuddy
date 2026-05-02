@@ -3,13 +3,13 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
@@ -17,6 +17,7 @@ import type { GuestStackParamList } from '../../navigation/types';
 import { createBooking, getQuote } from '../../services/bookings';
 import { createPaymentOrder } from '../../services/payments';
 import type { BookingQuote } from '../../types/booking';
+import { getErrorMessage } from '../../utils/errors';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'BookingConfirm'>;
 type Rt = RouteProp<GuestStackParamList, 'BookingConfirm'>;
@@ -38,7 +39,7 @@ export default function BookingConfirmScreen() {
         const q = await getQuote(listingId, checkIn, checkOut);
         if (!cancelled) setQuote(q);
       } catch (e: any) {
-        if (!cancelled) setError(e?.response?.data?.error || 'Could not fetch quote');
+        if (!cancelled) setError(getErrorMessage(e, 'Could not fetch quote'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -65,8 +66,7 @@ export default function BookingConfirmScreen() {
         order,
       });
     } catch (e: any) {
-      const msg = e?.response?.data?.error || 'Could not start booking';
-      Alert.alert('Booking failed', msg);
+      Alert.alert('Booking failed', getErrorMessage(e, 'Could not start booking'))
     } finally {
       setSubmitting(false);
     }
