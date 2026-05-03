@@ -1,22 +1,47 @@
 """
 Django settings for RoomBuddy backend.
+
+Configuration is environment-driven via .env file.
+- For LOCAL DEV: DJANGO_DEBUG=True, points to local Postgres + Redis
+- For LOCAL DEV against AWS: set DATABASE_URL/REDIS_URL to AWS endpoints (still DEBUG=True)
+- For PROD on EC2: DJANGO_DEBUG=False, all values from /etc/roombuddy/env
 """
 
 import os
-import urllib.parse
+import ssl
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv()
+import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me-in-production")
+# Load .env from backend/ directory
+load_dotenv(BASE_DIR / ".env")
 
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+# ── Core ─────────────────────────────────────────────────────
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
-# ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "dev-only-not-for-production-xxxxxxxxxxxxxxxxxxxx"
+    else:
+        raise RuntimeError("DJANGO_SECRET_KEY env var is required in production")
+
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
+]
+
+# ── Apps ─────────────────────────────────────────────────────
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -35,6 +60,7 @@ INSTALLED_APPS = [
     "apps.bookings",
     "apps.payments",
     "apps.reviews",
+    "apps.health",
 ]
 
 MIDDLEWARE = [
@@ -69,42 +95,43 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-_database_url = os.getenv("DATABASE_URL")
-_db_host = os.getenv("DB_HOST")
+# ── Database ─────────────────────────────────────────────────
+# Use DATABASE_URL env var. Falls back to local Postgres for dev.
+# Examples:
+#   Local:  postgres://roombuddy:roombuddy@localhost:5432/roombuddy
+#   AWS:    postgres://user:pass@xxx.rds.amazonaws.com:5432/roombuddy
+DATABASES = {
+    "default": dj_database_url.config(
+        default="postgres://roombuddy:roombuddy@localhost:5432/roombuddy",
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=not DEBUG,  # SSL required in prod, optional in dev
+    )
+}
 
-if _database_url:
-    _url = urllib.parse.urlparse(_database_url)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": _url.path.lstrip("/"),
-            "USER": _url.username,
-            "PASSWORD": urllib.parse.unquote(_url.password or ""),
-            "HOST": _url.hostname,
-            "PORT": str(_url.port or 5432),
-            "OPTIONS": {"sslmode": "require"},
-        }
-    }
-elif _db_host:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME", "postgres"),
-            "USER": os.getenv("DB_USER", "postgres"),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": _db_host,
-            "PORT": os.getenv("DB_PORT", "5432"),
-            "OPTIONS": {"sslmode": "require"},
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+# ── Redis (cache + distributed locks + webhook idempotency) ──
+# rediss:// = TLS (ElastiCache); redis:// = plain (local dev)
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+_redis_options = {}
+if REDIS_URL.startswith("rediss://"):
+    _redis_options = {"ssl_cert_reqs": ssl.CERT_NONE}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": _redis_options,
+        },
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+
+# ── Auth / i18n ──────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -117,12 +144,51 @@ TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+# ── Static / Media ───────────────────────────────────────────
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# Media: S3 in prod, local in dev (controlled by USE_S3 env)
+USE_S3 = os.environ.get("USE_S3", "False") == "True"
+
+if USE_S3:
+    AWS_STORAGE_BUCKET_NAME = os.environ["AWS_STORAGE_BUCKET_NAME"]
+    AWS_S3_REGION_NAME = os.environ.get("AWS_REGION", "ap-south-1")
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_QUERYSTRING_AUTH = True
+    AWS_S3_CUSTOM_DOMAIN = (
+        f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+    )
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+else:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+
+# ── Email ────────────────────────────────────────────────────
+# Console for dev, SMTP (SES) for prod
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "email-smtp.ap-south-1.amazonaws.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
+    EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 10
+
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", "RoomBuddy <no-reply@roombuddy.co.in>"
+)
+
+# ── Defaults ─────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ── DRF ──────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -153,22 +219,32 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api/",
 }
 
+# ── CORS ─────────────────────────────────────────────────────
+# In dev, allow all (Expo on phone hits Django on Mac with random IPs).
+# In prod, restrict to known origins.
 CORS_ALLOW_ALL_ORIGINS = DEBUG
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:8081"
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:8081",
+    ).split(",")
+    if o.strip()
+]
 
-# ── JWT Configuration ─────────────────────────────────────────
-ACCESS_TOKEN_LIFETIME_MINUTES = int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", "10080"))  # 7 days default for dev
-REFRESH_TOKEN_LIFETIME_DAYS = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "30"))
+# ── JWT ──────────────────────────────────────────────────────
+ACCESS_TOKEN_LIFETIME_MINUTES = int(os.environ.get("ACCESS_TOKEN_LIFETIME_MINUTES", "10080"))
+REFRESH_TOKEN_LIFETIME_DAYS = int(os.environ.get("REFRESH_TOKEN_LIFETIME_DAYS", "30"))
 
-# ── Logging ───────────────────────────────────────────────────
+# ── Logging ──────────────────────────────────────────────────
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {"format": "[{asctime}] {levelname} {name}: {message}", "style": "{"},
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
@@ -176,42 +252,58 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        "third_party": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# ── Payments / Razorpay ──────────────────────────────────────
+# "console" = local dev fake gateway (no Razorpay account needed)
+# "razorpay" = real Razorpay (test or live mode based on key prefix)
+PAYMENT_PROVIDER = os.environ.get("PAYMENT_PROVIDER", "console")
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
 
-# ── Redis ─────────────────────────────────────────────────────
-# Used for distributed locking on bookings + idempotency on webhooks.
-# Falls back to in-memory store if not configured (single-process dev only).
-REDIS_URL = os.getenv("REDIS_URL", "")
-
-# ── Payments / Razorpay ───────────────────────────────────────
-# PAYMENT_PROVIDER:
-#   "console"  = local dev fake gateway (no Razorpay account needed)
-#   "razorpay" = real Razorpay (test or live mode)
-PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "console")
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
-RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
-
-# ── Booking & payment timing ──────────────────────────────────
-# How long the guest has to complete payment after creating a booking. After
-# this window, the booking auto-expires and the dates become available again.
-PAYMENT_WINDOW_MINUTES = int(os.getenv("PAYMENT_WINDOW_MINUTES", "15"))
-
-# How long the host has to accept/reject a booking in REQUEST mode.
-HOST_RESPONSE_DEADLINE_HOURS = int(os.getenv("HOST_RESPONSE_DEADLINE_HOURS", "24"))
-
-# Distributed-lock TTL covering the booking-creation critical section. Acts as
-# a safety net — if the process crashes inside the lock, it auto-releases.
-BOOKING_LOCK_TTL_SECONDS = int(os.getenv("BOOKING_LOCK_TTL_SECONDS", "120"))
-
-# How long webhook idempotency keys live in Redis. Must outlast Razorpay's
-# longest possible retry window.
+# ── Booking & payment timing ─────────────────────────────────
+PAYMENT_WINDOW_MINUTES = int(os.environ.get("PAYMENT_WINDOW_MINUTES", "15"))
+HOST_RESPONSE_DEADLINE_HOURS = int(os.environ.get("HOST_RESPONSE_DEADLINE_HOURS", "24"))
+BOOKING_LOCK_TTL_SECONDS = int(os.environ.get("BOOKING_LOCK_TTL_SECONDS", "120"))
 WEBHOOK_IDEMPOTENCY_TTL_SECONDS = int(
-    os.getenv("WEBHOOK_IDEMPOTENCY_TTL_SECONDS", str(7 * 24 * 3600))
+    os.environ.get("WEBHOOK_IDEMPOTENCY_TTL_SECONDS", str(7 * 24 * 3600))
 )
+
+# ── OTP / SMS ────────────────────────────────────────────────
+OTP_PROVIDER = os.environ.get("OTP_PROVIDER", "console")
+MSG91_AUTH_KEY = os.environ.get("MSG91_AUTH_KEY", "")
+MSG91_TEMPLATE_ID = os.environ.get("MSG91_TEMPLATE_ID", "")
+MSG91_SENDER_ID = os.environ.get("MSG91_SENDER_ID", "RMBDY")
+
+# ── App config ───────────────────────────────────────────────
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:8000")
+
+# ── Security headers (production only) ───────────────────────
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "same-origin"
+    X_FRAME_OPTIONS = "DENY"
+
+# ── Sentry (error tracking, prod only) ───────────────────────
+SENTRY_DSN = os.environ.get("SENTRY_DSN")
+if SENTRY_DSN and not DEBUG:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        environment=os.environ.get("ENVIRONMENT", "production"),
+    )

@@ -7,6 +7,7 @@ Swagger UI available at /api/docs/
 
 from django.contrib import admin
 from django.urls import path, include
+from apps.health.views import health
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -25,6 +26,7 @@ urlpatterns = [
     path("api/bookings/", include("apps.bookings.urls")),
     path("api/payments/", include("apps.payments.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
+    path("api/health/", health, name="health"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
