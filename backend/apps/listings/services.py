@@ -50,6 +50,7 @@ def create_listing(user: User, data: dict) -> dict:
                 property=prop,
                 name=fm["name"],
                 age=fm.get("age"),
+                gender=fm.get("gender", "") or None,
                 occupation=fm.get("occupation", ""),
                 hobbies=fm.get("hobbies", ""),
             )
@@ -64,6 +65,7 @@ def create_listing(user: User, data: dict) -> dict:
             room_features=room_data.get("room_features", []),
         )
 
+        meal_desc = _build_meal_description(d)
         listing = Listing.objects.create(
             host_user=user,
             property=prop,
@@ -74,6 +76,8 @@ def create_listing(user: User, data: dict) -> dict:
             min_nights=d.get("min_nights", 1),
             food_kitchen_access=d.get("food_kitchen_access", False),
             food_meals_available=d.get("food_meals_available", False),
+            food_meal_cost=d.get("food_meal_cost"),
+            food_meal_description=meal_desc or None,
             status=Listing.Status.DRAFT,
         )
 
@@ -110,6 +114,17 @@ def create_listing(user: User, data: dict) -> dict:
 
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
+
+def _build_meal_description(d: dict) -> str:
+    parts = []
+    meal_types = d.get("food_meal_types", [])
+    meal_desc = (d.get("food_meal_description") or "").strip()
+    if meal_types:
+        parts.append("Meals served: " + ", ".join(meal_types))
+    if meal_desc:
+        parts.append(meal_desc)
+    return "\n".join(parts)
+
 
 def _parse_time(time_str: str) -> str:
     """Convert '2:00 PM' → '14:00' for Django TimeField."""

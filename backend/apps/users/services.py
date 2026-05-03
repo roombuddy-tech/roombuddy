@@ -420,7 +420,7 @@ def send_email_verification(user: User, email: str) -> dict:
     one_hour_ago = timezone.now() - timedelta(hours=1)
     recent_count = EmailVerification.objects.filter(user=user, email=email, created_at__gte=one_hour_ago).count()
 
-    if recent_count >= 3:
+    if recent_count >= 5:
         raise AuthServiceError("Too many verification requests. Try again later.", "RATE_LIMITED", 429)
 
     token = secrets.token_urlsafe(32)

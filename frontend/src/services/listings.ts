@@ -23,13 +23,15 @@ export async function createListing(form: {
   description: string;
   nearbyLandmarks: string[];
   distanceToLandmark: string;
-  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string }>;
+  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string }>;
   guestGenderPref: string;
   amenities: string[];
   kitchenAccess: boolean;
   homeCooked: boolean;
+  mealTypes: string[];
+  mealCost: string;
+  mealDescription: string;
   nightlyRate: string;
-  weeklyDiscount: boolean;
   minStay: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
@@ -43,8 +45,22 @@ export async function createListing(form: {
   cancellationPolicy: string;
   checkInTime: string;
   checkOutTime: string;
+  hostOccupation: string;
+  hostHobbies: string;
+  hostGender: string;
 }): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
+
+  // Prepend host as first flatmate entry
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
+    ? [{
+        name: '__host__',
+        age: null,
+        gender: form.hostGender,
+        occupation: form.hostOccupation,
+        hobbies: form.hostHobbies,
+      }]
+    : [];
 
   const body = {
     property: {
@@ -63,12 +79,16 @@ export async function createListing(form: {
       room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
       room_features: form.roomFeatures,
     },
-    flatmates: form.flatmates.map((fm) => ({
-      name: fm.name,
-      age: fm.age ? parseInt(fm.age, 10) : null,
-      occupation: fm.occupation,
-      hobbies: fm.hobbies,
-    })),
+    flatmates: [
+      ...hostFlatmate,
+      ...form.flatmates.map((fm) => ({
+        name: fm.name,
+        age: fm.age ? parseInt(fm.age, 10) : null,
+        gender: fm.gender || '',
+        occupation: fm.occupation,
+        hobbies: fm.hobbies,
+      })),
+    ],
     amenities: form.amenities,
     title: form.title,
     description,
@@ -76,6 +96,9 @@ export async function createListing(form: {
     min_nights: _mapMinStay(form.minStay),
     food_kitchen_access: form.kitchenAccess,
     food_meals_available: form.homeCooked,
+    food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
+    food_meal_description: form.homeCooked ? form.mealDescription : '',
+    food_meal_types: form.homeCooked ? form.mealTypes : [],
     house_rules: {
       no_smoking: form.noSmoking,
       no_loud_music: form.noLoudMusic,
