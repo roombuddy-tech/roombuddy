@@ -12,3 +12,7 @@ boto3==1.35.0
 Pillow==11.2.1
 redis==5.2.1
 razorpay==1.4.2
+dj-database-url==2.2.0
+django-redis==5.4.0
+django-storages==1.14.4
+sentry-sdk==2.18.0

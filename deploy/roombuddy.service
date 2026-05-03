@@ -1,0 +1,25 @@
+[Unit]
+Description=RoomBuddy Gunicorn Service
+After=network.target
+
+[Service]
+Type=notify
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/roombuddy/backend
+EnvironmentFile=/etc/roombuddy/env
+RuntimeDirectory=roombuddy
+RuntimeDirectoryMode=0775
+ExecStart=/home/ubuntu/roombuddy/backend/venv/bin/gunicorn \
+    --workers 3 \
+    --bind unix:/run/roombuddy/roombuddy.sock \
+    --access-logfile /var/log/roombuddy/access.log \
+    --error-logfile /var/log/roombuddy/error.log \
+    --timeout 30 \
+    config.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
