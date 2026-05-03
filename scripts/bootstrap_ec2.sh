@@ -73,6 +73,9 @@ cd "$APP_DIR/backend"
 ./venv/bin/python manage.py collectstatic --noinput
 
 log "Installing systemd service"
+sudo mkdir -p /var/log/roombuddy
+sudo chown ubuntu:www-data /var/log/roombuddy
+sudo chmod 775 /var/log/roombuddy
 sudo cp "$APP_DIR/deploy/roombuddy.service" /etc/systemd/system/roombuddy.service
 sudo usermod -a -G ubuntu www-data || true
 sudo systemctl daemon-reload
