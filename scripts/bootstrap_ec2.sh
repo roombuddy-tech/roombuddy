@@ -13,9 +13,10 @@ log "Installing system packages"
 sudo apt-get update -y
 sudo apt-get upgrade -y
 sudo apt-get install -y \
-    python3.12 python3.12-venv python3-pip \
+    python3-pip \
     nginx postgresql-client redis-tools \
     git build-essential libpq-dev \
+    libjpeg-dev zlib1g-dev \
     certbot python3-certbot-nginx \
     htop unzip jq
 
@@ -41,7 +42,13 @@ fi
 
 log "Setting up Python venv"
 cd "$APP_DIR/backend"
-python3.12 -m venv venv
+PYENV_PYTHON="/home/ubuntu/.pyenv/versions/3.12.7/bin/python3.12"
+if [ ! -x "$PYENV_PYTHON" ]; then
+    echo "❌ Python 3.12 not found at $PYENV_PYTHON"
+    echo "   Install it first: pyenv install 3.12.7"
+    exit 1
+fi
+"$PYENV_PYTHON" -m venv venv
 ./venv/bin/pip install --upgrade pip
 ./venv/bin/pip install -r requirements.txt
 
