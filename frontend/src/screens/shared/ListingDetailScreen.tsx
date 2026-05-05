@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
 import type { HostStackParamList } from '../../navigation/types';
+import { getListing } from '../../services/listings';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'ListingDetail'>;
 type Route = RouteProp<HostStackParamList, 'ListingDetail'>;
@@ -74,6 +75,23 @@ export default function ListingDetailScreen() {
   const isPreview = !!preview;
   const f = preview;
 
+  const [freshCoverUri, setFreshCoverUri] = useState<string | null>(null);
+
+  // Fetch fresh photo every time this screen focuses so stale navigation params don't hide photos
+  useFocusEffect(
+    useCallback(() => {
+      if (!isPreview && item?.listing_id) {
+        getListing(item.listing_id)
+          .then((data: any) => {
+            const first = Object.values(data.photos as Record<string, string[]>)
+              .find((arr: string[]) => arr.length > 0)?.[0] ?? null;
+            setFreshCoverUri(first);
+          })
+          .catch(() => {});
+      }
+    }, [item?.listing_id, isPreview]),
+  );
+
   // Derive display data from preview form or from list item
   const title = f?.title || item?.title || 'Listing';
   const areaName = f ? `${f.locality}${f.city ? `, ${f.city}` : ''}` : (item?.area_name ?? '');
@@ -84,7 +102,7 @@ export default function ListingDetailScreen() {
 
   const coverUri = f
     ? Object.values(f.photos as Record<string, string[]>).find((arr) => arr.length > 0)?.[0]
-    : item?.cover_photo_url ?? null;
+    : (freshCoverUri ?? item?.cover_photo_url ?? null);
 
   const tags: string[] = [];
   if (f?.roomType === 'private') tags.push('Private room');
@@ -128,7 +146,12 @@ export default function ListingDetailScreen() {
         {/* Photo */}
         <View style={styles.photoWrap}>
           {coverUri ? (
-            <Image source={{ uri: coverUri }} style={styles.coverPhoto} resizeMode="cover" />
+            <Image
+              source={{ uri: coverUri }}
+              style={styles.coverPhoto}
+              resizeMode="cover"
+              onError={() => setFreshCoverUri(null)}
+            />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={{ fontSize: 60 }}>🏠</Text>

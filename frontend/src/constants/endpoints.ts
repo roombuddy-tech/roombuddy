@@ -24,6 +24,7 @@ export const ENDPOINTS = {
     CREATE_LISTING: '/api/listings/',
     LISTING_DETAIL: (id: string) => `/api/listings/${id}/`,
     PROPERTIES: '/api/properties/',
+    PROPERTY_PHOTOS: (propertyId: string) => `/api/properties/${propertyId}/photos/`,
   },
   GUEST: {
     SEARCH: '/api/listings/search/',

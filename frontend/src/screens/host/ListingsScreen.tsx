@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -37,6 +37,25 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   snoozed: { label: 'Snoozed', color: '#94A3B8' },
   delisted: { label: 'Delisted', color: '#EF4444' },
 };
+
+function ListingThumbnail({ uri }: { uri: string | null }) {
+  const [failed, setFailed] = React.useState(false);
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={styles.photo}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <View style={[styles.photo, styles.photoPlaceholder]}>
+      <Text style={styles.photoEmoji}>🏠</Text>
+    </View>
+  );
+}
 
 export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
@@ -113,9 +132,7 @@ export default function ListingsScreen() {
                 onPress={() => handleCardPress(item)}
               >
                 <View style={styles.photoContainer}>
-                  <View style={styles.photo}>
-                    <Text style={styles.photoEmoji}>🏠</Text>
-                  </View>
+                  <ListingThumbnail uri={item.cover_photo_url} />
                 </View>
 
                 <View style={styles.detailsContainer}>
@@ -190,7 +207,8 @@ const styles = StyleSheet.create({
   },
 
   photoContainer: { marginRight: 12 },
-  photo: { width: 64, height: 64, borderRadius: RADIUS.sm, backgroundColor: COLORS.warm, justifyContent: 'center', alignItems: 'center' },
+  photo: { width: 64, height: 64, borderRadius: RADIUS.sm, overflow: 'hidden' },
+  photoPlaceholder: { backgroundColor: COLORS.warm, justifyContent: 'center', alignItems: 'center' },
   photoEmoji: { fontSize: 32 },
 
   detailsContainer: { flex: 1 },

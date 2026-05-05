@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   Alert,
+  ActionSheetIOS,
   Image,
   ActivityIndicator,
 } from 'react-native';
@@ -25,6 +26,7 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList } from '../../navigation/types';
 import { createListing, getListing, updateListing } from '../../services/listings';
+import { uploadAllPropertyPhotos } from '../../services/properties';
 
 const DRAFT_KEY = 'LISTING_DRAFT_NEW';
 
@@ -1443,33 +1445,77 @@ const amSt = StyleSheet.create({
 
 // ─── Step 6: Photos ───────────────────────────────────────────────────────────
 
+const ALL_PHOTO_CATEGORIES = [
+  ...PHOTO_CATEGORIES,
+  { key: 'other', label: 'Other', icon: '📷', required: false },
+];
+
 function StepPhotos({ form, update, onNext, onBack }: StepProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const pickPhotos = async (category: string) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library.');
-      return;
-    }
-    setLoading(category);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'] as any,
-        allowsMultipleSelection: true,
-        quality: 0.8,
-      });
-      if (!result.canceled) {
-        const uris = result.assets.map((a) => a.uri);
-        update({
-          photos: {
-            ...form.photos,
-            [category]: [...(form.photos[category] ?? []), ...uris],
-          },
-        });
+  const addPhotos = async (category: string, useCamera: boolean) => {
+    if (useCamera) {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow camera access to take photos.');
+        return;
       }
-    } finally {
-      setLoading(null);
+      setLoading(category);
+      try {
+        const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+        if (!result.canceled) {
+          const uris = result.assets.map((a) => a.uri);
+          update({ photos: { ...form.photos, [category]: [...(form.photos[category] ?? []), ...uris] } });
+        }
+      } finally {
+        setLoading(null);
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to your photo library.');
+        return;
+      }
+      setLoading(category);
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'] as any,
+          allowsMultipleSelection: true,
+          quality: 0.85,
+        });
+        if (!result.canceled) {
+          const uris = result.assets.map((a) => a.uri);
+          update({ photos: { ...form.photos, [category]: [...(form.photos[category] ?? []), ...uris] } });
+        }
+      } finally {
+        setLoading(null);
+      }
+    }
+  };
+
+  const openSourcePicker = (category: string) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: 'Add photos',
+          options: ['Cancel', 'Take a photo', 'Choose from library'],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) addPhotos(category, true);
+          else if (idx === 2) addPhotos(category, false);
+        }
+      );
+    } else {
+      Alert.alert(
+        'Add photos',
+        undefined,
+        [
+          { text: 'Take a photo', onPress: () => addPhotos(category, true) },
+          { text: 'Choose from library', onPress: () => addPhotos(category, false) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
     }
   };
 
@@ -1478,176 +1524,170 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
     update({ photos: { ...form.photos, [category]: updated } });
   };
 
-  const isValid =
-    (form.photos.bedroom?.length ?? 0) > 0 && (form.photos.bathroom?.length ?? 0) > 0;
+  const isValid = (form.photos.bedroom?.length ?? 0) > 0 && (form.photos.bathroom?.length ?? 0) > 0;
 
   const validate = (): string | null => {
-    if (!form.photos.bedroom?.length) return 'Please add at least 1 photo of the bedroom';
-    if (!form.photos.bathroom?.length) return 'Please add at least 1 photo of the bathroom';
+    if (!form.photos.bedroom?.length) return 'Please add at least 1 bedroom photo';
+    if (!form.photos.bathroom?.length) return 'Please add at least 1 bathroom photo';
     return null;
   };
 
   const totalPhotos = Object.values(form.photos).reduce((sum, arr) => sum + arr.length, 0);
-  const otherPhotos = form.photos.other ?? [];
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={stSt.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={stSt.title}>Photos</Text>
-      <Text style={stSt.sub}>
-        Great photos = more bookings.{' '}
-        <Text style={{ color: totalPhotos >= 5 ? COLORS.success : COLORS.accent }}>
-          {totalPhotos}/5 added
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={stSt.content} showsVerticalScrollIndicator={false}>
+        <Text style={stSt.title}>Photos</Text>
+        <Text style={stSt.sub}>
+          Great photos = more bookings.{' '}
+          <Text style={{ color: totalPhotos >= 5 ? COLORS.success : COLORS.accent }}>
+            {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''} added
+          </Text>
         </Text>
-      </Text>
 
-      <View style={phSt.tipBox}>
-        <Text style={phSt.tipTxt}>
-          💡 Use natural light · Landscape orientation · Show the full room · Clean and declutter · Required: Bedroom & Bathroom
-        </Text>
-      </View>
+        <View style={phSt.tipBox}>
+          <Text style={phSt.tipTxt}>
+            💡 Bedroom & Bathroom required · Natural light · Landscape · Clean & tidy
+          </Text>
+        </View>
 
-      <View style={phSt.grid}>
-        {PHOTO_CATEGORIES.map((cat) => {
+        {ALL_PHOTO_CATEGORIES.map((cat) => {
           const photos = form.photos[cat.key] ?? [];
           const isLoading = loading === cat.key;
-          const isEmpty = photos.length === 0;
+          const hasPhotos = photos.length > 0;
 
-          if (isEmpty) {
-            return (
-              <TouchableOpacity
-                key={cat.key}
-                style={phSt.catCard}
-                activeOpacity={0.7}
-                onPress={() => pickPhotos(cat.key)}
-              >
-                {cat.required && (
+          return (
+            <View key={cat.key} style={[phSt.categoryCard, hasPhotos && phSt.categoryCardFilled]}>
+              {/* Row header */}
+              <View style={phSt.categoryHeader}>
+                <Text style={phSt.categoryIcon}>{cat.icon}</Text>
+                <Text style={phSt.categoryName}>{cat.label}</Text>
+                {cat.required && !hasPhotos && (
                   <View style={phSt.requiredBadge}>
                     <Text style={phSt.requiredTxt}>Required</Text>
                   </View>
                 )}
-                <Text style={{ fontSize: 28, marginBottom: 6 }}>{cat.icon}</Text>
-                <Text style={phSt.catLabel}>{cat.label}</Text>
-                <Text style={phSt.catSub}>{isLoading ? 'Loading…' : 'Tap to add'}</Text>
-              </TouchableOpacity>
-            );
-          }
-
-          return (
-            <View key={cat.key} style={[phSt.catCard, phSt.catCardFilled]}>
-              <View style={phSt.cardTopRow}>
-                <Text style={[phSt.catLabel, { color: COLORS.primary, marginBottom: 0 }]} numberOfLines={1}>
-                  {cat.label}
-                </Text>
-                <Text style={phSt.countPill}>
-                  {photos.length} photo{photos.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-              <View style={phSt.thumbsRow}>
-                {photos.map((uri, idx) => (
-                  <View key={`${cat.key}-${idx}`} style={phSt.thumbWrap}>
-                    <Image source={{ uri }} style={phSt.thumbSm} resizeMode="cover" />
-                    <TouchableOpacity
-                      style={phSt.removeBtn}
-                      onPress={() => removePhoto(cat.key, idx)}
-                      hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                    >
-                      <Ionicons name="close-circle" size={18} color="#fff" />
-                    </TouchableOpacity>
+                {hasPhotos && (
+                  <View style={phSt.doneBadge}>
+                    <Ionicons name="checkmark" size={11} color={COLORS.success} />
+                    <Text style={phSt.doneTxt}>{photos.length} photo{photos.length > 1 ? 's' : ''}</Text>
                   </View>
-                ))}
+                )}
+                <View style={{ flex: 1 }} />
                 <TouchableOpacity
-                  style={phSt.addMoreBtn}
-                  onPress={() => pickPhotos(cat.key)}
+                  style={[phSt.addBtn, isLoading && { opacity: 0.5 }]}
+                  onPress={() => openSourcePicker(cat.key)}
+                  disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="add" size={20} color={COLORS.primary} />
+                  {isLoading
+                    ? <ActivityIndicator size="small" color={COLORS.primary} />
+                    : <Ionicons name={hasPhotos ? 'add' : 'camera-outline'} size={18} color={COLORS.primary} />
+                  }
                 </TouchableOpacity>
               </View>
+
+              {/* Photos strip */}
+              {hasPhotos && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={phSt.thumbStrip}
+                >
+                  {photos.map((uri, idx) => (
+                    <View key={`${cat.key}-${idx}`} style={phSt.thumbWrap}>
+                      <Image source={{ uri }} style={phSt.thumbImg} resizeMode="cover" />
+                      {idx === 0 && (
+                        <View style={phSt.coverBadge}>
+                          <Text style={phSt.coverBadgeTxt}>Cover</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        style={phSt.removeBtn}
+                        onPress={() => removePhoto(cat.key, idx)}
+                        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Empty prompt */}
+              {!hasPhotos && (
+                <TouchableOpacity
+                  style={phSt.emptyPrompt}
+                  onPress={() => openSourcePicker(cat.key)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="image-outline" size={18} color={COLORS.textMut} />
+                  <Text style={phSt.emptyPromptTxt}>Tap to add photos</Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         })}
-      </View>
 
-      <TouchableOpacity
-        style={phSt.uploadBox}
-        activeOpacity={0.7}
-        onPress={() => pickPhotos('other')}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 26 }}>
-            {loading === 'other' ? '⏳' : '📷'}
-          </Text>
-          <View style={{ flex: 1 }}>
-            <Text style={phSt.uploadTitle}>
-              Other photos{otherPhotos.length > 0 ? `  ·  ${otherPhotos.length} added` : ''}
-            </Text>
-            <Text style={phSt.uploadSub}>
-              Exterior view, street access, common areas, or any other photo
-            </Text>
-          </View>
-          <Ionicons name="add-circle-outline" size={22} color={COLORS.primary} />
-        </View>
-      </TouchableOpacity>
-
-      {otherPhotos.length > 0 && (
-        <View style={phSt.otherThumbsRow}>
-          {otherPhotos.map((uri, idx) => (
-            <View key={`other-${idx}`} style={phSt.thumbWrap}>
-              <Image source={{ uri }} style={phSt.thumbMd} resizeMode="cover" />
-              <TouchableOpacity
-                style={phSt.removeBtn}
-                onPress={() => removePhoto('other', idx)}
-                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-              >
-                <Ionicons name="close-circle" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      )}
-
-      <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
-    </ScrollView>
+        <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
+      </ScrollView>
   );
 }
 
 const phSt = StyleSheet.create({
   tipBox: { backgroundColor: '#FFFBEB', borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
   tipTxt: { fontSize: 12, color: '#92400E', lineHeight: 18 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
-  catCard: {
-    width: '47.5%',
-    padding: SPACING.sm,
-    borderRadius: RADIUS.md,
+
+  categoryCard: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    position: 'relative',
-    minHeight: 110,
-    justifyContent: 'center',
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
+    backgroundColor: COLORS.bg,
+    overflow: 'hidden',
+    ...SHADOW.sm,
   },
-  catCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5, backgroundColor: COLORS.bg, alignItems: 'flex-start', justifyContent: 'flex-start' },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6 },
-  countPill: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary, backgroundColor: COLORS.primaryAlpha, paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.pill },
-  thumbsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%' },
+  categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
+  categoryIcon: { fontSize: 18 },
+  categoryName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: '#FFF0EB', borderWidth: 1, borderColor: '#FECDB9' },
+  requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
+  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: '#ECFDF5' },
+  doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.success },
+  addBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  thumbStrip: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.md, gap: 8, flexDirection: 'row' },
   thumbWrap: { position: 'relative' },
-  thumbSm: { width: 44, height: 44, borderRadius: RADIUS.sm },
-  thumbMd: { width: 64, height: 64, borderRadius: RADIUS.sm },
-  removeBtn: { position: 'absolute', top: -6, right: -6, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 9 },
-  addMoreBtn: { width: 44, height: 44, borderRadius: RADIUS.sm, borderWidth: 1.5, borderColor: COLORS.primary, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primaryAlpha },
-  otherThumbsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 4, marginBottom: SPACING.sm },
-  requiredBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: COLORS.accent, borderRadius: RADIUS.pill, paddingHorizontal: 7, paddingVertical: 2 },
-  requiredTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
-  catLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.text, textAlign: 'center', marginTop: 4 },
-  catSub: { fontSize: 11, color: COLORS.textMut, marginTop: 1 },
-  uploadBox: { padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.primary, borderStyle: 'dashed', backgroundColor: COLORS.primaryAlpha, marginBottom: SPACING.sm },
-  uploadTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.primary },
-  uploadSub: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
+  thumbImg: { width: 110, height: 82, borderRadius: RADIUS.sm },
+  coverBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  coverBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
+  removeBtn: { position: 'absolute', top: -7, right: -7, backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 12 },
+
+  emptyPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    paddingVertical: 16,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    backgroundColor: COLORS.surface,
+  },
+  emptyPromptTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
+
 });
 
 // ─── Step 7: Set Your Price ───────────────────────────────────────────────────
@@ -1929,6 +1969,8 @@ function StepReview({
   isEditMode?: boolean;
   listingId?: string;
 }) {
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const amenityHighlights = form.amenities.slice(0, 3).join(', ');
   const ruleCount = [
@@ -1961,19 +2003,53 @@ function StepReview({
 
   const doPublish = async () => {
     setSubmitting(true);
+    setUploadProgress(null);
     try {
+      let propertyId: string | null = null;
+
       if (isEditMode && listingId) {
-        await updateListing(listingId, form);
-        Alert.alert('Updated!', 'Your listing has been updated.', [{ text: 'OK', onPress: onSuccess }]);
+        const result = await updateListing(listingId, form);
+        propertyId = result.property_id ?? null;
       } else {
-        await createListing(form);
+        const result = await createListing(form);
+        propertyId = result.property_id ?? null;
         await AsyncStorage.removeItem(DRAFT_KEY);
-        Alert.alert(
-          'Listing submitted!',
-          "We'll notify you once it's live.",
-          [{ text: 'OK', onPress: onSuccess }]
-        );
       }
+
+      // Upload photos if any were selected
+      const photoCount = Object.values(form.photos).reduce((s, a) => s + a.length, 0);
+      if (propertyId && photoCount > 0) {
+        setUploadProgress({ done: 0, total: photoCount });
+        const { uploaded, failed } = await uploadAllPropertyPhotos(
+          propertyId,
+          form.photos,
+          (done, total) => setUploadProgress({ done, total }),
+        );
+        setUploadProgress(null);
+
+        if (failed > 0 && uploaded === 0) {
+          Alert.alert(
+            isEditMode ? 'Updated' : 'Listing submitted!',
+            `Your listing was saved, but all ${failed} photo${failed > 1 ? 's' : ''} failed to upload. You can add them later via Edit listing.`,
+            [{ text: 'OK', onPress: onSuccess }],
+          );
+          return;
+        }
+        if (failed > 0) {
+          Alert.alert(
+            isEditMode ? 'Updated' : 'Listing submitted!',
+            `${uploaded} photo${uploaded > 1 ? 's' : ''} uploaded. ${failed} failed — you can add them later via Edit listing.`,
+            [{ text: 'OK', onPress: onSuccess }],
+          );
+          return;
+        }
+      }
+
+      Alert.alert(
+        isEditMode ? 'Updated!' : 'Listing submitted!',
+        isEditMode ? 'Your listing has been updated.' : "We'll notify you once it's live.",
+        [{ text: 'OK', onPress: onSuccess }],
+      );
     } catch (err: any) {
       const msg =
         err?.response?.data?.detail ||
@@ -1982,6 +2058,7 @@ function StepReview({
       Alert.alert('Error', msg);
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -2121,7 +2198,15 @@ function StepReview({
         disabled={submitting}
       >
         {submitting ? (
-          <ActivityIndicator color="#fff" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <ActivityIndicator color="#fff" size="small" />
+            <Text style={{ color: '#fff', fontSize: 15, ...FONTS.medium }}>
+              {uploadProgress
+                ? `Uploading photos ${uploadProgress.done} / ${uploadProgress.total}…`
+                : isEditMode ? 'Saving…' : 'Submitting…'
+              }
+            </Text>
+          </View>
         ) : (
           <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>
             {isEditMode ? 'Confirm update' : 'Review & publish'}
@@ -2237,6 +2322,15 @@ function mapListingToForm(data: any): FormData {
     hostOccupation: data.host?.occupation || '',
     hostHobbies: data.host?.hobbies || '',
     hostGender: data.host?.gender || '',
+    photos: {
+      bedroom: data.photos?.bedroom ?? [],
+      bathroom: data.photos?.bathroom ?? [],
+      kitchen: data.photos?.kitchen ?? [],
+      living: data.photos?.living ?? [],
+      entrance: [],
+      balcony: [],
+      other: data.photos?.other ?? [],
+    },
   };
 }
 

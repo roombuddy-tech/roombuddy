@@ -89,5 +89,6 @@ class CreateListingRequestSerializer(serializers.Serializer):
 
 class CreateListingResponseSerializer(serializers.Serializer):
     listing_id = serializers.UUIDField()
+    property_id = serializers.UUIDField()
     status = serializers.CharField()
     message = serializers.CharField()

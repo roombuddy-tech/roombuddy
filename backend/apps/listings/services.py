@@ -68,6 +68,22 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
     host_fm = next((f for f in flatmates_qs if f["name"] == "__host__"), None)
     real_flatmates = [f for f in flatmates_qs if f["name"] != "__host__"]
 
+    from apps.properties.models import PropertyPhoto
+    from third_party.storage import get_photo_url
+
+    # Area key → frontend category key
+    area_to_frontend = {
+        "bedroom": "bedroom",
+        "washroom": "bathroom",
+        "kitchen": "kitchen",
+        "living_room": "living",
+        "other": "other",
+    }
+    photos_by_category: dict[str, list[str]] = {k: [] for k in area_to_frontend.values()}
+    for photo in PropertyPhoto.objects.filter(property=prop).order_by("sort_order", "uploaded_at"):
+        cat = area_to_frontend.get(photo.area, "other")
+        photos_by_category[cat].append(get_photo_url(photo.url))
+
     return {
         "property": {
             "apartment_type": prop.apartment_type,
@@ -125,6 +141,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
         },
+        "photos": photos_by_category,
     }
 
 
@@ -215,6 +232,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
 
     return {
         "listing_id": str(listing.id),
+        "property_id": str(listing.property_id),
         "status": listing.status,
         "message": "Listing updated successfully.",
     }
@@ -318,6 +336,7 @@ def create_listing(user: User, data: dict) -> dict:
 
     return {
         "listing_id": str(listing.id),
+        "property_id": str(listing.property_id),
         "status": listing.status,
         "message": "Listing submitted for review.",
     }
@@ -395,6 +414,7 @@ def _get_area_name(listing: Listing) -> str:
 
 def _attach_cover_photos(listings, results: list[dict]):
     from apps.properties.models import PropertyPhoto
+    from third_party.storage import get_photo_url
 
     if not results:
         return
@@ -411,4 +431,5 @@ def _attach_cover_photos(listings, results: list[dict]):
 
     for r in results:
         prop_id = str(listing_property_map.get(r["listing_id"], ""))
-        r["cover_photo_url"] = photo_map.get(prop_id)
+        raw_url = photo_map.get(prop_id)
+        r["cover_photo_url"] = get_photo_url(raw_url) if raw_url else None

@@ -3,6 +3,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 
 export interface CreateListingResponse {
   listing_id: string;
+  property_id: string;
   status: string;
   message: string;
 }
