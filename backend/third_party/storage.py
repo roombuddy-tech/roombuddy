@@ -8,16 +8,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-STORAGE_PROVIDER = os.getenv("STORAGE_PROVIDER", "local")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "roombuddy-profile-picture-uploads")
-S3_REGION = os.getenv("S3_REGION", "ap-south-1")
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
-
-# Local storage directory (for dev)
-LOCAL_MEDIA_DIR = os.getenv("LOCAL_MEDIA_DIR", "media")
-
-# Max file sizes
 MAX_IMAGE_SIZE_MB = 5
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
@@ -26,6 +16,60 @@ class StorageError(Exception):
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
+
+
+def get_photo_url(url: str, expires_in: int = 3600) -> str:
+    """
+    Return a client-displayable URL for a stored photo.
+    - S3 URLs → 1-hour pre-signed URL
+    - Local /media/ paths → absolute URL using SITE_URL
+    """
+    if not url:
+        return url
+
+    provider = os.getenv("STORAGE_PROVIDER", "local").lower()
+
+    if provider == "s3" and url.startswith("https://"):
+        bucket = os.getenv("S3_BUCKET_NAME", "roombuddy-media")
+        region = os.getenv("S3_REGION", "ap-south-1")
+        prefix = f"https://{bucket}.s3.{region}.amazonaws.com/"
+        if url.startswith(prefix):
+            key = url[len(prefix):]
+            return _generate_presigned_url(key, expires_in, bucket, region)
+    elif url.startswith("/media/"):
+        from django.conf import settings
+        site_url = getattr(settings, "SITE_URL", "http://localhost:8000").rstrip("/")
+        return f"{site_url}{url}"
+
+    return url
+
+
+def _generate_presigned_url(key: str, expires_in: int, bucket: str, region: str) -> str:
+    try:
+        import boto3
+        from botocore.config import Config
+    except ImportError:
+        raise StorageError("boto3 not installed.")
+
+    access_key = os.getenv("AWS_ACCESS_KEY_ID", "")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+
+    # endpoint_url forces the regional endpoint; addressing_style='virtual' produces
+    # virtual-hosted URLs (bucket.s3.region.amazonaws.com/key) which are universally
+    # supported and avoid the 307 redirect that breaks path-style presigned signatures.
+    client = boto3.client(
+        "s3",
+        region_name=region,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        endpoint_url=f"https://s3.{region}.amazonaws.com",
+        config=Config(s3={"addressing_style": "virtual"}),
+    )
+    return client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": bucket, "Key": key},
+        ExpiresIn=expires_in,
+    )
 
 
 def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1200) -> dict:
@@ -41,11 +85,9 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     Returns:
         {"url": "https://...", "thumbnail_url": "https://...", "key": "profiles/abc123.jpg"}
     """
-    # Validate file size
     if hasattr(file_obj, 'size') and file_obj.size > MAX_IMAGE_SIZE_BYTES:
         raise StorageError(f"File too large. Maximum size is {MAX_IMAGE_SIZE_MB}MB.")
 
-    # Read and validate image
     try:
         image = Image.open(file_obj)
         image.verify()
@@ -54,11 +96,9 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     except Exception:
         raise StorageError("Invalid image file. Please upload a JPEG or PNG.")
 
-    # Convert to RGB if needed (handles RGBA PNGs)
     if image.mode in ("RGBA", "P"):
         image = image.convert("RGB")
 
-    # Generate filename
     ext = "jpg"
     if not filename:
         filename = f"{uuid.uuid4().hex}.{ext}"
@@ -67,17 +107,14 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
 
     key = f"{folder}/{filename}"
 
-    # Resize main image
     main_image = _resize_image(image, max_width)
     main_buffer = _image_to_buffer(main_image)
 
-    # Create thumbnail
     thumbnail = _resize_image(image, 300)
     thumb_key = f"{folder}/thumbs/{filename}"
     thumb_buffer = _image_to_buffer(thumbnail)
 
-    # Upload
-    provider = STORAGE_PROVIDER.lower()
+    provider = os.getenv("STORAGE_PROVIDER", "local").lower()
 
     if provider == "local":
         url = _upload_local(main_buffer, key)
@@ -97,7 +134,7 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
 
 def delete_image(key: str) -> bool:
     """Delete an image by its key. Also deletes thumbnail."""
-    provider = STORAGE_PROVIDER.lower()
+    provider = os.getenv("STORAGE_PROVIDER", "local").lower()
 
     if provider == "local":
         return _delete_local(key)
@@ -107,7 +144,6 @@ def delete_image(key: str) -> bool:
 
 
 def _resize_image(image: Image.Image, max_width: int) -> Image.Image:
-    """Resize image maintaining aspect ratio."""
     if image.width <= max_width:
         return image.copy()
     ratio = max_width / image.width
@@ -116,7 +152,6 @@ def _resize_image(image: Image.Image, max_width: int) -> Image.Image:
 
 
 def _image_to_buffer(image: Image.Image, quality: int = 85) -> BytesIO:
-    """Convert PIL Image to BytesIO buffer."""
     buffer = BytesIO()
     image.save(buffer, format="JPEG", quality=quality, optimize=True)
     buffer.seek(0)
@@ -126,9 +161,9 @@ def _image_to_buffer(image: Image.Image, quality: int = 85) -> BytesIO:
 # ─── Local storage (dev) ──────────────────────────────────────
 
 def _upload_local(buffer: BytesIO, key: str) -> str:
-    """Save file locally for development."""
     from django.conf import settings
-    media_dir = Path(settings.BASE_DIR) / LOCAL_MEDIA_DIR
+    local_media_dir = os.getenv("LOCAL_MEDIA_DIR", "media")
+    media_dir = Path(settings.BASE_DIR) / local_media_dir
     file_path = media_dir / key
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -140,10 +175,10 @@ def _upload_local(buffer: BytesIO, key: str) -> str:
 
 
 def _delete_local(key: str) -> bool:
-    """Delete file from local storage."""
     from django.conf import settings
-    file_path = Path(settings.BASE_DIR) / LOCAL_MEDIA_DIR / key
-    thumb_path = Path(settings.BASE_DIR) / LOCAL_MEDIA_DIR / key.replace(key.split("/")[-1], f"thumbs/{key.split('/')[-1]}")
+    local_media_dir = os.getenv("LOCAL_MEDIA_DIR", "media")
+    file_path = Path(settings.BASE_DIR) / local_media_dir / key
+    thumb_path = Path(settings.BASE_DIR) / local_media_dir / key.replace(key.split("/")[-1], f"thumbs/{key.split('/')[-1]}")
 
     for p in [file_path, thumb_path]:
         if p.exists():
@@ -155,27 +190,31 @@ def _delete_local(key: str) -> bool:
 # ─── S3 storage (production) ─────────────────────────────────
 
 def _upload_s3(buffer: BytesIO, key: str) -> str:
-    """Upload file to S3. Returns public URL."""
     try:
         import boto3
         from botocore.exceptions import ClientError
     except ImportError:
         raise StorageError("boto3 not installed.")
 
-    if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
+    access_key = os.getenv("AWS_ACCESS_KEY_ID", "")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    bucket = os.getenv("S3_BUCKET_NAME", "roombuddy-media")
+    region = os.getenv("S3_REGION", "ap-south-1")
+
+    if not access_key or not secret_key:
         raise StorageError("AWS credentials not configured.")
 
     try:
         client = boto3.client(
             "s3",
-            region_name=S3_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=region,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
         )
 
         client.upload_fileobj(
             buffer,
-            S3_BUCKET_NAME,
+            bucket,
             key,
             ExtraArgs={
                 "ContentType": "image/jpeg",
@@ -183,7 +222,7 @@ def _upload_s3(buffer: BytesIO, key: str) -> str:
             },
         )
 
-        url = f"https://{S3_BUCKET_NAME}.s3.{S3_REGION}.amazonaws.com/{key}"
+        url = f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
         logger.info(f"[S3] Uploaded: {url}")
         return url
 
@@ -193,23 +232,26 @@ def _upload_s3(buffer: BytesIO, key: str) -> str:
 
 
 def _delete_s3(key: str) -> bool:
-    """Delete file from S3."""
     try:
         import boto3
         from botocore.exceptions import ClientError
 
+        access_key = os.getenv("AWS_ACCESS_KEY_ID", "")
+        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+        bucket = os.getenv("S3_BUCKET_NAME", "roombuddy-media")
+        region = os.getenv("S3_REGION", "ap-south-1")
+
         client = boto3.client(
             "s3",
-            region_name=S3_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=region,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
         )
 
-        # Delete main and thumbnail
         thumb_key = key.replace(key.split("/")[-1], f"thumbs/{key.split('/')[-1]}")
         for k in [key, thumb_key]:
             try:
-                client.delete_object(Bucket=S3_BUCKET_NAME, Key=k)
+                client.delete_object(Bucket=bucket, Key=k)
             except ClientError:
                 pass
 

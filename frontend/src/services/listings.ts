@@ -3,6 +3,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 
 export interface CreateListingResponse {
   listing_id: string;
+  property_id: string;
   status: string;
   message: string;
 }
@@ -23,13 +24,15 @@ export async function createListing(form: {
   description: string;
   nearbyLandmarks: string[];
   distanceToLandmark: string;
-  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string }>;
+  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string }>;
   guestGenderPref: string;
   amenities: string[];
   kitchenAccess: boolean;
   homeCooked: boolean;
+  mealTypes: string[];
+  mealCost: string;
+  mealDescription: string;
   nightlyRate: string;
-  weeklyDiscount: boolean;
   minStay: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
@@ -43,8 +46,22 @@ export async function createListing(form: {
   cancellationPolicy: string;
   checkInTime: string;
   checkOutTime: string;
+  hostOccupation: string;
+  hostHobbies: string;
+  hostGender: string;
 }): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
+
+  // Prepend host as first flatmate entry
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
+    ? [{
+        name: '__host__',
+        age: null,
+        gender: form.hostGender,
+        occupation: form.hostOccupation,
+        hobbies: form.hostHobbies,
+      }]
+    : [];
 
   const body = {
     property: {
@@ -63,12 +80,16 @@ export async function createListing(form: {
       room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
       room_features: form.roomFeatures,
     },
-    flatmates: form.flatmates.map((fm) => ({
-      name: fm.name,
-      age: fm.age ? parseInt(fm.age, 10) : null,
-      occupation: fm.occupation,
-      hobbies: fm.hobbies,
-    })),
+    flatmates: [
+      ...hostFlatmate,
+      ...form.flatmates.map((fm) => ({
+        name: fm.name,
+        age: fm.age ? parseInt(fm.age, 10) : null,
+        gender: fm.gender || '',
+        occupation: fm.occupation,
+        hobbies: fm.hobbies,
+      })),
+    ],
     amenities: form.amenities,
     title: form.title,
     description,
@@ -76,6 +97,9 @@ export async function createListing(form: {
     min_nights: _mapMinStay(form.minStay),
     food_kitchen_access: form.kitchenAccess,
     food_meals_available: form.homeCooked,
+    food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
+    food_meal_description: form.homeCooked ? form.mealDescription : '',
+    food_meal_types: form.homeCooked ? form.mealTypes : [],
     house_rules: {
       no_smoking: form.noSmoking,
       no_loud_music: form.noLoudMusic,
@@ -93,6 +117,81 @@ export async function createListing(form: {
   };
 
   const res = await api.post<CreateListingResponse>(ENDPOINTS.HOST.CREATE_LISTING, body);
+  return res.data;
+}
+
+export async function getListing(listingId: string): Promise<any> {
+  const res = await api.get(ENDPOINTS.HOST.LISTING_DETAIL(listingId));
+  return res.data;
+}
+
+export async function updateListing(listingId: string, form: Parameters<typeof createListing>[0]): Promise<CreateListingResponse> {
+  const description = _buildDescription(form);
+
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
+    ? [{
+        name: '__host__',
+        age: null,
+        gender: form.hostGender,
+        occupation: form.hostOccupation,
+        hobbies: form.hostHobbies,
+      }]
+    : [];
+
+  const body = {
+    property: {
+      apartment_type: form.apartmentType.toLowerCase().replace('+', ''),
+      floor_number: parseInt(form.floorNumber, 10),
+      total_floors: form.totalFloors ? parseInt(form.totalFloors, 10) : null,
+      apartment_name: form.apartmentName,
+      address_line1: form.locality,
+      city_name: form.city,
+      gender_preference: form.guestGenderPref,
+    },
+    room: {
+      room_type: form.roomType,
+      bed_type: form.bedType,
+      bathroom_type: form.bathroom,
+      room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
+      room_features: form.roomFeatures,
+    },
+    flatmates: [
+      ...hostFlatmate,
+      ...form.flatmates.map((fm) => ({
+        name: fm.name,
+        age: fm.age ? parseInt(fm.age, 10) : null,
+        gender: fm.gender || '',
+        occupation: fm.occupation,
+        hobbies: fm.hobbies,
+      })),
+    ],
+    amenities: form.amenities,
+    title: form.title,
+    description,
+    host_price_per_night: parseFloat(form.nightlyRate),
+    min_nights: _mapMinStay(form.minStay),
+    food_kitchen_access: form.kitchenAccess,
+    food_meals_available: form.homeCooked,
+    food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
+    food_meal_description: form.homeCooked ? form.mealDescription : '',
+    food_meal_types: form.homeCooked ? form.mealTypes : [],
+    house_rules: {
+      no_smoking: form.noSmoking,
+      no_loud_music: form.noLoudMusic,
+      no_pets: form.noPets,
+      no_alcohol: form.noAlcohol,
+      no_parties: form.noParties,
+      shoes_off: form.shoesOff,
+      kitchen_clean: form.kitchenClean,
+      lock_door: form.lockDoor,
+      custom_rules: form.customRules,
+      cancellation_policy: form.cancellationPolicy,
+      check_in_time: form.checkInTime,
+      check_out_time: form.checkOutTime,
+    },
+  };
+
+  const res = await api.patch<CreateListingResponse>(ENDPOINTS.HOST.LISTING_DETAIL(listingId), body);
   return res.data;
 }
 

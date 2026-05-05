@@ -1,13 +1,16 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import Navigation from './src/navigation';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <StatusBar style="dark" />
-      <Navigation />
-    </AuthProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <AuthProvider>
+        <StatusBar style="dark" />
+        <Navigation />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

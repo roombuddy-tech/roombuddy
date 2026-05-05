@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,13 +38,32 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   delisted: { label: 'Delisted', color: '#EF4444' },
 };
 
+function ListingThumbnail({ uri }: { uri: string | null }) {
+  const [failed, setFailed] = React.useState(false);
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={styles.photo}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <View style={[styles.photo, styles.photoPlaceholder]}>
+      <Text style={styles.photoEmoji}>🏠</Text>
+    </View>
+  );
+}
+
 export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     try {
       const res = await api.get(ENDPOINTS.HOST.LISTINGS);
       setListings(res.data.results);
@@ -53,13 +73,27 @@ export default function ListingsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchListings(); }, []);
+  // Refetch every time the screen comes into focus so newly created listings appear
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchListings();
+    }, [fetchListings])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchListings();
+  };
+
+  const handleCardPress = (item: ListingItem) => {
+    if (item.status === 'draft') {
+      navigation.navigate('ListingEditor', { listingId: item.listing_id });
+    } else {
+      navigation.navigate('ListingDetail', { item });
+    }
   };
 
   return (
@@ -69,17 +103,14 @@ export default function ListingsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         contentContainerStyle={styles.scrollContent}
       >
-
-        {/* Header row */}
         <View style={styles.headerRow}>
           <Text style={styles.pageTitle}>My listings</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('ListingEditor')}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('ListingEditor', undefined)}>
             <Ionicons name="add" size={18} color="#fff" />
             <Text style={styles.addBtnText}>Add listing</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Listings */}
         {loading ? (
           <View style={styles.loadingArea}>
             <ActivityIndicator size="large" color={COLORS.primary} />
@@ -94,21 +125,16 @@ export default function ListingsScreen() {
           listings.map((item) => {
             const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.draft;
             return (
-              <TouchableOpacity key={item.listing_id} style={styles.listingCard} activeOpacity={0.7}>
-                {/* Photo */}
+              <TouchableOpacity
+                key={item.listing_id}
+                style={styles.listingCard}
+                activeOpacity={0.7}
+                onPress={() => handleCardPress(item)}
+              >
                 <View style={styles.photoContainer}>
-                  {item.cover_photo_url ? (
-                    <View style={styles.photo}>
-                      <Text style={styles.photoEmoji}>🏠</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.photo}>
-                      <Text style={styles.photoEmoji}>🏠</Text>
-                    </View>
-                  )}
+                  <ListingThumbnail uri={item.cover_photo_url} />
                 </View>
 
-                {/* Details */}
                 <View style={styles.detailsContainer}>
                   <View style={styles.titleRow}>
                     <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
@@ -121,18 +147,28 @@ export default function ListingsScreen() {
                   <Text style={styles.areaName}>{item.area_name}</Text>
 
                   <View style={styles.bottomRow}>
-                    <Text style={styles.price}>₹{item.host_price_per_night.toLocaleString('en-IN')}<Text style={styles.priceUnit}>/night</Text></Text>
+                    <Text style={styles.price}>
+                      ₹{item.host_price_per_night.toLocaleString('en-IN')}
+                      <Text style={styles.priceUnit}>/night</Text>
+                    </Text>
                     <View style={styles.statsRow}>
-                      {item.average_rating && (
+                      {item.average_rating ? (
                         <>
                           <Text style={styles.star}>☆</Text>
                           <Text style={styles.rating}>{item.average_rating}</Text>
+                          <Text style={styles.dot}>·</Text>
                         </>
-                      )}
-                      <Text style={styles.dot}>·</Text>
+                      ) : null}
                       <Text style={styles.bookingCount}>{item.total_bookings} bookings</Text>
                     </View>
                   </View>
+
+                  {item.status === 'draft' && (
+                    <View style={styles.draftHint}>
+                      <Ionicons name="pencil-outline" size={12} color={COLORS.accent} />
+                      <Text style={styles.draftHintTxt}>Tap to continue editing</Text>
+                    </View>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -171,7 +207,8 @@ const styles = StyleSheet.create({
   },
 
   photoContainer: { marginRight: 12 },
-  photo: { width: 64, height: 64, borderRadius: RADIUS.sm, backgroundColor: COLORS.warm, justifyContent: 'center', alignItems: 'center' },
+  photo: { width: 64, height: 64, borderRadius: RADIUS.sm, overflow: 'hidden' },
+  photoPlaceholder: { backgroundColor: COLORS.warm, justifyContent: 'center', alignItems: 'center' },
   photoEmoji: { fontSize: 32 },
 
   detailsContainer: { flex: 1 },
@@ -194,11 +231,7 @@ const styles = StyleSheet.create({
   rating: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
   dot: { fontSize: 13, color: COLORS.textMut },
   bookingCount: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.sm, marginBottom: SPACING.md },
-  brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
-  avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
+
+  draftHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  draftHintTxt: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
 });

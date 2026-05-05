@@ -1,36 +1,8 @@
-
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
   OTP: { phoneNumber: string };
   ProfileSetup: undefined;
-};
-
-export type GuestStackParamList = {
-  GuestTabs: undefined;
-  BookTest: undefined;
-  BookingConfirm: {
-    listingId: string;
-    listingTitle: string;
-    checkIn: string;
-    checkOut: string;
-    numberOfGuests?: number;
-  };
-  RazorpayCheckout: {
-    bookingId: string;
-    bookingCode: string;
-    order: {
-      razorpay_key_id: string;
-      order_id: string;
-      amount: number;
-      currency: string;
-      booking_code: string;
-    };
-  };
-  BookingSuccess: {
-    bookingId: string;
-    bookingCode: string;
-  };
 };
 
 export type GuestTabParamList = {
@@ -49,6 +21,17 @@ export type HostTabParamList = {
 export type HostStackParamList = {
   HostTabs: undefined;
   ListingEditor: { listingId?: string } | undefined;
-  BookingDetail: { bookingId: string };
-  GuestProfile: { userId: string };
+  ListingDetail: {
+    preview?: any;
+    item?: {
+      listing_id: string;
+      title: string;
+      area_name: string;
+      host_price_per_night: number;
+      guest_price_per_night: number;
+      status: string;
+      cover_photo_url: string | null;
+    };
+  };
+  BookingDetail: { booking: any };
 };

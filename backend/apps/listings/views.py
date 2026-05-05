@@ -8,7 +8,7 @@ from apps.listings.serializers import (
     CreateListingResponseSerializer,
     HostListingsResponseSerializer,
 )
-from apps.listings.services import create_listing, get_host_listings
+from apps.listings.services import create_listing, get_host_listings, get_listing_form_data, update_listing
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
 
@@ -35,3 +35,22 @@ class CreateListingView(APIView):
     def post(self, request):
         result = create_listing(request.user, request.data)
         return Response(result, status=status.HTTP_201_CREATED)
+
+
+class ListingDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Host"])
+    def get(self, request, listing_id):
+        data = get_listing_form_data(request.user, listing_id)
+        if data is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(data)
+
+    @extend_schema(tags=["Host"], request=CreateListingRequestSerializer, responses={200: CreateListingResponseSerializer})
+    def patch(self, request, listing_id):
+        result = update_listing(request.user, listing_id, request.data)
+        if result is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)

@@ -26,6 +26,7 @@ class HostListingsResponseSerializer(serializers.Serializer):
 class FlatmateInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150)
     age = serializers.IntegerField(required=False, allow_null=True)
+    gender = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
     occupation = serializers.CharField(required=False, allow_blank=True, default="")
     hobbies = serializers.CharField(required=False, allow_blank=True, default="")
 
@@ -80,10 +81,14 @@ class CreateListingRequestSerializer(serializers.Serializer):
     min_nights = serializers.IntegerField(default=1)
     food_kitchen_access = serializers.BooleanField(default=False)
     food_meals_available = serializers.BooleanField(default=False)
+    food_meal_cost = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    food_meal_description = serializers.CharField(required=False, allow_blank=True, default="")
+    food_meal_types = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     house_rules = HouseRulesInputSerializer()
 
 
 class CreateListingResponseSerializer(serializers.Serializer):
     listing_id = serializers.UUIDField()
+    property_id = serializers.UUIDField()
     status = serializers.CharField()
     message = serializers.CharField()

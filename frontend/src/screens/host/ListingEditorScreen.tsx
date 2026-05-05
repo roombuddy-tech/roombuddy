@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,18 +11,24 @@ import {
   Platform,
   Modal,
   Alert,
+  ActionSheetIOS,
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList } from '../../navigation/types';
-import { createListing } from '../../services/listings';
+import { createListing, getListing, updateListing } from '../../services/listings';
+import { uploadAllPropertyPhotos } from '../../services/properties';
+
+const DRAFT_KEY = 'LISTING_DRAFT_NEW';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +38,7 @@ interface Flatmate {
   age: string;
   occupation: string;
   hobbies: string;
+  gender: string;
 }
 
 interface FormData {
@@ -55,8 +62,10 @@ interface FormData {
   amenities: string[];
   kitchenAccess: boolean;
   homeCooked: boolean;
+  mealTypes: string[];
+  mealCost: string;
+  mealDescription: string;
   nightlyRate: string;
-  weeklyDiscount: boolean;
   minStay: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
@@ -71,6 +80,9 @@ interface FormData {
   checkInTime: string;
   checkOutTime: string;
   photos: Record<string, string[]>;
+  hostOccupation: string;
+  hostHobbies: string;
+  hostGender: string;
 }
 
 const INIT: FormData = {
@@ -94,8 +106,10 @@ const INIT: FormData = {
   amenities: [],
   kitchenAccess: false,
   homeCooked: false,
+  mealTypes: [],
+  mealCost: '',
+  mealDescription: '',
   nightlyRate: '',
-  weeklyDiscount: true,
   minStay: '1_night',
   noSmoking: true,
   noLoudMusic: true,
@@ -110,30 +124,73 @@ const INIT: FormData = {
   checkInTime: '',
   checkOutTime: '',
   photos: { bedroom: [], bathroom: [], kitchen: [], living: [], entrance: [], balcony: [], other: [] },
+  hostOccupation: '',
+  hostHobbies: '',
+  hostGender: '',
 };
 
 const TOTAL_STEPS = 9;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const APT_TYPES = [
+  { value: '1BHK', label: '1 BHK', sub: 'Studio / single room', icon: 'bed-outline' as const },
+  { value: '2BHK', label: '2 BHK', sub: 'Two-room flat', icon: 'home-outline' as const },
+  { value: '3BHK', label: '3 BHK', sub: 'Spacious apartment', icon: 'home' as const },
+  { value: '4BHK+', label: '4 BHK+', sub: 'Large home / villa', icon: 'business' as const },
+];
+
 const AMENITY_GROUPS = [
   {
     label: 'Essentials',
+    optional: false,
     items: ['WiFi', 'AC', 'Geyser / Hot water', 'Power backup', 'Washing machine', 'Iron', 'Hair dryer'],
   },
   {
     label: 'Kitchen & Food',
+    optional: false,
     items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'],
   },
   {
     label: 'Comfort',
+    optional: false,
     items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
   },
   {
     label: 'Safety',
+    optional: true,
     items: ['CCTV (common areas)', 'Security guard', 'Fire extinguisher', 'First aid kit', 'Door lock on room'],
   },
 ];
+
+const AMENITY_ICONS: Record<string, any> = {
+  'WiFi': 'wifi-outline',
+  'AC': 'snow-outline',
+  'Geyser / Hot water': 'water-outline',
+  'Power backup': 'battery-charging-outline',
+  'Washing machine': 'refresh-circle-outline',
+  'Iron': 'shirt-outline',
+  'Hair dryer': 'color-wand-outline',
+  'Full kitchen access': 'restaurant-outline',
+  'Fridge': 'cube-outline',
+  'Microwave': 'radio-outline',
+  'Gas stove': 'flame-outline',
+  'Water purifier': 'filter-outline',
+  'Utensils provided': 'cafe-outline',
+  'TV': 'tv-outline',
+  'Sofa / Common area': 'people-outline',
+  'Workspace / Desk': 'desktop-outline',
+  'Parking (2-wheeler)': 'bicycle-outline',
+  'Parking (4-wheeler)': 'car-outline',
+  'Lift / Elevator': 'arrow-up-circle-outline',
+  'CCTV (common areas)': 'camera-outline',
+  'Security guard': 'shield-checkmark-outline',
+  'Fire extinguisher': 'warning-outline',
+  'First aid kit': 'medkit-outline',
+  'Door lock on room': 'lock-closed-outline',
+};
+
+const MEAL_TYPE_OPTIONS = ['Breakfast', 'Lunch', 'Dinner'];
 
 const PHOTO_CATEGORIES = [
   { key: 'bedroom', label: 'Bedroom', icon: '🛏️', required: true },
@@ -222,11 +279,13 @@ function BottomNav({
   onNext,
   nextLabel = 'Continue',
   validate,
+  isValid = true,
 }: {
   onBack: () => void;
   onNext: () => void;
   nextLabel?: string;
   validate?: () => string | null;
+  isValid?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -254,7 +313,11 @@ function BottomNav({
         <TouchableOpacity onPress={onBack} style={bnSt.back}>
           <Text style={bnSt.backTxt}>Back</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleNext} style={bnSt.next} activeOpacity={0.85}>
+        <TouchableOpacity
+          onPress={handleNext}
+          style={[bnSt.next, !isValid && { opacity: 0.45 }]}
+          activeOpacity={0.85}
+        >
           <Text style={bnSt.nextTxt}>{nextLabel}</Text>
         </TouchableOpacity>
       </View>
@@ -331,15 +394,14 @@ function AmenityChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const iconName = AMENITY_ICONS[label] ?? 'ellipse-outline';
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       style={[acSt.chip, selected && acSt.sel]}
     >
-      {selected && (
-        <Text style={{ fontSize: 11, marginRight: 4, color: COLORS.primary }}>✓</Text>
-      )}
+      <Ionicons name={iconName} size={13} color={selected ? COLORS.primary : COLORS.textSec} style={{ marginRight: 5 }} />
       <Text style={[acSt.lbl, selected && acSt.lblSel]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -349,7 +411,7 @@ const acSt = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: RADIUS.pill,
     borderWidth: 1.5,
@@ -362,8 +424,8 @@ const acSt = StyleSheet.create({
   lblSel: { color: COLORS.primary, ...FONTS.semibold },
 });
 
-function RequiredMark() {
-  return <Text style={{ color: COLORS.danger }}> *</Text>;
+function OptionalMark() {
+  return <Text style={{ fontSize: 11, color: COLORS.textMut, ...FONTS.regular }}> (optional)</Text>;
 }
 
 function Field({
@@ -373,7 +435,7 @@ function Field({
   onChange,
   multiline,
   keyboardType,
-  required,
+  optional,
 }: {
   label?: string;
   placeholder?: string;
@@ -381,20 +443,20 @@ function Field({
   onChange: (v: string) => void;
   multiline?: boolean;
   keyboardType?: any;
-  required?: boolean;
+  optional?: boolean;
 }) {
   return (
     <View style={{ marginBottom: 14 }}>
       {label ? (
         <Text style={fldSt.label}>
           {label}
-          {required && <RequiredMark />}
+          {optional && <OptionalMark />}
         </Text>
       ) : null}
       <TextInput
         style={[fldSt.input, multiline && fldSt.multiline]}
         placeholder={placeholder}
-        placeholderTextColor={COLORS.textMut}
+        placeholderTextColor="#C8D0DA"
         value={value}
         onChangeText={onChange}
         multiline={multiline}
@@ -419,11 +481,11 @@ const fldSt = StyleSheet.create({
   multiline: { height: 100, textAlignVertical: 'top', paddingTop: 12 },
 });
 
-function SectionLabel({ label, required }: { label: string; required?: boolean }) {
+function SectionLabel({ label, optional }: { label: string; optional?: boolean }) {
   return (
     <Text style={{ fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginTop: 16, marginBottom: 8 }}>
       {label}
-      {required && <RequiredMark />}
+      {optional && <OptionalMark />}
     </Text>
   );
 }
@@ -469,13 +531,13 @@ function TimePicker({
   label,
   value,
   onChange,
-  required,
+  optional,
   placeholder = 'Select time',
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  required?: boolean;
+  optional?: boolean;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -484,7 +546,7 @@ function TimePicker({
     <View style={{ marginBottom: 14 }}>
       <Text style={fldSt.label}>
         {label}
-        {required && <RequiredMark />}
+        {optional && <OptionalMark />}
       </Text>
       <TouchableOpacity
         style={tpSt.trigger}
@@ -605,14 +667,12 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       <TouchableOpacity style={wlSt.cta} onPress={onNext} activeOpacity={0.85}>
         <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>Get started</Text>
       </TouchableOpacity>
-
-      <Text style={wlSt.footnote}>Free to list. You pay 3–5% only when booked.</Text>
     </ScrollView>
   );
 }
 
 const wlSt = StyleSheet.create({
-  content: { padding: SPACING.lg, paddingTop: SPACING.xxl },
+  content: { padding: SPACING.lg, paddingTop: SPACING.md },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
   title: { fontSize: 28, ...FONTS.bold, color: COLORS.primaryDark, textAlign: 'center', marginBottom: SPACING.sm },
   sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
@@ -634,12 +694,18 @@ const wlSt = StyleSheet.create({
     alignItems: 'center',
     marginTop: SPACING.xl,
   },
-  footnote: { textAlign: 'center', fontSize: 12, color: COLORS.textMut, marginTop: SPACING.md },
 });
 
 // ─── Step 1: Your Property ────────────────────────────────────────────────────
 
 function StepProperty({ form, update, onNext, onBack }: StepProps) {
+  const isValid =
+    !!form.apartmentType &&
+    form.floorNumber.trim().length > 0 &&
+    form.apartmentName.trim().length > 0 &&
+    form.locality.trim().length > 0 &&
+    form.city.trim().length > 0;
+
   const validate = (): string | null => {
     if (!form.apartmentType) return 'Please select an apartment type';
     if (!form.floorNumber.trim()) return 'Please enter the floor number';
@@ -660,16 +726,28 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>Your property</Text>
         <Text style={stSt.sub}>Tell us about the apartment where the room is located.</Text>
 
-        <SectionLabel label="Apartment type" required />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {['1BHK', '2BHK', '3BHK', '4BHK+'].map((t) => (
-            <Chip
-              key={t}
-              label={t}
-              selected={form.apartmentType === t}
-              onPress={() => update({ apartmentType: t })}
-            />
-          ))}
+        <SectionLabel label="Apartment type" />
+        <View style={prpSt.aptGrid}>
+          {APT_TYPES.map((t) => {
+            const sel = form.apartmentType === t.value;
+            return (
+              <TouchableOpacity
+                key={t.value}
+                style={[prpSt.aptCard, sel && prpSt.aptCardSel]}
+                onPress={() => update({ apartmentType: t.value })}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={t.icon}
+                  size={28}
+                  color={sel ? COLORS.primary : COLORS.textSec}
+                  style={{ marginBottom: 6 }}
+                />
+                <Text style={[prpSt.aptLabel, sel && { color: COLORS.primary }]}>{t.label}</Text>
+                <Text style={prpSt.aptSub}>{t.sub}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Field
@@ -677,7 +755,6 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           placeholder="e.g. 3rd floor"
           value={form.floorNumber}
           onChange={(v) => update({ floorNumber: v })}
-          required
         />
         <Field
           label="Total floors in building"
@@ -685,40 +762,59 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           value={form.totalFloors}
           onChange={(v) => update({ totalFloors: v })}
           keyboardType="number-pad"
+          optional
         />
         <Field
           label="Society / Apartment name"
           placeholder="e.g. Prestige Shantiniketan"
           value={form.apartmentName}
           onChange={(v) => update({ apartmentName: v })}
-          required
         />
         <Field
           label="Locality / Area"
           placeholder="e.g. Koramangala 5th Block"
           value={form.locality}
           onChange={(v) => update({ locality: v })}
-          required
         />
         <Field
           label="City"
           placeholder="City"
           value={form.city}
           onChange={(v) => update({ city: v })}
-          required
         />
 
         <View style={stSt.infoBox}>
-          <Text style={{ fontSize: 12, color: COLORS.primaryDark, lineHeight: 18 }}>
-            📍 Your exact address is shared only after a booking is confirmed. Guests see only the neighbourhood on the map.
+          <Ionicons name="information-circle" size={16} color={COLORS.primary} style={{ marginRight: 8, marginTop: 1 }} />
+          <Text style={{ fontSize: 12, color: COLORS.primaryDark, lineHeight: 18, flex: 1 }}>
+            Your full address is only shared with guests after a confirmed booking. On the map, guests see only the neighbourhood.
           </Text>
         </View>
 
-        <BottomNav onBack={onBack} onNext={onNext} validate={validate} />
+        <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const prpSt = StyleSheet.create({
+  aptGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  aptCard: {
+    width: '47%',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  aptCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  aptLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  aptSub: { fontSize: 11, color: COLORS.textSec, textAlign: 'center' },
+});
 
 // ─── Step 2: Room Details ─────────────────────────────────────────────────────
 
@@ -727,6 +823,8 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
     const cur = form.roomFeatures;
     update({ roomFeatures: cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f] });
   };
+
+  const isValid = !!form.roomType && !!form.bedType && !!form.bathroom;
 
   const validate = (): string | null => {
     if (!form.roomType) return 'Please select a room type';
@@ -746,7 +844,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>Room details</Text>
         <Text style={stSt.sub}>Describe the room you're renting out.</Text>
 
-        <SectionLabel label="Room type" required />
+        <SectionLabel label="Room type" />
         <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm }}>
           <TouchableOpacity
             style={[rdSt.typeCard, form.roomType === 'private' && rdSt.typeCardSel]}
@@ -772,7 +870,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
           </TouchableOpacity>
         </View>
 
-        <SectionLabel label="Bed type" required />
+        <SectionLabel label="Bed type" />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {['Single', 'Double', 'Queen', 'King', 'Mattress'].map((b) => (
             <Chip
@@ -784,7 +882,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
           ))}
         </View>
 
-        <SectionLabel label="Bathroom" required />
+        <SectionLabel label="Bathroom" />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {[
             { value: 'attached', label: 'Attached' },
@@ -800,13 +898,14 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <Field
-          label="Room size (optional)"
+          label="Room size"
           placeholder="e.g. 12x14 ft"
           value={form.roomSize}
           onChange={(v) => update({ roomSize: v })}
+          optional
         />
 
-        <SectionLabel label="Room has" />
+        <SectionLabel label="Room has" optional />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {['Door lock', 'Window', 'Balcony', 'Wardrobe', 'Study table', 'Mirror', 'Bookshelf', 'Curtains'].map(
             (f) => (
@@ -820,7 +919,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
           )}
         </View>
 
-        <BottomNav onBack={onBack} onNext={onNext} validate={validate} />
+        <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -849,6 +948,8 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
     update({ nearbyLandmarks: cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l] });
   };
 
+  const isValid = form.title.trim().length > 0 && form.description.trim().length > 0;
+
   const validate = (): string | null => {
     if (!form.title.trim()) return 'Please add a listing title';
     if (!form.description.trim()) return 'Please add a description of your space';
@@ -871,7 +972,6 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
           placeholder='e.g. Cozy private room in 2BHK, Koramangala'
           value={form.title}
           onChange={(v) => update({ title: v })}
-          required
         />
 
         <Field
@@ -880,10 +980,9 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
           value={form.description}
           onChange={(v) => update({ description: v })}
           multiline
-          required
         />
 
-        <SectionLabel label="Nearby landmarks (optional)" />
+        <SectionLabel label="Nearby landmarks" optional />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {LANDMARKS.map((l) => (
             <Chip
@@ -896,13 +995,14 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <Field
-          label="Distance to nearest landmark (optional)"
+          label="Distance to nearest landmark"
           placeholder="e.g. 5 min walk from Koramangala bus stop"
           value={form.distanceToLandmark}
           onChange={(v) => update({ distanceToLandmark: v })}
+          optional
         />
 
-        <BottomNav onBack={onBack} onNext={onNext} validate={validate} />
+        <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -913,7 +1013,13 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
 function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
-  const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '' });
+  const [hostModalOpen, setHostModalOpen] = useState(false);
+  const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '', gender: '' });
+  const [hostDraft, setHostDraft] = useState({
+    occupation: form.hostOccupation,
+    hobbies: form.hostHobbies,
+    gender: form.hostGender,
+  });
 
   const displayName: string =
     user?.display_name || user?.first_name || user?.profile?.first_name || 'You';
@@ -927,9 +1033,10 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       age: draft.age,
       occupation: draft.occupation,
       hobbies: draft.hobbies,
+      gender: draft.gender,
     };
     update({ flatmates: [...form.flatmates, flatmate] });
-    setDraft({ name: '', age: '', occupation: '', hobbies: '' });
+    setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '' });
     setModalVisible(false);
   };
 
@@ -944,6 +1051,8 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       .map((w) => w[0]?.toUpperCase() ?? '')
       .join('');
 
+  const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -956,18 +1065,26 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
         <Text style={fmSt.bannerTxt}>⭐ Listings with flatmate profiles get 3x more bookings</Text>
       </View>
 
-      <View style={fmSt.card}>
+      {/* Host card — tappable to add occupation/hobbies/gender */}
+      <TouchableOpacity style={fmSt.card} onPress={() => setHostModalOpen(true)} activeOpacity={0.7}>
         <View style={fmSt.avatar}>
           <Text style={fmSt.avatarTxt}>{initials(displayName)}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={fmSt.name}>{displayName}</Text>
+          {form.hostOccupation || form.hostHobbies ? (
+            <Text style={fmSt.detail} numberOfLines={1}>
+              {[form.hostOccupation, form.hostHobbies].filter(Boolean).join(' · ')}
+            </Text>
+          ) : (
+            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: 2 }}>
+              Tap to add occupation & hobbies
+            </Text>
+          )}
           {city ? <Text style={fmSt.detail}>{city}</Text> : null}
         </View>
-        <View style={fmSt.youBadge}>
-          <Text style={fmSt.youTxt}>You</Text>
-        </View>
-      </View>
+        <Ionicons name="pencil-outline" size={16} color={COLORS.textMut} />
+      </TouchableOpacity>
 
       {form.flatmates.map((fm) => (
         <View key={fm.id} style={fmSt.card}>
@@ -979,6 +1096,11 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
               {fm.name}
               {fm.age ? `, ${fm.age}` : ''}
             </Text>
+            {fm.gender ? (
+              <Text style={fmSt.detail}>
+                {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}
+              </Text>
+            ) : null}
             {fm.occupation || fm.hobbies ? (
               <Text style={fmSt.detail} numberOfLines={1}>
                 {[fm.occupation, fm.hobbies].filter(Boolean).join(' · ')}
@@ -1000,7 +1122,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
         <Text style={fmSt.addTxt}>Add flatmate</Text>
       </TouchableOpacity>
 
-      <SectionLabel label="Guest gender preference" />
+      <SectionLabel label="Guest gender preference" optional />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {[
           { value: 'male_only', label: 'Male only' },
@@ -1018,20 +1140,87 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
 
       <BottomNav onBack={onBack} onNext={onNext} />
 
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={fmSt.modalOverlay}>
-          <View style={fmSt.modalSheet}>
-            <View style={fmSt.modalHeader}>
-              <Text style={fmSt.modalTitle}>Add flatmate</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={COLORS.textSec} />
-              </TouchableOpacity>
+      {/* Host profile modal */}
+      <Modal visible={hostModalOpen} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={fmSt.modalOverlay}>
+            <View style={fmSt.modalSheet}>
+              <View style={fmSt.modalHeader}>
+                <Text style={fmSt.modalTitle}>Your profile</Text>
+                <TouchableOpacity onPress={() => setHostModalOpen(false)}>
+                  <Ionicons name="close" size={22} color={COLORS.textSec} />
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.md }}>
+                Help guests know who they'll be living with.
+              </Text>
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <SectionLabel label="Gender" optional />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
+                  {GENDER_OPTIONS.map((g) => (
+                    <Chip
+                      key={g}
+                      label={g}
+                      selected={hostDraft.gender === g.toLowerCase()}
+                      onPress={() => setHostDraft((d) => ({ ...d, gender: g.toLowerCase() }))}
+                    />
+                  ))}
+                </View>
+                <Field
+                  label="Occupation"
+                  placeholder="e.g. Software Engineer"
+                  value={hostDraft.occupation}
+                  onChange={(v) => setHostDraft((d) => ({ ...d, occupation: v }))}
+                  optional
+                />
+                <Field
+                  label="Hobbies"
+                  placeholder="e.g. Reading, Cooking, Cricket"
+                  value={hostDraft.hobbies}
+                  onChange={(v) => setHostDraft((d) => ({ ...d, hobbies: v }))}
+                  optional
+                />
+                <TouchableOpacity
+                  style={fmSt.saveBtn}
+                  onPress={() => {
+                    update({
+                      hostOccupation: hostDraft.occupation,
+                      hostHobbies: hostDraft.hobbies,
+                      hostGender: hostDraft.gender,
+                    });
+                    setHostModalOpen(false);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Add flatmate modal */}
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={fmSt.modalOverlay}>
+            <View style={fmSt.modalSheet}>
+              <View style={fmSt.modalHeader}>
+                <Text style={fmSt.modalTitle}>Add flatmate</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Ionicons name="close" size={22} color={COLORS.textSec} />
+                </TouchableOpacity>
+              </View>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Field
                   label="Name"
-                  placeholder="e.g. Mayank K."
+                  placeholder="e.g. Arjun S."
                   value={draft.name}
                   onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
                 />
@@ -1041,18 +1230,32 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   value={draft.age}
                   onChange={(v) => setDraft((d) => ({ ...d, age: v }))}
                   keyboardType="number-pad"
+                  optional
                 />
+                <SectionLabel label="Gender" optional />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
+                  {GENDER_OPTIONS.map((g) => (
+                    <Chip
+                      key={g}
+                      label={g}
+                      selected={draft.gender === g.toLowerCase()}
+                      onPress={() => setDraft((d) => ({ ...d, gender: g.toLowerCase() }))}
+                    />
+                  ))}
+                </View>
                 <Field
                   label="Occupation"
                   placeholder="e.g. SE at Google"
                   value={draft.occupation}
                   onChange={(v) => setDraft((d) => ({ ...d, occupation: v }))}
+                  optional
                 />
                 <Field
-                  label="Hobbies (optional)"
+                  label="Hobbies"
                   placeholder="e.g. Cricket, Cooking"
                   value={draft.hobbies}
                   onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
+                  optional
                 />
                 <TouchableOpacity
                   style={fmSt.saveBtn}
@@ -1062,9 +1265,9 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
                 </TouchableOpacity>
               </ScrollView>
-            </KeyboardAvoidingView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );
@@ -1100,15 +1303,6 @@ const fmSt = StyleSheet.create({
   avatarTxt: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
   name: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
   detail: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
-  youBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.primaryAlpha,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  youTxt: { fontSize: 12, ...FONTS.medium, color: COLORS.primary },
   addCard: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1153,8 +1347,18 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
     update({ amenities: cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a] });
   };
 
+  const toggleMealType = (m: string) => {
+    const cur = form.mealTypes;
+    update({ mealTypes: cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m] });
+  };
+
+  const requiredGroups = AMENITY_GROUPS.filter((g) => !g.optional);
+  const isValid = requiredGroups.every((group) =>
+    group.items.some((item) => form.amenities.includes(item))
+  );
+
   const validate = (): string | null => {
-    for (const group of AMENITY_GROUPS) {
+    for (const group of requiredGroups) {
       const hasOne = group.items.some((item) => form.amenities.includes(item));
       if (!hasOne) return `Please select at least one item from "${group.label}"`;
     }
@@ -1162,6 +1366,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={stSt.content}
@@ -1173,7 +1378,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
 
       {AMENITY_GROUPS.map((group) => (
         <View key={group.label}>
-          <SectionLabel label={group.label} required />
+          <SectionLabel label={group.label} optional={group.optional} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {group.items.map((item) => (
               <AmenityChip
@@ -1187,7 +1392,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
         </View>
       ))}
 
-      <SectionLabel label="Food options for guests" />
+      <SectionLabel label="Food options for guests" optional />
       <RuleRow
         label="Guests can use the kitchen"
         value={form.kitchenAccess}
@@ -1199,40 +1404,118 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
         onChange={(v) => update({ homeCooked: v })}
       />
 
-      <BottomNav onBack={onBack} onNext={onNext} validate={validate} />
+      {form.homeCooked && (
+        <View style={amSt.mealBox}>
+          <SectionLabel label="Meal types offered" optional />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {MEAL_TYPE_OPTIONS.map((m) => (
+              <Chip
+                key={m}
+                label={m}
+                selected={form.mealTypes.includes(m)}
+                onPress={() => toggleMealType(m)}
+              />
+            ))}
+          </View>
+          <Field
+            label="Describe the meals"
+            placeholder="e.g. South Indian home cooking, vegetarian friendly..."
+            value={form.mealDescription}
+            onChange={(v) => update({ mealDescription: v })}
+            multiline
+            optional
+          />
+        </View>
+      )}
+
+      <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
+const amSt = StyleSheet.create({
+  mealBox: {
+    backgroundColor: COLORS.primaryAlpha,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.sm,
+  },
+});
+
 // ─── Step 6: Photos ───────────────────────────────────────────────────────────
+
+const ALL_PHOTO_CATEGORIES = [
+  ...PHOTO_CATEGORIES,
+  { key: 'other', label: 'Other', icon: '📷', required: false },
+];
 
 function StepPhotos({ form, update, onNext, onBack }: StepProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const pickPhotos = async (category: string) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library.');
-      return;
-    }
-    setLoading(category);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'] as any,
-        allowsMultipleSelection: true,
-        quality: 0.8,
-      });
-      if (!result.canceled) {
-        const uris = result.assets.map((a) => a.uri);
-        update({
-          photos: {
-            ...form.photos,
-            [category]: [...(form.photos[category] ?? []), ...uris],
-          },
-        });
+  const addPhotos = async (category: string, useCamera: boolean) => {
+    if (useCamera) {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow camera access to take photos.');
+        return;
       }
-    } finally {
-      setLoading(null);
+      setLoading(category);
+      try {
+        const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+        if (!result.canceled) {
+          const uris = result.assets.map((a) => a.uri);
+          update({ photos: { ...form.photos, [category]: [...(form.photos[category] ?? []), ...uris] } });
+        }
+      } finally {
+        setLoading(null);
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to your photo library.');
+        return;
+      }
+      setLoading(category);
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'] as any,
+          allowsMultipleSelection: true,
+          quality: 0.85,
+        });
+        if (!result.canceled) {
+          const uris = result.assets.map((a) => a.uri);
+          update({ photos: { ...form.photos, [category]: [...(form.photos[category] ?? []), ...uris] } });
+        }
+      } finally {
+        setLoading(null);
+      }
+    }
+  };
+
+  const openSourcePicker = (category: string) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: 'Add photos',
+          options: ['Cancel', 'Take a photo', 'Choose from library'],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) addPhotos(category, true);
+          else if (idx === 2) addPhotos(category, false);
+        }
+      );
+    } else {
+      Alert.alert(
+        'Add photos',
+        undefined,
+        [
+          { text: 'Take a photo', onPress: () => addPhotos(category, true) },
+          { text: 'Choose from library', onPress: () => addPhotos(category, false) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
     }
   };
 
@@ -1241,264 +1524,191 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
     update({ photos: { ...form.photos, [category]: updated } });
   };
 
+  const isValid = (form.photos.bedroom?.length ?? 0) > 0 && (form.photos.bathroom?.length ?? 0) > 0;
+
   const validate = (): string | null => {
-    if (!form.photos.bedroom?.length) return 'Please add at least 1 photo of the bedroom';
-    if (!form.photos.bathroom?.length) return 'Please add at least 1 photo of the bathroom';
+    if (!form.photos.bedroom?.length) return 'Please add at least 1 bedroom photo';
+    if (!form.photos.bathroom?.length) return 'Please add at least 1 bathroom photo';
     return null;
   };
 
   const totalPhotos = Object.values(form.photos).reduce((sum, arr) => sum + arr.length, 0);
-  const otherPhotos = form.photos.other ?? [];
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={stSt.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={stSt.title}>Photos</Text>
-      <Text style={stSt.sub}>
-        Great photos = more bookings.{' '}
-        <Text style={{ color: totalPhotos >= 5 ? COLORS.success : COLORS.accent }}>
-          {totalPhotos}/5 added
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={stSt.content} showsVerticalScrollIndicator={false}>
+        <Text style={stSt.title}>Photos</Text>
+        <Text style={stSt.sub}>
+          Great photos = more bookings.{' '}
+          <Text style={{ color: totalPhotos >= 5 ? COLORS.success : COLORS.accent }}>
+            {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''} added
+          </Text>
         </Text>
-      </Text>
 
-      <View style={phSt.tipBox}>
-        <Text style={phSt.tipTxt}>
-          💡 Use natural light · Landscape orientation · Show the full room · Clean and declutter · Required: Bedroom & Bathroom
-        </Text>
-      </View>
+        <View style={phSt.tipBox}>
+          <Text style={phSt.tipTxt}>
+            💡 Bedroom & Bathroom required · Natural light · Landscape · Clean & tidy
+          </Text>
+        </View>
 
-      {/* Category grid */}
-      <View style={phSt.grid}>
-        {PHOTO_CATEGORIES.map((cat) => {
+        {ALL_PHOTO_CATEGORIES.map((cat) => {
           const photos = form.photos[cat.key] ?? [];
           const isLoading = loading === cat.key;
-          const isEmpty = photos.length === 0;
+          const hasPhotos = photos.length > 0;
 
-          if (isEmpty) {
-            // Empty state — full card is tappable
-            return (
-              <TouchableOpacity
-                key={cat.key}
-                style={phSt.catCard}
-                activeOpacity={0.7}
-                onPress={() => pickPhotos(cat.key)}
-              >
-                {cat.required && (
+          return (
+            <View key={cat.key} style={[phSt.categoryCard, hasPhotos && phSt.categoryCardFilled]}>
+              {/* Row header */}
+              <View style={phSt.categoryHeader}>
+                <Text style={phSt.categoryIcon}>{cat.icon}</Text>
+                <Text style={phSt.categoryName}>{cat.label}</Text>
+                {cat.required && !hasPhotos && (
                   <View style={phSt.requiredBadge}>
                     <Text style={phSt.requiredTxt}>Required</Text>
                   </View>
                 )}
-                <Text style={{ fontSize: 28, marginBottom: 6 }}>{cat.icon}</Text>
-                <Text style={phSt.catLabel}>{cat.label}</Text>
-                <Text style={phSt.catSub}>{isLoading ? 'Loading…' : 'Tap to add'}</Text>
-              </TouchableOpacity>
-            );
-          }
-
-          // Filled state — show thumbnails with individual X buttons
-          return (
-            <View key={cat.key} style={[phSt.catCard, phSt.catCardFilled]}>
-              <View style={phSt.cardTopRow}>
-                <Text style={[phSt.catLabel, { color: COLORS.primary, marginBottom: 0 }]} numberOfLines={1}>
-                  {cat.label}
-                </Text>
-                <Text style={phSt.countPill}>
-                  {photos.length} photo{photos.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-
-              <View style={phSt.thumbsRow}>
-                {photos.map((uri, idx) => (
-                  <View key={`${cat.key}-${idx}`} style={phSt.thumbWrap}>
-                    <Image source={{ uri }} style={phSt.thumbSm} resizeMode="cover" />
-                    <TouchableOpacity
-                      style={phSt.removeBtn}
-                      onPress={() => removePhoto(cat.key, idx)}
-                      hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                    >
-                      <Ionicons name="close-circle" size={18} color="#fff" />
-                    </TouchableOpacity>
+                {hasPhotos && (
+                  <View style={phSt.doneBadge}>
+                    <Ionicons name="checkmark" size={11} color={COLORS.success} />
+                    <Text style={phSt.doneTxt}>{photos.length} photo{photos.length > 1 ? 's' : ''}</Text>
                   </View>
-                ))}
-                {/* Add more */}
+                )}
+                <View style={{ flex: 1 }} />
                 <TouchableOpacity
-                  style={phSt.addMoreBtn}
-                  onPress={() => pickPhotos(cat.key)}
+                  style={[phSt.addBtn, isLoading && { opacity: 0.5 }]}
+                  onPress={() => openSourcePicker(cat.key)}
+                  disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="add" size={20} color={COLORS.primary} />
+                  {isLoading
+                    ? <ActivityIndicator size="small" color={COLORS.primary} />
+                    : <Ionicons name={hasPhotos ? 'add' : 'camera-outline'} size={18} color={COLORS.primary} />
+                  }
                 </TouchableOpacity>
               </View>
+
+              {/* Photos strip */}
+              {hasPhotos && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={phSt.thumbStrip}
+                >
+                  {photos.map((uri, idx) => (
+                    <View key={`${cat.key}-${idx}`} style={phSt.thumbWrap}>
+                      <Image source={{ uri }} style={phSt.thumbImg} resizeMode="cover" />
+                      {idx === 0 && (
+                        <View style={phSt.coverBadge}>
+                          <Text style={phSt.coverBadgeTxt}>Cover</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        style={phSt.removeBtn}
+                        onPress={() => removePhoto(cat.key, idx)}
+                        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Empty prompt */}
+              {!hasPhotos && (
+                <TouchableOpacity
+                  style={phSt.emptyPrompt}
+                  onPress={() => openSourcePicker(cat.key)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="image-outline" size={18} color={COLORS.textMut} />
+                  <Text style={phSt.emptyPromptTxt}>Tap to add photos</Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         })}
-      </View>
 
-      {/* Upload uncategorised photos */}
-      <TouchableOpacity
-        style={phSt.uploadBox}
-        activeOpacity={0.7}
-        onPress={() => pickPhotos('other')}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 26 }}>
-            {loading === 'other' ? '⏳' : '📷'}
-          </Text>
-          <View style={{ flex: 1 }}>
-            <Text style={phSt.uploadTitle}>
-              Other photos{otherPhotos.length > 0 ? `  ·  ${otherPhotos.length} added` : ''}
-            </Text>
-            <Text style={phSt.uploadSub}>
-              Exterior view, street access, common areas, or any photo that doesn't fit a specific room category
-            </Text>
-          </View>
-          <Ionicons name="add-circle-outline" size={22} color={COLORS.primary} />
-        </View>
-      </TouchableOpacity>
-
-      {/* "Other" thumbnails shown outside the tappable box so X buttons work cleanly */}
-      {otherPhotos.length > 0 && (
-        <View style={phSt.otherThumbsRow}>
-          {otherPhotos.map((uri, idx) => (
-            <View key={`other-${idx}`} style={phSt.thumbWrap}>
-              <Image source={{ uri }} style={phSt.thumbMd} resizeMode="cover" />
-              <TouchableOpacity
-                style={phSt.removeBtn}
-                onPress={() => removePhoto('other', idx)}
-                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-              >
-                <Ionicons name="close-circle" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      )}
-
-      <BottomNav onBack={onBack} onNext={onNext} validate={validate} />
-    </ScrollView>
+        <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
+      </ScrollView>
   );
 }
 
 const phSt = StyleSheet.create({
-  tipBox: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: RADIUS.sm,
-    padding: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
+  tipBox: { backgroundColor: '#FFFBEB', borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
   tipTxt: { fontSize: 12, color: '#92400E', lineHeight: 18 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
-  catCard: {
-    width: '47.5%',
-    padding: SPACING.sm,
-    borderRadius: RADIUS.md,
+
+  categoryCard: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    position: 'relative',
-    minHeight: 110,
-    justifyContent: 'center',
-  },
-  catCardFilled: {
-    borderColor: COLORS.primary,
-    borderWidth: 1.5,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
     backgroundColor: COLORS.bg,
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
+    overflow: 'hidden',
+    ...SHADOW.sm,
   },
-  cardTopRow: {
+  categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
+  categoryIcon: { fontSize: 18 },
+  categoryName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: '#FFF0EB', borderWidth: 1, borderColor: '#FECDB9' },
+  requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
+  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: '#ECFDF5' },
+  doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.success },
+  addBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  thumbStrip: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.md, gap: 8, flexDirection: 'row' },
+  thumbWrap: { position: 'relative' },
+  thumbImg: { width: 110, height: 82, borderRadius: RADIUS.sm },
+  coverBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  coverBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
+  removeBtn: { position: 'absolute', top: -7, right: -7, backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 12 },
+
+  emptyPrompt: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 6,
-  },
-  countPill: {
-    fontSize: 10,
-    ...FONTS.semibold,
-    color: COLORS.primary,
-    backgroundColor: COLORS.primaryAlpha,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: RADIUS.pill,
-  },
-  thumbsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    width: '100%',
-  },
-  thumbWrap: { position: 'relative' },
-  thumbSm: { width: 44, height: 44, borderRadius: RADIUS.sm },
-  thumbMd: { width: 64, height: 64, borderRadius: RADIUS.sm },
-  removeBtn: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 9,
-    lineHeight: 18,
-  },
-  addMoreBtn: {
-    width: 44,
-    height: 44,
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    paddingVertical: 16,
     borderRadius: RADIUS.sm,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.border,
     borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryAlpha,
+    backgroundColor: COLORS.surface,
   },
-  otherThumbsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 4,
-    marginBottom: SPACING.sm,
-  },
-  requiredBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: COLORS.accent,
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  requiredTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
-  catLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.text, textAlign: 'center', marginTop: 4 },
-  catSub: { fontSize: 11, color: COLORS.textMut, marginTop: 1 },
-  uploadBox: {
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed',
-    backgroundColor: COLORS.primaryAlpha,
-    marginBottom: SPACING.sm,
-  },
-  uploadTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.primary },
-  uploadSub: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
+  emptyPromptTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
+
 });
 
 // ─── Step 7: Set Your Price ───────────────────────────────────────────────────
 
 function StepPrice({ form, update, onNext, onBack }: StepProps) {
+  const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
+  const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
   const serviceFee = Math.round(rate * 0.08);
-  const gst = Math.round(serviceFee * 0.18);
-  const guestTotal = rate + serviceFee + gst;
+  const gst = Math.round((rate + mealCost) * 0.18);
+  const guestTotal = rate + mealCost + serviceFee + gst;
   const hostFee = Math.round(rate * 0.03);
-  const hostEarning = rate - hostFee;
+  const hostEarning = rate + mealCost - hostFee;
+
+  const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
 
   const validate = (): string | null => {
     if (!form.nightlyRate || parseInt(form.nightlyRate, 10) < 1)
       return 'Please set your nightly rate to continue';
+    if (form.homeCooked && (!form.mealCost || parseInt(form.mealCost, 10) < 1))
+      return 'Please enter the meal cost per day';
     return null;
   };
 
@@ -1518,16 +1728,13 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             <Text style={prSt.smartTxt}>
               💡 Smart price suggestion{'\n'}
               <Text style={{ ...FONTS.regular }}>
-                Based on similar rooms in {form.locality}, we recommend ₹750–₹1,000/night. Rooms
-                with AC and kitchen access average ₹850/night.
+                Based on similar rooms in {form.locality}, we recommend ₹750–₹1,000/night.
               </Text>
             </Text>
           </View>
         ) : null}
 
-        <Text style={fldSt.label}>
-          Your nightly rate <RequiredMark />
-        </Text>
+        <Text style={fldSt.label}>Your nightly rate</Text>
         <View style={prSt.rateRow}>
           <Text style={prSt.rupee}>₹</Text>
           <TextInput
@@ -1535,19 +1742,37 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             value={form.nightlyRate}
             onChangeText={(v) => update({ nightlyRate: v.replace(/[^0-9]/g, '') })}
             keyboardType="number-pad"
-            placeholder="850"
-            placeholderTextColor={COLORS.textMut}
+            placeholder={rateFocused ? '' : '850'}
+            placeholderTextColor="#D4D9DF"
+            onFocus={() => setRateFocused(true)}
+            onBlur={() => setRateFocused(false)}
           />
           <Text style={prSt.perNight}>per night</Text>
         </View>
+
+        {form.homeCooked && (
+          <View style={{ marginBottom: SPACING.md }}>
+            <Field
+              label="Meal cost per day"
+              placeholder="e.g. 200"
+              value={form.mealCost}
+              onChange={(v) => update({ mealCost: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad"
+            />
+            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: -8 }}>
+              Charged separately from the room rate.
+            </Text>
+          </View>
+        )}
 
         {rate > 0 && (
           <>
             <View style={prSt.breakdownBox}>
               <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
-              <PriceRow label="RoomBuddy service fee (8%)" value={`₹${serviceFee}`} />
-              <PriceRow label="GST (18% on fee)" value={`₹${gst}`} />
+              {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
+              <PriceRow label="Service fee (8% on room)" value={`₹${serviceFee}`} />
+              <PriceRow label={`GST (18% on room${mealCost > 0 ? ' + meals' : ''})`} value={`₹${gst}`} />
               <View style={prSt.divider} />
               <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
             </View>
@@ -1555,27 +1780,15 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             <View style={prSt.breakdownBox}>
               <Text style={prSt.breakdownTitle}>You earn</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
-              <PriceRow label="RoomBuddy host fee (3%)" value={`−₹${hostFee}`} muted />
+              {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
+              <PriceRow label="RoomBuddy host fee (3% on room)" value={`−₹${hostFee}`} muted />
               <View style={prSt.divider} />
               <PriceRow label="Your earning" value={`₹${hostEarning}/night`} bold />
             </View>
           </>
         )}
 
-        <View style={prSt.toggleRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={prSt.toggleLabel}>Weekly discount (7+ nights: 10% off)</Text>
-          </View>
-          <Switch
-            value={form.weeklyDiscount}
-            onValueChange={(v) => update({ weeklyDiscount: v })}
-            trackColor={{ false: COLORS.border, true: COLORS.primary }}
-            thumbColor="#fff"
-            ios_backgroundColor={COLORS.border}
-          />
-        </View>
-
-        <SectionLabel label="Minimum stay" />
+        <SectionLabel label="Minimum stay" optional />
         <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
           {MIN_STAY_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1591,7 +1804,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
           ))}
         </View>
 
-        <BottomNav onBack={onBack} onNext={onNext} validate={validate} />
+        <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -1610,22 +1823,10 @@ function PriceRow({
 }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-      <Text
-        style={{
-          fontSize: 14,
-          color: muted ? COLORS.textMut : COLORS.textSec,
-          ...(bold ? FONTS.semibold : FONTS.regular),
-        }}
-      >
+      <Text style={{ fontSize: 14, color: muted ? COLORS.textMut : COLORS.textSec, ...(bold ? FONTS.semibold : FONTS.regular) }}>
         {label}
       </Text>
-      <Text
-        style={{
-          fontSize: 14,
-          color: muted ? COLORS.textMut : COLORS.text,
-          ...(bold ? FONTS.bold : FONTS.regular),
-        }}
-      >
+      <Text style={{ fontSize: 14, color: muted ? COLORS.textMut : COLORS.text, ...(bold ? FONTS.bold : FONTS.regular) }}>
         {value}
       </Text>
     </View>
@@ -1633,55 +1834,16 @@ function PriceRow({
 }
 
 const prSt = StyleSheet.create({
-  smartBox: {
-    backgroundColor: COLORS.primaryAlpha,
-    borderRadius: RADIUS.sm,
-    padding: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
+  smartBox: { backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
   smartTxt: { fontSize: 13, color: COLORS.primaryDark, ...FONTS.semibold, lineHeight: 20 },
-  rateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.lg,
-    gap: 8,
-  },
+  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 8 },
   rupee: { fontSize: 28, ...FONTS.bold, color: COLORS.text },
-  rateInput: {
-    fontSize: 52,
-    ...FONTS.bold,
-    color: COLORS.text,
-    minWidth: 120,
-    textAlign: 'center',
-  },
+  rateInput: { fontSize: 52, ...FONTS.bold, color: COLORS.text, minWidth: 120, textAlign: 'center' },
   perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 8 },
-  breakdownBox: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
+  breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  toggleLabel: { fontSize: 15, color: COLORS.text, ...FONTS.regular },
-  minStayBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: RADIUS.sm,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
+  minStayBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: RADIUS.sm, borderWidth: 1.5, borderColor: COLORS.border },
   minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   minStayTxt: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec },
   minStayTxtSel: { color: COLORS.primary, ...FONTS.semibold },
@@ -1695,6 +1857,8 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
     { value: 'moderate', title: 'Moderate', sub: 'Full refund up to 5 days before check-in' },
     { value: 'strict', title: 'Strict', sub: 'No refund within 7 days of check-in' },
   ];
+
+  const isValid = !!form.checkInTime && !!form.checkOutTime;
 
   const validate = (): string | null => {
     if (!form.checkInTime) return 'Please select a check-in time';
@@ -1711,7 +1875,7 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={stSt.title}>House rules</Text>
-        <Text style={stSt.sub}>Set clear expectations for your guests. This prevents misunderstandings.</Text>
+        <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
         <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
           Common rules
@@ -1723,15 +1887,16 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         <RuleRow label="No parties or events" value={form.noParties} onChange={(v) => update({ noParties: v })} />
         <RuleRow label="Guests must remove shoes indoors" value={form.shoesOff} onChange={(v) => update({ shoesOff: v })} />
         <RuleRow label="Keep kitchen clean after use" value={form.kitchenClean} onChange={(v) => update({ kitchenClean: v })} />
-        <RuleRow label="No alcohol consumption in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
+        <RuleRow label="No alcohol in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
         <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} />
 
         <Field
-          label="Custom rules (optional)"
+          label="Custom rules"
           placeholder="e.g. Please don't use the washing machine after 9 PM..."
           value={form.customRules}
           onChange={(v) => update({ customRules: v })}
           multiline
+          optional
         />
 
         <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md, marginBottom: 8 }}>
@@ -1759,31 +1924,23 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
           label="Check-in time"
           value={form.checkInTime}
           onChange={(v) => update({ checkInTime: v })}
-          required
           placeholder="e.g. 2:00 PM"
         />
         <TimePicker
           label="Check-out time"
           value={form.checkOutTime}
           onChange={(v) => update({ checkOutTime: v })}
-          required
           placeholder="e.g. 11:00 AM"
         />
 
-        <BottomNav onBack={onBack} onNext={onNext} nextLabel="Review & publish" validate={validate} />
+        <BottomNav onBack={onBack} onNext={onNext} nextLabel="Review & publish" validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const rlSt = StyleSheet.create({
-  policyCard: {
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.sm,
-  },
+  policyCard: { padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, marginBottom: SPACING.sm },
   policyCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   policyTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   policySub: { fontSize: 13, color: COLORS.textSec },
@@ -1798,6 +1955,9 @@ function StepReview({
   submitting,
   setSubmitting,
   onSuccess,
+  navigation,
+  isEditMode = false,
+  listingId,
 }: {
   form: FormData;
   onBack: () => void;
@@ -1805,7 +1965,12 @@ function StepReview({
   submitting: boolean;
   setSubmitting: (v: boolean) => void;
   onSuccess: () => void;
+  navigation: NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>;
+  isEditMode?: boolean;
+  listingId?: string;
 }) {
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const amenityHighlights = form.amenities.slice(0, 3).join(', ');
   const ruleCount = [
@@ -1815,24 +1980,75 @@ function StepReview({
   const totalPhotos = Object.values(form.photos).reduce((s, a) => s + a.length, 0);
 
   const handlePublish = () => {
-    Alert.alert(
-      'Submit for review',
-      'Your listing will be reviewed by our team and go live within 24 hours.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Submit', onPress: doPublish },
-      ]
-    );
+    if (isEditMode) {
+      Alert.alert(
+        'Confirm update',
+        'Save your changes to this listing?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Update', onPress: doPublish },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Submit for review',
+        'Your listing will be reviewed by our team and go live within 24 hours.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Submit', onPress: doPublish },
+        ]
+      );
+    }
   };
 
   const doPublish = async () => {
     setSubmitting(true);
+    setUploadProgress(null);
     try {
-      await createListing(form);
+      let propertyId: string | null = null;
+
+      if (isEditMode && listingId) {
+        const result = await updateListing(listingId, form);
+        propertyId = result.property_id ?? null;
+      } else {
+        const result = await createListing(form);
+        propertyId = result.property_id ?? null;
+        await AsyncStorage.removeItem(DRAFT_KEY);
+      }
+
+      // Upload photos if any were selected
+      const photoCount = Object.values(form.photos).reduce((s, a) => s + a.length, 0);
+      if (propertyId && photoCount > 0) {
+        setUploadProgress({ done: 0, total: photoCount });
+        const { uploaded, failed } = await uploadAllPropertyPhotos(
+          propertyId,
+          form.photos,
+          (done, total) => setUploadProgress({ done, total }),
+        );
+        setUploadProgress(null);
+
+        if (failed > 0 && uploaded === 0) {
+          Alert.alert(
+            isEditMode ? 'Updated' : 'Listing submitted!',
+            `Your listing was saved, but all ${failed} photo${failed > 1 ? 's' : ''} failed to upload. You can add them later via Edit listing.`,
+            [{ text: 'OK', onPress: onSuccess }],
+          );
+          return;
+        }
+        if (failed > 0) {
+          Alert.alert(
+            isEditMode ? 'Updated' : 'Listing submitted!',
+            `${uploaded} photo${uploaded > 1 ? 's' : ''} uploaded. ${failed} failed — you can add them later via Edit listing.`,
+            [{ text: 'OK', onPress: onSuccess }],
+          );
+          return;
+        }
+      }
+
       Alert.alert(
-        'Listing submitted!',
-        "We'll notify you once it's live.",
-        [{ text: 'OK', onPress: onSuccess }]
+        isEditMode ? 'Updated!' : 'Listing submitted!',
+        isEditMode ? 'Your listing has been updated.' : "We'll notify you once it's live.",
+        [{ text: 'OK', onPress: onSuccess }],
       );
     } catch (err: any) {
       const msg =
@@ -1842,6 +2058,7 @@ function StepReview({
       Alert.alert('Error', msg);
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -1868,7 +2085,6 @@ function StepReview({
         form.roomType === 'private' ? 'Private' : form.roomType === 'shared' ? 'Shared' : null,
         form.bedType ? `${form.bedType.charAt(0).toUpperCase()}${form.bedType.slice(1)} bed` : null,
         form.bathroom === 'attached' ? 'Attached bath' : form.bathroom ? 'Shared bath' : null,
-        form.roomFeatures.length > 0 ? form.roomFeatures.slice(0, 2).join(', ') : null,
       ].filter(Boolean).join(' · '),
     },
     {
@@ -1881,8 +2097,7 @@ function StepReview({
     {
       label: 'Amenities',
       step: 5,
-      value: [amenityHighlights || null, form.homeCooked ? 'Home-cooked meals' : null]
-        .filter(Boolean).join(' · '),
+      value: [amenityHighlights || null, form.homeCooked ? 'Home-cooked meals' : null].filter(Boolean).join(' · '),
     },
     {
       label: 'Photos',
@@ -1894,7 +2109,7 @@ function StepReview({
       step: 7,
       value: [
         rate > 0 ? `₹${rate}/night` : null,
-        form.weeklyDiscount ? '10% weekly discount' : null,
+        form.homeCooked && form.mealCost ? `+ ₹${form.mealCost}/day meals` : null,
       ].filter(Boolean).join(' · '),
     },
     {
@@ -1914,10 +2129,15 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={stSt.title}>Review & publish</Text>
-      <Text style={stSt.sub}>Here's what guests will see. Make sure everything looks great!</Text>
+      <Text style={stSt.title}>{isEditMode ? 'Review & update' : 'Review & publish'}</Text>
+      <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
-      <View style={rvSt.previewCard}>
+      {/* Tappable preview card → full guest view */}
+      <TouchableOpacity
+        style={rvSt.previewCard}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('ListingDetail', { preview: form })}
+      >
         {coverUri ? (
           <Image source={{ uri: coverUri }} style={rvSt.coverPhoto} resizeMode="cover" />
         ) : (
@@ -1950,7 +2170,12 @@ function StepReview({
             <Text style={rvSt.newTxt}>✨ New listing</Text>
           </View>
         </View>
-      </View>
+
+        <View style={rvSt.tapHint}>
+          <Ionicons name="eye-outline" size={13} color={COLORS.primary} />
+          <Text style={rvSt.tapHintTxt}>Tap to see guest view</Text>
+        </View>
+      </TouchableOpacity>
 
       {SUMMARY_ROWS.map((row) => (
         <View key={row.label} style={rvSt.summaryRow}>
@@ -1973,9 +2198,19 @@ function StepReview({
         disabled={submitting}
       >
         {submitting ? (
-          <ActivityIndicator color="#fff" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <ActivityIndicator color="#fff" size="small" />
+            <Text style={{ color: '#fff', fontSize: 15, ...FONTS.medium }}>
+              {uploadProgress
+                ? `Uploading photos ${uploadProgress.done} / ${uploadProgress.total}…`
+                : isEditMode ? 'Saving…' : 'Submitting…'
+              }
+            </Text>
+          </View>
         ) : (
-          <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>Review & publish</Text>
+          <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>
+            {isEditMode ? 'Confirm update' : 'Review & publish'}
+          </Text>
         )}
       </TouchableOpacity>
 
@@ -1987,71 +2222,35 @@ function StepReview({
 }
 
 const rvSt = StyleSheet.create({
-  previewCard: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
-    ...SHADOW.sm,
-  },
+  previewCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg, ...SHADOW.sm },
   coverPhoto: { width: '100%', height: 140, borderRadius: RADIUS.sm },
-  photoPlaceholder: {
-    height: 120,
-    backgroundColor: COLORS.warm,
-    borderRadius: RADIUS.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  photoPlaceholder: { height: 120, backgroundColor: COLORS.warm, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
+  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   tagTxt: { fontSize: 11, ...FONTS.medium, color: COLORS.textSec },
   previewTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 6 },
   price: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   newBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentAlpha },
   newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.accent },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: SPACING.sm,
-  },
+  tapHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, justifyContent: 'center' },
+  tapHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
+  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
   summaryLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 2 },
   summaryValue: { fontSize: 14, color: COLORS.text },
-  editBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  editBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
   editTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  publishBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: SPACING.xl,
-    marginBottom: SPACING.sm,
-  },
+  publishBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 16, alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.sm },
   backBtn: { alignItems: 'center', paddingVertical: SPACING.sm, marginBottom: SPACING.lg },
 });
 
-// ─── Shared step styles ────────────────────────────────────────────────────────
+// ─── Shared step styles ───────────────────────────────────────────────────────
 
 const stSt = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
   title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
   infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: COLORS.primaryAlpha,
     borderRadius: RADIUS.sm,
     padding: SPACING.sm,
@@ -2060,21 +2259,168 @@ const stSt = StyleSheet.create({
   },
 });
 
+// ─── Helper: map API response → FormData ─────────────────────────────────────
+
+function mapListingToForm(data: any): FormData {
+  const p = data.property;
+  const r = data.room;
+  const hr = data.house_rules;
+
+  const aptTypeMap: Record<string, string> = {
+    '1bhk': '1BHK', '2bhk': '2BHK', '3bhk': '3BHK', '4bhk': '4BHK+',
+  };
+  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 3: '3_nights', 7: '1_week' };
+
+  const allFlatmates: any[] = data.flatmates || [];
+  const hostFm = allFlatmates.find((f: any) => f.name === '__host__');
+  const realFlatmates = allFlatmates.filter((f: any) => f.name !== '__host__');
+
+  return {
+    ...INIT,
+    apartmentType: aptTypeMap[p.apartment_type] ?? p.apartment_type.toUpperCase(),
+    floorNumber: String(p.floor_number),
+    totalFloors: p.total_floors != null ? String(p.total_floors) : '',
+    apartmentName: p.apartment_name,
+    locality: p.address_line1 || '',
+    city: p.city_name,
+    roomType: r.room_type,
+    bedType: r.bed_type,
+    bathroom: r.bathroom_type,
+    roomSize: r.room_size_sqft != null ? String(r.room_size_sqft) : '',
+    roomFeatures: r.room_features || [],
+    title: data.title,
+    description: data.description || '',
+    flatmates: realFlatmates.map((f: any) => ({
+      id: f.id || String(Date.now() + Math.random()),
+      name: f.name,
+      age: f.age != null ? String(f.age) : '',
+      occupation: f.occupation || '',
+      hobbies: f.hobbies || '',
+      gender: f.gender || '',
+    })),
+    guestGenderPref: p.gender_preference,
+    amenities: data.amenities || [],
+    kitchenAccess: data.food_kitchen_access,
+    homeCooked: data.food_meals_available,
+    mealTypes: data.food_meal_types || [],
+    mealCost: data.food_meal_cost != null ? String(Math.round(data.food_meal_cost)) : '',
+    mealDescription: data.food_meal_description || '',
+    nightlyRate: String(Math.round(data.host_price_per_night)),
+    minStay: minStayMap[data.min_nights as number] ?? '1_night',
+    noSmoking: hr.no_smoking,
+    noLoudMusic: hr.no_loud_music,
+    noPets: hr.no_pets,
+    noParties: hr.no_parties,
+    shoesOff: hr.shoes_off,
+    kitchenClean: hr.kitchen_clean,
+    noAlcohol: hr.no_alcohol,
+    lockDoor: hr.lock_door,
+    customRules: hr.custom_rules || '',
+    cancellationPolicy: hr.cancellation_policy,
+    checkInTime: hr.check_in_time,
+    checkOutTime: hr.check_out_time,
+    hostOccupation: data.host?.occupation || '',
+    hostHobbies: data.host?.hobbies || '',
+    hostGender: data.host?.gender || '',
+    photos: {
+      bedroom: data.photos?.bedroom ?? [],
+      bathroom: data.photos?.bathroom ?? [],
+      kitchen: data.photos?.kitchen ?? [],
+      living: data.photos?.living ?? [],
+      entrance: [],
+      balcony: [],
+      other: data.photos?.other ?? [],
+    },
+  };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ListingEditorScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>>();
+  const route = useRoute<RouteProp<HostStackParamList, 'ListingEditor'>>();
+  const listingId = route.params?.listingId;
+
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INIT);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingListing, setLoadingListing] = useState(false);
+  const hasCheckedDraft = useRef(false);
+
+  // Edit mode: fetch listing data and jump to review step
+  useEffect(() => {
+    if (!listingId) return;
+    setLoadingListing(true);
+    getListing(listingId)
+      .then((data: any) => {
+        setForm(mapListingToForm(data));
+        setStep(9);
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Failed to load listing. Please try again.');
+        navigation.goBack();
+      })
+      .finally(() => setLoadingListing(false));
+  }, [listingId]);
+
+  // New listing mode: check for a saved draft
+  useEffect(() => {
+    if (listingId || hasCheckedDraft.current) return;
+    hasCheckedDraft.current = true;
+
+    AsyncStorage.getItem(DRAFT_KEY).then((data) => {
+      if (!data) return;
+      Alert.alert(
+        'Resume draft?',
+        'You have an unfinished listing. Continue where you left off?',
+        [
+          {
+            text: 'Start fresh',
+            style: 'destructive',
+            onPress: () => AsyncStorage.removeItem(DRAFT_KEY),
+          },
+          {
+            text: 'Resume',
+            onPress: () => {
+              try {
+                const draft = JSON.parse(data);
+                setForm(draft.form ?? INIT);
+                setStep(draft.step ?? 0);
+              } catch {
+                AsyncStorage.removeItem(DRAFT_KEY);
+              }
+            },
+          },
+        ]
+      );
+    });
+  }, [listingId]);
 
   const update = useCallback((u: Partial<FormData>) => setForm((prev) => ({ ...prev, ...u })), []);
+
   const next = useCallback(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)), []);
+
   const back = useCallback(
-    () => (step === 0 ? navigation.goBack() : setStep((s) => s - 1)),
-    [step, navigation]
+    () => {
+      if (step === 0 || (listingId && step === 9)) {
+        navigation.goBack();
+      } else {
+        setStep((s) => s - 1);
+      }
+    },
+    [step, listingId, navigation]
   );
-  const saveExit = useCallback(() => navigation.goBack(), [navigation]);
+
+  const saveExit = useCallback(async () => {
+    if (step > 0) {
+      try {
+        await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form }));
+      } catch {}
+    }
+    navigation.goBack();
+  }, [step, form, navigation]);
+
   const goToStep = useCallback((s: number) => setStep(s), []);
 
   const stepProps: StepProps = { form, update, onNext: next, onBack: back };
@@ -2098,17 +2444,36 @@ export default function ListingEditorScreen() {
           submitting={submitting}
           setSubmitting={setSubmitting}
           onSuccess={() => navigation.goBack()}
+          navigation={navigation}
+          isEditMode={!!listingId}
+          listingId={listingId}
         />
       );
       default: return null;
     }
   };
 
+  if (loadingListing) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 12, color: COLORS.textSec, fontSize: 14 }}>Loading listing…</Text>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}>
+      {step === 0 && (
+        <View style={hdrSt.row}>
+          <TouchableOpacity onPress={back} style={{ width: 36, height: 36, justifyContent: 'center' }}>
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
+      )}
       {step > 0 && <EditorHeader onSaveExit={saveExit} />}
-      {step > 0 && <ProgressBar step={step} />}
+      {step > 0 && step < 9 && <ProgressBar step={step} />}
       {renderStep()}
-    </SafeAreaView>
+    </View>
   );
 }
