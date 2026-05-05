@@ -21,6 +21,8 @@ export const ENDPOINTS = {
     BOOKINGS: '/api/bookings/host/',
     EARNINGS: '/api/bookings/host/earnings/',
     LISTINGS: '/api/listings/host/',
+    CREATE_LISTING: '/api/listings/',
+    LISTING_DETAIL: (id: string) => `/api/listings/${id}/`,
     PROPERTIES: '/api/properties/',
   },
   GUEST: {

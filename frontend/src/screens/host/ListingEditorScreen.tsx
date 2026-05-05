@@ -14,7 +14,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,7 +24,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList } from '../../navigation/types';
-import { createListing } from '../../services/listings';
+import { createListing, getListing, updateListing } from '../../services/listings';
 
 const DRAFT_KEY = 'LISTING_DRAFT_NEW';
 
@@ -188,14 +188,7 @@ const AMENITY_ICONS: Record<string, any> = {
   'Door lock on room': 'lock-closed-outline',
 };
 
-const MEAL_TYPE_OPTIONS = [
-  'Breakfast',
-  'Lunch',
-  'Dinner',
-  'Breakfast & Lunch',
-  'Lunch & Dinner',
-  'All meals',
-];
+const MEAL_TYPE_OPTIONS = ['Breakfast', 'Lunch', 'Dinner'];
 
 const PHOTO_CATEGORIES = [
   { key: 'bedroom', label: 'Bedroom', icon: '🛏️', required: true },
@@ -677,7 +670,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
 }
 
 const wlSt = StyleSheet.create({
-  content: { padding: SPACING.lg, paddingTop: SPACING.xxl },
+  content: { padding: SPACING.lg, paddingTop: SPACING.md },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
   title: { fontSize: 28, ...FONTS.bold, color: COLORS.primaryDark, textAlign: 'center', marginBottom: SPACING.sm },
   sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
@@ -1147,18 +1140,21 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
 
       {/* Host profile modal */}
       <Modal visible={hostModalOpen} transparent animationType="slide">
-        <View style={fmSt.modalOverlay}>
-          <View style={fmSt.modalSheet}>
-            <View style={fmSt.modalHeader}>
-              <Text style={fmSt.modalTitle}>Your profile</Text>
-              <TouchableOpacity onPress={() => setHostModalOpen(false)}>
-                <Ionicons name="close" size={22} color={COLORS.textSec} />
-              </TouchableOpacity>
-            </View>
-            <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.md }}>
-              Help guests know who they'll be living with.
-            </Text>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={fmSt.modalOverlay}>
+            <View style={fmSt.modalSheet}>
+              <View style={fmSt.modalHeader}>
+                <Text style={fmSt.modalTitle}>Your profile</Text>
+                <TouchableOpacity onPress={() => setHostModalOpen(false)}>
+                  <Ionicons name="close" size={22} color={COLORS.textSec} />
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.md }}>
+                Help guests know who they'll be living with.
+              </Text>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <SectionLabel label="Gender" optional />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
@@ -1200,22 +1196,25 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
                 </TouchableOpacity>
               </ScrollView>
-            </KeyboardAvoidingView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Add flatmate modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={fmSt.modalOverlay}>
-          <View style={fmSt.modalSheet}>
-            <View style={fmSt.modalHeader}>
-              <Text style={fmSt.modalTitle}>Add flatmate</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={COLORS.textSec} />
-              </TouchableOpacity>
-            </View>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={fmSt.modalOverlay}>
+            <View style={fmSt.modalSheet}>
+              <View style={fmSt.modalHeader}>
+                <Text style={fmSt.modalTitle}>Add flatmate</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Ionicons name="close" size={22} color={COLORS.textSec} />
+                </TouchableOpacity>
+              </View>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Field
                   label="Name"
@@ -1264,9 +1263,9 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
                 </TouchableOpacity>
               </ScrollView>
-            </KeyboardAvoidingView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );
@@ -1365,6 +1364,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={stSt.content}
@@ -1428,6 +1428,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
 
       <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1654,17 +1655,20 @@ const phSt = StyleSheet.create({
 function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
+  const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
   const serviceFee = Math.round(rate * 0.08);
-  const gst = Math.round(serviceFee * 0.18);
-  const guestTotal = rate + serviceFee + gst;
+  const gst = Math.round((rate + mealCost) * 0.18);
+  const guestTotal = rate + mealCost + serviceFee + gst;
   const hostFee = Math.round(rate * 0.03);
-  const hostEarning = rate - hostFee;
+  const hostEarning = rate + mealCost - hostFee;
 
-  const isValid = rate > 0;
+  const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
 
   const validate = (): string | null => {
     if (!form.nightlyRate || parseInt(form.nightlyRate, 10) < 1)
       return 'Please set your nightly rate to continue';
+    if (form.homeCooked && (!form.mealCost || parseInt(form.mealCost, 10) < 1))
+      return 'Please enter the meal cost per day';
     return null;
   };
 
@@ -1706,27 +1710,6 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
           <Text style={prSt.perNight}>per night</Text>
         </View>
 
-        {rate > 0 && (
-          <>
-            <View style={prSt.breakdownBox}>
-              <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
-              <PriceRow label="Room rate" value={`₹${rate}`} />
-              <PriceRow label="RoomBuddy service fee (8%)" value={`₹${serviceFee}`} />
-              <PriceRow label="GST (18% on fee)" value={`₹${gst}`} />
-              <View style={prSt.divider} />
-              <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
-            </View>
-
-            <View style={prSt.breakdownBox}>
-              <Text style={prSt.breakdownTitle}>You earn</Text>
-              <PriceRow label="Room rate" value={`₹${rate}`} />
-              <PriceRow label="RoomBuddy host fee (3%)" value={`−₹${hostFee}`} muted />
-              <View style={prSt.divider} />
-              <PriceRow label="Your earning" value={`₹${hostEarning}/night`} bold />
-            </View>
-          </>
-        )}
-
         {form.homeCooked && (
           <View style={{ marginBottom: SPACING.md }}>
             <Field
@@ -1735,12 +1718,34 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               value={form.mealCost}
               onChange={(v) => update({ mealCost: v.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
-              optional
             />
             <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: -8 }}>
               Charged separately from the room rate.
             </Text>
           </View>
+        )}
+
+        {rate > 0 && (
+          <>
+            <View style={prSt.breakdownBox}>
+              <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
+              <PriceRow label="Room rate" value={`₹${rate}`} />
+              {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
+              <PriceRow label="Service fee (8% on room)" value={`₹${serviceFee}`} />
+              <PriceRow label={`GST (18% on room${mealCost > 0 ? ' + meals' : ''})`} value={`₹${gst}`} />
+              <View style={prSt.divider} />
+              <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
+            </View>
+
+            <View style={prSt.breakdownBox}>
+              <Text style={prSt.breakdownTitle}>You earn</Text>
+              <PriceRow label="Room rate" value={`₹${rate}`} />
+              {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
+              <PriceRow label="RoomBuddy host fee (3% on room)" value={`−₹${hostFee}`} muted />
+              <View style={prSt.divider} />
+              <PriceRow label="Your earning" value={`₹${hostEarning}/night`} bold />
+            </View>
+          </>
         )}
 
         <SectionLabel label="Minimum stay" optional />
@@ -1911,6 +1916,8 @@ function StepReview({
   setSubmitting,
   onSuccess,
   navigation,
+  isEditMode = false,
+  listingId,
 }: {
   form: FormData;
   onBack: () => void;
@@ -1919,6 +1926,8 @@ function StepReview({
   setSubmitting: (v: boolean) => void;
   onSuccess: () => void;
   navigation: NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>;
+  isEditMode?: boolean;
+  listingId?: string;
 }) {
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const amenityHighlights = form.amenities.slice(0, 3).join(', ');
@@ -1929,26 +1938,42 @@ function StepReview({
   const totalPhotos = Object.values(form.photos).reduce((s, a) => s + a.length, 0);
 
   const handlePublish = () => {
-    Alert.alert(
-      'Submit for review',
-      'Your listing will be reviewed by our team and go live within 24 hours.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Submit', onPress: doPublish },
-      ]
-    );
+    if (isEditMode) {
+      Alert.alert(
+        'Confirm update',
+        'Save your changes to this listing?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Update', onPress: doPublish },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Submit for review',
+        'Your listing will be reviewed by our team and go live within 24 hours.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Submit', onPress: doPublish },
+        ]
+      );
+    }
   };
 
   const doPublish = async () => {
     setSubmitting(true);
     try {
-      await createListing(form);
-      await AsyncStorage.removeItem(DRAFT_KEY);
-      Alert.alert(
-        'Listing submitted!',
-        "We'll notify you once it's live.",
-        [{ text: 'OK', onPress: onSuccess }]
-      );
+      if (isEditMode && listingId) {
+        await updateListing(listingId, form);
+        Alert.alert('Updated!', 'Your listing has been updated.', [{ text: 'OK', onPress: onSuccess }]);
+      } else {
+        await createListing(form);
+        await AsyncStorage.removeItem(DRAFT_KEY);
+        Alert.alert(
+          'Listing submitted!',
+          "We'll notify you once it's live.",
+          [{ text: 'OK', onPress: onSuccess }]
+        );
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.detail ||
@@ -2027,7 +2052,7 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={stSt.title}>Review & publish</Text>
+      <Text style={stSt.title}>{isEditMode ? 'Review & update' : 'Review & publish'}</Text>
       <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
       {/* Tappable preview card → full guest view */}
@@ -2098,7 +2123,9 @@ function StepReview({
         {submitting ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>Review & publish</Text>
+          <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>
+            {isEditMode ? 'Confirm update' : 'Review & publish'}
+          </Text>
         )}
       </TouchableOpacity>
 
@@ -2147,9 +2174,76 @@ const stSt = StyleSheet.create({
   },
 });
 
+// ─── Helper: map API response → FormData ─────────────────────────────────────
+
+function mapListingToForm(data: any): FormData {
+  const p = data.property;
+  const r = data.room;
+  const hr = data.house_rules;
+
+  const aptTypeMap: Record<string, string> = {
+    '1bhk': '1BHK', '2bhk': '2BHK', '3bhk': '3BHK', '4bhk': '4BHK+',
+  };
+  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 3: '3_nights', 7: '1_week' };
+
+  const allFlatmates: any[] = data.flatmates || [];
+  const hostFm = allFlatmates.find((f: any) => f.name === '__host__');
+  const realFlatmates = allFlatmates.filter((f: any) => f.name !== '__host__');
+
+  return {
+    ...INIT,
+    apartmentType: aptTypeMap[p.apartment_type] ?? p.apartment_type.toUpperCase(),
+    floorNumber: String(p.floor_number),
+    totalFloors: p.total_floors != null ? String(p.total_floors) : '',
+    apartmentName: p.apartment_name,
+    locality: p.address_line1 || '',
+    city: p.city_name,
+    roomType: r.room_type,
+    bedType: r.bed_type,
+    bathroom: r.bathroom_type,
+    roomSize: r.room_size_sqft != null ? String(r.room_size_sqft) : '',
+    roomFeatures: r.room_features || [],
+    title: data.title,
+    description: data.description || '',
+    flatmates: realFlatmates.map((f: any) => ({
+      id: f.id || String(Date.now() + Math.random()),
+      name: f.name,
+      age: f.age != null ? String(f.age) : '',
+      occupation: f.occupation || '',
+      hobbies: f.hobbies || '',
+      gender: f.gender || '',
+    })),
+    guestGenderPref: p.gender_preference,
+    amenities: data.amenities || [],
+    kitchenAccess: data.food_kitchen_access,
+    homeCooked: data.food_meals_available,
+    mealTypes: data.food_meal_types || [],
+    mealCost: data.food_meal_cost != null ? String(Math.round(data.food_meal_cost)) : '',
+    mealDescription: data.food_meal_description || '',
+    nightlyRate: String(Math.round(data.host_price_per_night)),
+    minStay: minStayMap[data.min_nights as number] ?? '1_night',
+    noSmoking: hr.no_smoking,
+    noLoudMusic: hr.no_loud_music,
+    noPets: hr.no_pets,
+    noParties: hr.no_parties,
+    shoesOff: hr.shoes_off,
+    kitchenClean: hr.kitchen_clean,
+    noAlcohol: hr.no_alcohol,
+    lockDoor: hr.lock_door,
+    customRules: hr.custom_rules || '',
+    cancellationPolicy: hr.cancellation_policy,
+    checkInTime: hr.check_in_time,
+    checkOutTime: hr.check_out_time,
+    hostOccupation: data.host?.occupation || '',
+    hostHobbies: data.host?.hobbies || '',
+    hostGender: data.host?.gender || '',
+  };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ListingEditorScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>>();
   const route = useRoute<RouteProp<HostStackParamList, 'ListingEditor'>>();
   const listingId = route.params?.listingId;
@@ -2157,9 +2251,26 @@ export default function ListingEditorScreen() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INIT);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingListing, setLoadingListing] = useState(false);
   const hasCheckedDraft = useRef(false);
 
-  // On mount: if no listingId, check for a saved draft
+  // Edit mode: fetch listing data and jump to review step
+  useEffect(() => {
+    if (!listingId) return;
+    setLoadingListing(true);
+    getListing(listingId)
+      .then((data: any) => {
+        setForm(mapListingToForm(data));
+        setStep(9);
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Failed to load listing. Please try again.');
+        navigation.goBack();
+      })
+      .finally(() => setLoadingListing(false));
+  }, [listingId]);
+
+  // New listing mode: check for a saved draft
   useEffect(() => {
     if (listingId || hasCheckedDraft.current) return;
     hasCheckedDraft.current = true;
@@ -2197,8 +2308,14 @@ export default function ListingEditorScreen() {
   const next = useCallback(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)), []);
 
   const back = useCallback(
-    () => (step === 0 ? navigation.goBack() : setStep((s) => s - 1)),
-    [step, navigation]
+    () => {
+      if (step === 0 || (listingId && step === 9)) {
+        navigation.goBack();
+      } else {
+        setStep((s) => s - 1);
+      }
+    },
+    [step, listingId, navigation]
   );
 
   const saveExit = useCallback(async () => {
@@ -2234,17 +2351,35 @@ export default function ListingEditorScreen() {
           setSubmitting={setSubmitting}
           onSuccess={() => navigation.goBack()}
           navigation={navigation}
+          isEditMode={!!listingId}
+          listingId={listingId}
         />
       );
       default: return null;
     }
   };
 
+  if (loadingListing) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 12, color: COLORS.textSec, fontSize: 14 }}>Loading listing…</Text>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}>
+      {step === 0 && (
+        <View style={hdrSt.row}>
+          <TouchableOpacity onPress={back} style={{ width: 36, height: 36, justifyContent: 'center' }}>
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
+      )}
       {step > 0 && <EditorHeader onSaveExit={saveExit} />}
-      {step > 0 && <ProgressBar step={step} />}
+      {step > 0 && step < 9 && <ProgressBar step={step} />}
       {renderStep()}
-    </SafeAreaView>
+    </View>
   );
 }

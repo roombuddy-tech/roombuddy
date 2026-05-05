@@ -436,8 +436,8 @@ export default function ListingDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky bottom bar */}
-      {!isPreview && (
+      {/* Sticky bottom bar — host view */}
+      {!isPreview && item && (
         <View style={styles.stickyBar}>
           <View>
             {hostPrice > 0 && (
@@ -446,9 +446,14 @@ export default function ListingDetailScreen() {
                 <Text style={styles.stickyPriceUnit}>/night</Text>
               </Text>
             )}
+            <Text style={styles.stickyPriceSub}>Your earnings per night</Text>
           </View>
-          <TouchableOpacity style={styles.bookBtn} activeOpacity={0.85}>
-            <Text style={styles.bookBtnTxt}>Book now</Text>
+          <TouchableOpacity
+            style={styles.bookBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ListingEditor', { listingId: item.listing_id })}
+          >
+            <Text style={styles.bookBtnTxt}>Edit listing</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -649,6 +654,7 @@ const styles = StyleSheet.create({
   },
   stickyPrice: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
+  stickyPriceSub: { fontSize: 11, color: COLORS.textSec, marginTop: 2 },
   bookBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 13,

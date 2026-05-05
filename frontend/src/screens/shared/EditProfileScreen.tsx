@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +21,7 @@ const GENDERS = [
 ];
 
 export default function EditProfileScreen({ visible, onClose }: EditProfileProps) {
+  const insets = useSafeAreaInsets();
   const { completeProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,7 +120,11 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
   const minDate = new Date(1920, 0, 1);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
@@ -135,7 +140,11 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
-        <View style={styles.form}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.form}
+        >
           <View style={styles.field}>
             <Text style={styles.label}>First name</Text>
             <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} placeholder="First name" placeholderTextColor={COLORS.textMut} />
@@ -190,19 +199,18 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
             <Text style={styles.label}>City</Text>
             <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={COLORS.textMut} />
           </View>
-        </View>
+        </ScrollView>
       )}
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   saveBtn: { fontSize: 16, color: COLORS.primary, ...FONTS.semibold },
-  form: { marginTop: SPACING.lg },
+  form: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.xxl },
   field: { marginBottom: SPACING.lg },
   label: { fontSize: 14, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 6 },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 14, fontSize: 16, color: COLORS.text, backgroundColor: COLORS.bg, ...FONTS.medium },
