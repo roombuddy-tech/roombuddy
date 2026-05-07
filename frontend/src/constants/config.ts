@@ -1,8 +1,28 @@
-const DEV_API_URL = 'http://192.168.7.2:8000';
-const PROD_API_URL = 'https://api.roombuddy.co.in';
+// ── API endpoint toggle ─────────────────────────────────────
+// Choose where Expo hits the backend.
+//   "local"    = local Django on your Mac (http://192.168.1.2:8000)
+//   "aws"      = AWS-hosted Django (https://api.roombuddy.co.in)
+//   "prod"     = real production (used in release builds; same URL as aws for now)
+//
+// To switch: just change the value of API_TARGET below and reload Expo.
+
+type ApiTarget = 'local' | 'aws' | 'prod';
+
+// ⬇⬇⬇  CHANGE THIS LINE TO SWITCH BACKENDS  ⬇⬇⬇
+const API_TARGET: ApiTarget = 'local';
+
+const API_URLS: Record<ApiTarget, string> = {
+  local: 'http://192.168.1.2:8000',
+  aws: 'https://api.roombuddy.co.in',
+  prod: 'https://api.roombuddy.co.in',
+};
+
+// In production builds (__DEV__ === false), always use prod regardless of toggle.
+// In dev (__DEV__ === true), respect API_TARGET.
+const API_URL = __DEV__ ? API_URLS[API_TARGET] : API_URLS.prod;
 
 export const CONFIG = {
-  API_URL: __DEV__ ? DEV_API_URL : PROD_API_URL,
+  API_URL,
   OTP_LENGTH: 6,
   OTP_EXPIRY_SECONDS: 300,
 };
