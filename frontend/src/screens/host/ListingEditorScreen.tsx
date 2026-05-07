@@ -289,6 +289,10 @@ function BottomNav({
 }) {
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isValid) setError(null);
+  }, [isValid]);
+
   const handleNext = () => {
     if (validate) {
       const err = validate();
@@ -1723,17 +1727,6 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>Set your price</Text>
         <Text style={stSt.sub}>Set your nightly rate. We'll show you what guests pay and what you earn.</Text>
 
-        {form.locality ? (
-          <View style={prSt.smartBox}>
-            <Text style={prSt.smartTxt}>
-              💡 Smart price suggestion{'\n'}
-              <Text style={{ ...FONTS.regular }}>
-                Based on similar rooms in {form.locality}, we recommend ₹750–₹1,000/night.
-              </Text>
-            </Text>
-          </View>
-        ) : null}
-
         <Text style={fldSt.label}>Your nightly rate</Text>
         <View style={prSt.rateRow}>
           <Text style={prSt.rupee}>₹</Text>
@@ -1834,8 +1827,6 @@ function PriceRow({
 }
 
 const prSt = StyleSheet.create({
-  smartBox: { backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
-  smartTxt: { fontSize: 13, color: COLORS.primaryDark, ...FONTS.semibold, lineHeight: 20 },
   rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 8 },
   rupee: { fontSize: 28, ...FONTS.bold, color: COLORS.text },
   rateInput: { fontSize: 52, ...FONTS.bold, color: COLORS.text, minWidth: 120, textAlign: 'center' },
@@ -1852,12 +1843,6 @@ const prSt = StyleSheet.create({
 // ─── Step 8: House Rules ──────────────────────────────────────────────────────
 
 function StepRules({ form, update, onNext, onBack }: StepProps) {
-  const CANCELLATION_OPTIONS = [
-    { value: 'flexible', title: 'Flexible', sub: 'Full refund up to 24 hours before check-in' },
-    { value: 'moderate', title: 'Moderate', sub: 'Full refund up to 5 days before check-in' },
-    { value: 'strict', title: 'Strict', sub: 'No refund within 7 days of check-in' },
-  ];
-
   const isValid = !!form.checkInTime && !!form.checkOutTime;
 
   const validate = (): string | null => {
@@ -1899,24 +1884,7 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
           optional
         />
 
-        <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md, marginBottom: 8 }}>
-          Cancellation policy
-        </Text>
-        {CANCELLATION_OPTIONS.map((opt) => (
-          <TouchableOpacity
-            key={opt.value}
-            style={[rlSt.policyCard, form.cancellationPolicy === opt.value && rlSt.policyCardSel]}
-            onPress={() => update({ cancellationPolicy: opt.value })}
-            activeOpacity={0.7}
-          >
-            <Text style={[rlSt.policyTitle, form.cancellationPolicy === opt.value && { color: COLORS.primary }]}>
-              {opt.title}
-            </Text>
-            <Text style={rlSt.policySub}>{opt.sub}</Text>
-          </TouchableOpacity>
-        ))}
-
-        <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.lg, marginBottom: 4 }}>
+        <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md, marginBottom: 4 }}>
           Check-in / Check-out
         </Text>
 
@@ -1933,18 +1901,12 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
           placeholder="e.g. 11:00 AM"
         />
 
-        <BottomNav onBack={onBack} onNext={onNext} nextLabel="Review & publish" validate={validate} isValid={isValid} />
+        <BottomNav onBack={onBack} onNext={onNext} nextLabel="Review & list" validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const rlSt = StyleSheet.create({
-  policyCard: { padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, marginBottom: SPACING.sm },
-  policyCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
-  policyTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
-  policySub: { fontSize: 13, color: COLORS.textSec },
-});
 
 // ─── Step 9: Review & Publish ─────────────────────────────────────────────────
 
@@ -1991,11 +1953,11 @@ function StepReview({
       );
     } else {
       Alert.alert(
-        'Submit for review',
-        'Your listing will be reviewed by our team and go live within 24 hours.',
+        'Publish listing',
+        'Your listing will be available for booking in a few hours.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Submit', onPress: doPublish },
+          { text: 'Publish', onPress: doPublish },
         ]
       );
     }
@@ -2030,7 +1992,7 @@ function StepReview({
 
         if (failed > 0 && uploaded === 0) {
           Alert.alert(
-            isEditMode ? 'Updated' : 'Listing submitted!',
+            isEditMode ? 'Updated' : 'Listing published!',
             `Your listing was saved, but all ${failed} photo${failed > 1 ? 's' : ''} failed to upload. You can add them later via Edit listing.`,
             [{ text: 'OK', onPress: onSuccess }],
           );
@@ -2038,7 +2000,7 @@ function StepReview({
         }
         if (failed > 0) {
           Alert.alert(
-            isEditMode ? 'Updated' : 'Listing submitted!',
+            isEditMode ? 'Updated' : 'Listing published!',
             `${uploaded} photo${uploaded > 1 ? 's' : ''} uploaded. ${failed} failed — you can add them later via Edit listing.`,
             [{ text: 'OK', onPress: onSuccess }],
           );
@@ -2047,8 +2009,8 @@ function StepReview({
       }
 
       Alert.alert(
-        isEditMode ? 'Updated!' : 'Listing submitted!',
-        isEditMode ? 'Your listing has been updated.' : "We'll notify you once it's live.",
+        isEditMode ? 'Updated!' : 'Listing published!',
+        isEditMode ? 'Your listing has been updated.' : 'Your listing will be available for booking in a few hours.',
         [{ text: 'OK', onPress: onSuccess }],
       );
     } catch (err: any) {
@@ -2118,7 +2080,6 @@ function StepReview({
       step: 8,
       value: [
         ruleCount > 0 ? `${ruleCount} rule${ruleCount > 1 ? 's' : ''} set` : null,
-        form.cancellationPolicy ? `${form.cancellationPolicy.charAt(0).toUpperCase()}${form.cancellationPolicy.slice(1)} cancellation` : null,
         form.checkInTime ? `Check-in ${form.checkInTime}` : null,
       ].filter(Boolean).join(' · '),
     },
@@ -2130,7 +2091,7 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={stSt.title}>{isEditMode ? 'Review & update' : 'Review & publish'}</Text>
+      <Text style={stSt.title}>{isEditMode ? 'Review & update' : 'Review & list'}</Text>
       <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
       {/* Tappable preview card → full guest view */}
@@ -2206,13 +2167,13 @@ function StepReview({
             <Text style={{ color: '#fff', fontSize: 15, ...FONTS.medium }}>
               {uploadProgress
                 ? `Uploading photos ${uploadProgress.done} / ${uploadProgress.total}…`
-                : isEditMode ? 'Saving…' : 'Submitting…'
+                : isEditMode ? 'Saving…' : 'Publishing…'
               }
             </Text>
           </View>
         ) : (
           <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>
-            {isEditMode ? 'Confirm update' : 'Review & publish'}
+            {isEditMode ? 'Confirm update' : 'Publish listing'}
           </Text>
         )}
       </TouchableOpacity>
@@ -2344,6 +2305,7 @@ export default function ListingEditorScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>>();
   const route = useRoute<RouteProp<HostStackParamList, 'ListingEditor'>>();
   const listingId = route.params?.listingId;
+  const resumeDraft = route.params?.resumeDraft;
 
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INIT);
@@ -2367,38 +2329,26 @@ export default function ListingEditorScreen() {
       .finally(() => setLoadingListing(false));
   }, [listingId]);
 
-  // New listing mode: check for a saved draft
+  // New listing mode: auto-resume draft or start fresh
   useEffect(() => {
     if (listingId || hasCheckedDraft.current) return;
     hasCheckedDraft.current = true;
 
-    AsyncStorage.getItem(DRAFT_KEY).then((data) => {
-      if (!data) return;
-      Alert.alert(
-        'Resume draft?',
-        'You have an unfinished listing. Continue where you left off?',
-        [
-          {
-            text: 'Start fresh',
-            style: 'destructive',
-            onPress: () => AsyncStorage.removeItem(DRAFT_KEY),
-          },
-          {
-            text: 'Resume',
-            onPress: () => {
-              try {
-                const draft = JSON.parse(data);
-                setForm(draft.form ?? INIT);
-                setStep(draft.step ?? 0);
-              } catch {
-                AsyncStorage.removeItem(DRAFT_KEY);
-              }
-            },
-          },
-        ]
-      );
-    });
-  }, [listingId]);
+    if (resumeDraft) {
+      AsyncStorage.getItem(DRAFT_KEY).then((data) => {
+        if (!data) return;
+        try {
+          const saved = JSON.parse(data);
+          setForm(saved.form ?? INIT);
+          setStep(saved.step ?? 0);
+        } catch {
+          AsyncStorage.removeItem(DRAFT_KEY);
+        }
+      });
+    } else {
+      AsyncStorage.removeItem(DRAFT_KEY);
+    }
+  }, [listingId, resumeDraft]);
 
   const update = useCallback((u: Partial<FormData>) => setForm((prev) => ({ ...prev, ...u })), []);
 

@@ -20,7 +20,7 @@ export type HostTabParamList = {
 
 export type HostStackParamList = {
   HostTabs: undefined;
-  ListingEditor: { listingId?: string } | undefined;
+  ListingEditor: { listingId?: string; resumeDraft?: boolean };
   ListingDetail: {
     preview?: any;
     item?: {

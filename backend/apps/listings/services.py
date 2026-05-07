@@ -338,7 +338,7 @@ def create_listing(user: User, data: dict) -> dict:
         "listing_id": str(listing.id),
         "property_id": str(listing.property_id),
         "status": listing.status,
-        "message": "Listing submitted for review.",
+        "message": "Listing published successfully.",
     }
 
 

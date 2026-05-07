@@ -27,16 +27,15 @@ def get_photo_url(url: str, expires_in: int = 3600) -> str:
     if not url:
         return url
 
-    provider = os.getenv("STORAGE_PROVIDER", "local").lower()
+    bucket = os.getenv("S3_BUCKET_NAME", "roombuddy-media")
+    region = os.getenv("S3_REGION", "ap-south-1")
+    s3_prefix = f"https://{bucket}.s3.{region}.amazonaws.com/"
 
-    if provider == "s3" and url.startswith("https://"):
-        bucket = os.getenv("S3_BUCKET_NAME", "roombuddy-media")
-        region = os.getenv("S3_REGION", "ap-south-1")
-        prefix = f"https://{bucket}.s3.{region}.amazonaws.com/"
-        if url.startswith(prefix):
-            key = url[len(prefix):]
-            return _generate_presigned_url(key, expires_in, bucket, region)
-    elif url.startswith("/media/"):
+    if url.startswith(s3_prefix):
+        key = url[len(s3_prefix):]
+        return _generate_presigned_url(key, expires_in, bucket, region)
+
+    if url.startswith("/media/"):
         from django.conf import settings
         site_url = getattr(settings, "SITE_URL", "http://localhost:8000").rstrip("/")
         return f"{site_url}{url}"
