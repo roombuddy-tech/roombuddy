@@ -2016,10 +2016,11 @@ function StepReview({
         await AsyncStorage.removeItem(DRAFT_KEY);
       }
 
-      // Upload photos if any were selected
-      const photoCount = Object.values(form.photos).reduce((s, a) => s + a.length, 0);
-      if (propertyId && photoCount > 0) {
-        setUploadProgress({ done: 0, total: photoCount });
+      // Upload only newly added local photos (skip existing S3 URLs)
+      const newPhotoCount = Object.values(form.photos)
+        .reduce((s, arr) => s + arr.filter(u => !u.startsWith('http')).length, 0);
+      if (propertyId && newPhotoCount > 0) {
+        setUploadProgress({ done: 0, total: newPhotoCount });
         const { uploaded, failed } = await uploadAllPropertyPhotos(
           propertyId,
           form.photos,
@@ -2166,9 +2167,11 @@ function StepReview({
               <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
             </Text>
           )}
-          <View style={rvSt.newBadge}>
-            <Text style={rvSt.newTxt}>✨ New listing</Text>
-          </View>
+          {!isEditMode && (
+            <View style={rvSt.newBadge}>
+              <Text style={rvSt.newTxt}>✨ New listing</Text>
+            </View>
+          )}
         </View>
 
         <View style={rvSt.tapHint}>
