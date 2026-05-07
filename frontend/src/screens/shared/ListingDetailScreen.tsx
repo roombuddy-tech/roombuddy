@@ -1,12 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Image,
   Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,17 +78,16 @@ export default function ListingDetailScreen() {
   const isPreview = !!preview;
   const f = preview;
 
-  const [freshCoverUri, setFreshCoverUri] = useState<string | null>(null);
+  const [fetchedPhotos, setFetchedPhotos] = useState<string[]>([]);
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
-  // Fetch fresh photo every time this screen focuses so stale navigation params don't hide photos
   useFocusEffect(
     useCallback(() => {
       if (!isPreview && item?.listing_id) {
         getListing(item.listing_id)
           .then((data: any) => {
-            const first = Object.values(data.photos as Record<string, string[]>)
-              .find((arr: string[]) => arr.length > 0)?.[0] ?? null;
-            setFreshCoverUri(first);
+            const all = Object.values(data.photos as Record<string, string[]>).flat();
+            setFetchedPhotos(all);
           })
           .catch(() => {});
       }
@@ -100,9 +102,18 @@ export default function ListingDetailScreen() {
     ? Math.round(hostPrice * 1.18 * 1.08)
     : (item?.guest_price_per_night ?? 0);
 
-  const coverUri = f
-    ? Object.values(f.photos as Record<string, string[]>).find((arr) => arr.length > 0)?.[0]
-    : (freshCoverUri ?? item?.cover_photo_url ?? null);
+  const allPhotos: string[] = f
+    ? Object.values(f.photos as Record<string, string[]>).flat().filter(Boolean)
+    : fetchedPhotos.length > 0
+      ? fetchedPhotos
+      : item?.cover_photo_url
+        ? [item.cover_photo_url]
+        : [];
+
+  const onPhotoScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+    setActivePhotoIdx(idx);
+  };
 
   const tags: string[] = [];
   if (f?.roomType === 'private') tags.push('Private room');
@@ -123,11 +134,6 @@ export default function ListingDetailScreen() {
   const initials = (name: string) =>
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 
-  const cancellationDesc: Record<string, string> = {
-    flexible: 'Full refund up to 24 hours before check-in',
-    moderate: 'Full refund up to 5 days before check-in',
-    strict: 'No refund within 7 days of check-in',
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -143,14 +149,24 @@ export default function ListingDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* Photo */}
+        {/* Photos carousel */}
         <View style={styles.photoWrap}>
-          {coverUri ? (
-            <Image
-              source={{ uri: coverUri }}
-              style={styles.coverPhoto}
-              resizeMode="cover"
-              onError={() => setFreshCoverUri(null)}
+          {allPhotos.length > 0 ? (
+            <FlatList
+              data={allPhotos}
+              keyExtractor={(uri, i) => `${uri}-${i}`}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={onPhotoScroll}
+              scrollEventThrottle={16}
+              renderItem={({ item: uri }) => (
+                <Image
+                  source={{ uri }}
+                  style={styles.coverPhoto}
+                  resizeMode="cover"
+                />
+              )}
             />
           ) : (
             <View style={styles.photoPlaceholder}>
@@ -165,6 +181,14 @@ export default function ListingDetailScreen() {
           {isPreview && (
             <View style={styles.newBadge}>
               <Text style={styles.newBadgeTxt}>✨ New listing</Text>
+            </View>
+          )}
+
+          {allPhotos.length > 1 && (
+            <View style={styles.photoCounter}>
+              <Text style={styles.photoCounterTxt}>
+                {activePhotoIdx + 1} / {allPhotos.length}
+              </Text>
             </View>
           )}
         </View>
@@ -434,19 +458,6 @@ export default function ListingDetailScreen() {
             </>
           )}
 
-          {/* Cancellation */}
-          {f?.cancellationPolicy && (
-            <>
-              <SectionHeader title="Cancellation policy" />
-              <Text style={styles.cancelTitle}>
-                {f.cancellationPolicy.charAt(0).toUpperCase() + f.cancellationPolicy.slice(1)}
-              </Text>
-              <Text style={styles.cancelSub}>
-                {cancellationDesc[f.cancellationPolicy] ?? ''}
-              </Text>
-            </>
-          )}
-
           {/* Limited info from list API */}
           {!isPreview && item && (
             <View style={styles.limitedInfoBox}>
@@ -509,8 +520,18 @@ const styles = StyleSheet.create({
   previewBannerTxt: { fontSize: 12, color: '#92400E', ...FONTS.medium, flex: 1 },
 
   photoWrap: { position: 'relative', width: SCREEN_W, height: 240, backgroundColor: COLORS.warm },
-  coverPhoto: { width: '100%', height: '100%' },
+  coverPhoto: { width: SCREEN_W, height: 240 },
   photoPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  photoCounter: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
 
   backBtn: {
     position: 'absolute',
@@ -646,8 +667,6 @@ const styles = StyleSheet.create({
   checkinLabel: { fontSize: 12, color: COLORS.textSec },
   checkinTime: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
 
-  cancelTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
-  cancelSub: { fontSize: 13, color: COLORS.textSec, lineHeight: 20 },
 
   limitedInfoBox: {
     flexDirection: 'row',
