@@ -53,12 +53,18 @@ export async function uploadAllPropertyPhotos(
 ): Promise<{ uploaded: number; failed: number }> {
   const categoryOrder = ['bedroom', 'bathroom', 'kitchen', 'living', 'entrance', 'balcony', 'other'];
 
+  // If any photo is already an S3 URL, the property already has uploaded photos.
+  // In that case don't promote a newly added photo to cover — the existing cover stays.
+  const hasExistingPhotos = Object.values(photos).flat().some(u => u.startsWith('http'));
+
+  // Only queue local-device URIs — remote URLs are already uploaded, skip entirely.
   const queue: { uri: string; category: string; isCover: boolean }[] = [];
-  let isFirstOverall = true;
+  let isFirstNew = true;
   for (const cat of categoryOrder) {
     for (const uri of photos[cat] ?? []) {
-      queue.push({ uri, category: cat, isCover: isFirstOverall });
-      isFirstOverall = false;
+      if (uri.startsWith('http')) continue;
+      queue.push({ uri, category: cat, isCover: !hasExistingPhotos && isFirstNew });
+      isFirstNew = false;
     }
   }
 
@@ -67,12 +73,6 @@ export async function uploadAllPropertyPhotos(
   const total = queue.length;
 
   for (const { uri, category, isCover } of queue) {
-    if (uri.startsWith('http')) {
-      // Already an S3/remote URL — skip re-upload
-      uploaded++;
-      onProgress?.(uploaded + failed, total);
-      continue;
-    }
     try {
       await uploadPropertyPhoto(propertyId, uri, category, isCover);
       uploaded++;

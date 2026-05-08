@@ -7,10 +7,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
 import type { HostTabParamList, HostStackParamList } from '../../navigation/types';
+
+const DRAFT_KEY = 'LISTING_DRAFT_NEW';
+const TOTAL_STEPS = 9;
 
 type NavProp = CompositeNavigationProp<
   BottomTabNavigationProp<HostTabParamList, 'Listing'>,
@@ -28,6 +32,11 @@ interface ListingItem {
   review_count: number;
   total_bookings: number;
   cover_photo_url: string | null;
+}
+
+interface DraftData {
+  step: number;
+  form: { title?: string; apartmentName?: string };
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -57,11 +66,20 @@ function ListingThumbnail({ uri }: { uri: string | null }) {
   );
 }
 
+function DraftProgressBar({ completed, total }: { completed: number; total: number }) {
+  return (
+    <View style={styles.draftProgressTrack}>
+      <View style={[styles.draftProgressFill, { width: `${(completed / total) * 100}%` }]} />
+    </View>
+  );
+}
+
 export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [draft, setDraft] = useState<DraftData | null>(null);
 
   const fetchListings = useCallback(async () => {
     try {
@@ -75,17 +93,31 @@ export default function ListingsScreen() {
     }
   }, []);
 
-  // Refetch every time the screen comes into focus so newly created listings appear
+  const loadDraft = useCallback(async () => {
+    try {
+      const data = await AsyncStorage.getItem(DRAFT_KEY);
+      if (data) {
+        setDraft(JSON.parse(data));
+      } else {
+        setDraft(null);
+      }
+    } catch {
+      setDraft(null);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
       fetchListings();
-    }, [fetchListings])
+      loadDraft();
+    }, [fetchListings, loadDraft])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchListings();
+    loadDraft();
   };
 
   const handleCardPress = (item: ListingItem) => {
@@ -96,6 +128,17 @@ export default function ListingsScreen() {
     }
   };
 
+  const handleResumeDraft = () => {
+    navigation.navigate('ListingEditor', { resumeDraft: true });
+  };
+
+  const handleAddNew = () => {
+    navigation.navigate('ListingEditor', {});
+  };
+
+  const draftTitle = draft?.form?.title?.trim() || draft?.form?.apartmentName?.trim() || 'Untitled listing';
+  const draftStepsCompleted = draft ? Math.max(0, draft.step) : 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -103,76 +146,124 @@ export default function ListingsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.headerRow}>
-          <Text style={styles.pageTitle}>My listings</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('ListingEditor', undefined)}>
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={styles.addBtnText}>Add listing</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.pageTitle}>My listings</Text>
 
         {loading ? (
           <View style={styles.loadingArea}>
             <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
-        ) : listings.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🏠</Text>
-            <Text style={styles.emptyTitle}>No listings yet</Text>
-            <Text style={styles.emptySub}>Tap "+ Add listing" to list your first room and start earning.</Text>
-          </View>
         ) : (
-          listings.map((item) => {
-            const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.draft;
-            return (
-              <TouchableOpacity
-                key={item.listing_id}
-                style={styles.listingCard}
-                activeOpacity={0.7}
-                onPress={() => handleCardPress(item)}
-              >
-                <View style={styles.photoContainer}>
-                  <ListingThumbnail uri={item.cover_photo_url} />
+          <>
+            {/* Draft card */}
+            {draft && (
+              <View style={styles.draftSection}>
+                <View style={styles.draftSectionHeader}>
+                  <Ionicons name="pencil-outline" size={16} color="#92400E" />
+                  <Text style={styles.draftSectionTitle}>Unfinished listing</Text>
                 </View>
 
-                <View style={styles.detailsContainer}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={styles.statusRow}>
-                      <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
-                      <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
-                    </View>
+                <TouchableOpacity
+                  style={styles.draftCard}
+                  activeOpacity={0.7}
+                  onPress={handleResumeDraft}
+                >
+                  <View style={styles.draftIconWrap}>
+                    <Ionicons name="document-text-outline" size={28} color="#D97706" />
                   </View>
 
-                  <Text style={styles.areaName}>{item.area_name}</Text>
-
-                  <View style={styles.bottomRow}>
-                    <Text style={styles.price}>
-                      ₹{item.host_price_per_night.toLocaleString('en-IN')}
-                      <Text style={styles.priceUnit}>/night</Text>
+                  <View style={styles.draftContent}>
+                    <Text style={styles.draftTitle} numberOfLines={1}>{draftTitle}</Text>
+                    <Text style={styles.draftProgress}>
+                      {draftStepsCompleted} of {TOTAL_STEPS} steps completed
                     </Text>
-                    <View style={styles.statsRow}>
-                      {item.average_rating ? (
-                        <>
-                          <Text style={styles.star}>☆</Text>
-                          <Text style={styles.rating}>{item.average_rating}</Text>
-                          <Text style={styles.dot}>·</Text>
-                        </>
-                      ) : null}
-                      <Text style={styles.bookingCount}>{item.total_bookings} bookings</Text>
-                    </View>
+                    <DraftProgressBar completed={draftStepsCompleted} total={TOTAL_STEPS} />
                   </View>
 
-                  {item.status === 'draft' && (
-                    <View style={styles.draftHint}>
-                      <Ionicons name="pencil-outline" size={12} color={COLORS.accent} />
-                      <Text style={styles.draftHintTxt}>Tap to continue editing</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })
+                  <View style={styles.draftContinueBtn}>
+                    <Text style={styles.draftContinueTxt}>Continue</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Active listings */}
+            {listings.length > 0 && (
+              <View style={styles.listingsSection}>
+                {(draft || listings.length > 0) && (
+                  <Text style={styles.sectionLabel}>
+                    {listings.length === 1 ? '1 listing' : `${listings.length} listings`}
+                  </Text>
+                )}
+                {listings.map((item) => {
+                  const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.draft;
+                  return (
+                    <TouchableOpacity
+                      key={item.listing_id}
+                      style={styles.listingCard}
+                      activeOpacity={0.7}
+                      onPress={() => handleCardPress(item)}
+                    >
+                      <View style={styles.photoContainer}>
+                        <ListingThumbnail uri={item.cover_photo_url} />
+                      </View>
+
+                      <View style={styles.detailsContainer}>
+                        <View style={styles.titleRow}>
+                          <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
+                          <View style={styles.statusRow}>
+                            <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
+                            <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.areaName}>{item.area_name}</Text>
+
+                        <View style={styles.bottomRow}>
+                          <Text style={styles.price}>
+                            ₹{item.host_price_per_night.toLocaleString('en-IN')}
+                            <Text style={styles.priceUnit}>/night</Text>
+                          </Text>
+                          <View style={styles.statsRow}>
+                            {item.average_rating ? (
+                              <>
+                                <Text style={styles.star}>☆</Text>
+                                <Text style={styles.rating}>{item.average_rating}</Text>
+                                <Text style={styles.dot}>·</Text>
+                              </>
+                            ) : null}
+                            <Text style={styles.bookingCount}>{item.total_bookings} bookings</Text>
+                          </View>
+                        </View>
+
+                        {item.status === 'draft' && (
+                          <View style={styles.serverDraftHint}>
+                            <Ionicons name="pencil-outline" size={12} color={COLORS.accent} />
+                            <Text style={styles.serverDraftHintTxt}>Tap to continue editing</Text>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Empty state — no drafts and no listings */}
+            {!draft && listings.length === 0 && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>🏠</Text>
+                <Text style={styles.emptyTitle}>No listings yet</Text>
+                <Text style={styles.emptySub}>List your first room and start earning.</Text>
+              </View>
+            )}
+
+            {/* Add new listing button — always at bottom */}
+            <TouchableOpacity style={styles.addNewBtn} activeOpacity={0.85} onPress={handleAddNew}>
+              <Ionicons name="add-circle-outline" size={20} color="#fff" />
+              <Text style={styles.addNewBtnTxt}>Add new listing</Text>
+            </TouchableOpacity>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -183,17 +274,69 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   scrollContent: { paddingBottom: SPACING.xl },
 
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.md, marginBottom: SPACING.lg },
-  pageTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.accent, paddingVertical: 8, paddingHorizontal: 14, borderRadius: RADIUS.pill },
-  addBtnText: { color: '#fff', fontSize: 13, ...FONTS.semibold },
+  pageTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.lg },
 
   loadingArea: { paddingVertical: 60, alignItems: 'center' },
 
-  emptyState: { alignItems: 'center', paddingVertical: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
-  emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
-  emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', paddingHorizontal: SPACING.xl },
+  // ── Draft section ──
+  draftSection: { marginBottom: SPACING.lg },
+  draftSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.sm,
+  },
+  draftSectionTitle: { fontSize: 13, ...FONTS.semibold, color: '#92400E' },
+
+  draftCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    ...SHADOW.sm,
+  },
+  draftIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.sm,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  draftContent: { flex: 1, marginRight: 12 },
+  draftTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
+  draftProgress: { fontSize: 12, color: '#92400E', ...FONTS.medium, marginBottom: 6 },
+
+  draftProgressTrack: {
+    height: 4,
+    backgroundColor: '#FDE68A',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  draftProgressFill: {
+    height: '100%',
+    backgroundColor: '#D97706',
+    borderRadius: 2,
+  },
+
+  draftContinueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#D97706',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.pill,
+  },
+  draftContinueTxt: { fontSize: 13, ...FONTS.semibold, color: '#fff' },
+
+  // ── Listings section ──
+  listingsSection: { marginBottom: SPACING.md },
+  sectionLabel: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec, marginBottom: SPACING.sm },
 
   listingCard: {
     flexDirection: 'row',
@@ -232,6 +375,25 @@ const styles = StyleSheet.create({
   dot: { fontSize: 13, color: COLORS.textMut },
   bookingCount: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
 
-  draftHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  draftHintTxt: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
+  serverDraftHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  serverDraftHintTxt: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
+
+  // ── Empty state ──
+  emptyState: { alignItems: 'center', paddingVertical: 60 },
+  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
+  emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', paddingHorizontal: SPACING.xl },
+
+  // ── Add new listing button (bottom) ──
+  addNewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.accent,
+    paddingVertical: 14,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.md,
+  },
+  addNewBtnTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
 });

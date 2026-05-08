@@ -128,8 +128,8 @@ class PropertyPhoto(models.Model):
         "rooms.Room", on_delete=models.CASCADE, null=True, blank=True, related_name="photos",
     )
     area = models.CharField(max_length=30, choices=Area.choices)
-    url = models.URLField(max_length=2048)
-    thumbnail_url = models.URLField(max_length=2048, null=True, blank=True)
+    url = models.CharField(max_length=2048)
+    thumbnail_url = models.CharField(max_length=2048, null=True, blank=True)
     caption = models.CharField(max_length=255, null=True, blank=True)
     sort_order = models.SmallIntegerField(default=0)
     is_cover = models.BooleanField(default=False)
