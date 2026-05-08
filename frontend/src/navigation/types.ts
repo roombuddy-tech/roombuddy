@@ -34,4 +34,12 @@ export type HostStackParamList = {
     };
   };
   BookingDetail: { booking: any };
+  Notifications: undefined;
+  NotificationPreferences: undefined;
+};
+
+export type GuestStackParamList = {
+  GuestTabs: undefined;
+  Notifications: undefined;
+  NotificationPreferences: undefined;
 };

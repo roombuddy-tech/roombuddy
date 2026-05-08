@@ -24,6 +24,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.payments.models import Payment, Refund, WebhookEvent, WebhookEventType
 from common.constants import StatusChangeReason
+from apps.notifications.models import EventType
+from apps.notifications.services import dispatch
 from common.error_codes import ErrorCode
 from common.redis_utils import idempotency_seen
 from third_party import razorpay as rzp
@@ -162,6 +164,7 @@ def verify_and_capture(
         _mark_booking_paid_and_maybe_accept(booking, by_user=None)
 
     logger.info(f"Booking {booking.booking_code} marked PAID via verify endpoint")
+    _notify_payment_succeeded(booking, payment)
     return booking
 
 
@@ -259,6 +262,7 @@ def _handle_payment_captured(payload: dict) -> None:
         payment.save()
 
         _mark_booking_paid_and_maybe_accept(payment.booking, by_user=None)
+        _notify_payment_succeeded(payment.booking, payment)
 
     logger.info(f"Webhook captured payment for booking {payment.booking.booking_code}")
 
@@ -292,6 +296,7 @@ def _handle_payment_failed(payload: dict) -> None:
             reason=f"{StatusChangeReason.PAYMENT_FAILED}: {payment.error_description or 'unknown'}",
         )
     booking.save()
+    _notify_payment_failed(booking)
     logger.info(
         f"Payment failed for booking {booking.booking_code}: {payment.error_description}",
     )
@@ -329,6 +334,8 @@ def _handle_refund_processed(payload: dict) -> None:
         refund.payment.status = Payment.Status.PARTIALLY_REFUNDED
     refund.payment.save(update_fields=["status", "updated_at"])
     booking.save(update_fields=["payment_status", "updated_at"])
+
+    _notify_refund_completed(booking, refund)
 
     logger.info(f"Refund {refund_id} processed; total refunded ₹{total_refunded}")
 
@@ -422,3 +429,88 @@ def _mark_booking_paid_and_maybe_accept(booking: Booking, by_user) -> None:
         )
 
     booking.save()
+
+def _user_first_name(user) -> str:
+    """Safely get a user's first name from their profile; falls back to 'there'."""
+    if not user:
+        return "there"
+    profile = getattr(user, "profile", None)
+    if profile and profile.first_name:
+        return profile.first_name
+    return "there"
+
+
+def _build_booking_context(booking) -> dict:
+    """Common context for booking-related notifications."""
+    return {
+        "property_name": booking.listing.title,
+        "booking_reference": booking.booking_code,
+        "check_in": booking.check_in_date.strftime("%d %b %Y"),
+        "check_out": booking.check_out_date.strftime("%d %b %Y"),
+        "amount": f"{booking.total_guest_pays:.2f}",
+        # MSG91-specific (only used when SMS_PROVIDER=msg91)
+        "msg91_flow_id": "",
+        "msg91_variables": {
+            "var1": booking.booking_code,
+            "var2": booking.listing.title,
+            "var3": booking.check_in_date.strftime("%d-%b"),
+            "var4": booking.check_out_date.strftime("%d-%b"),
+            "var5": f"{booking.total_guest_pays:.0f}",
+        },
+    }
+
+
+def _notify_payment_succeeded(booking, payment) -> None:
+    base = _build_booking_context(booking)
+    idem = f"payment_succeeded:{payment.id}"
+    guest = booking.guest_user
+    host = booking.host_user
+
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=idem,
+        )
+    if host:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
+            recipients=[host],
+            context={**base, "recipient_name": _user_first_name(host)},
+            idempotency_event_id=idem,
+        )
+
+    # If payment auto-accepted the booking, notify guest of acceptance too
+    if booking.status == Booking.Status.ACCEPTED and guest:
+        dispatch(
+            event_type=EventType.BOOKING_HOST_ACCEPTED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=f"host_accepted:{booking.id}",
+        )
+
+
+def _notify_payment_failed(booking) -> None:
+    base = _build_booking_context(booking)
+    guest = booking.guest_user
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_FAILED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=f"payment_failed:{booking.id}",
+        )
+
+
+def _notify_refund_completed(booking, refund) -> None:
+    base = _build_booking_context(booking)
+    base["amount"] = f"{refund.amount:.2f}"
+    guest = booking.guest_user
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_REFUND_COMPLETED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=f"refund_completed:{refund.id}",
+        )

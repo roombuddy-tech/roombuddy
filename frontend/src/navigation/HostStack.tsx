@@ -1,9 +1,11 @@
-import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HostTabs from './HostTabs';
+import React from 'react';
+import BookingDetailScreen from '../screens/host/BookingDetailScreen';
 import ListingEditorScreen from '../screens/host/ListingEditorScreen';
 import ListingDetailScreen from '../screens/shared/ListingDetailScreen';
-import BookingDetailScreen from '../screens/host/BookingDetailScreen';
+import NotificationPreferencesScreen from '../screens/shared/NotificationPreferencesScreen';
+import NotificationsScreen from '../screens/shared/NotificationsScreen';
+import HostTabs from './HostTabs';
 import type { HostStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<HostStackParamList>();
@@ -19,6 +21,8 @@ export default function HostStack() {
       />
       <Stack.Screen name="ListingDetail" component={ListingDetailScreen} />
       <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Notification preferences' }}/>
     </Stack.Navigator>
   );
 }
