@@ -1,0 +1,45 @@
+<tr>
+  <td style="padding:24px 24px 8px 24px;">
+    <h3 style="margin:0 0 12px 0;color:#1a1a1a;font-size:16px;font-weight:600;">Reservation details</h3>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;width:35%;vertical-align:top;">Property</td>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ property_name }}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Check-in</td>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ check_in }}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Check-out</td>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ check_out }}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Your reservation</td>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">
+          {{ nights }} night{{ nights|pluralize }}, {{ guest_count }} guest{{ guest_count|pluralize }}
+        </td>
+      </tr>
+      {% if location %}
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Location</td>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;line-height:1.5;">{{ location }}</td>
+      </tr>
+      {% endif %}
+      {% if host_name %}
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Host</td>
+        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ host_name }}</td>
+      </tr>
+      {% endif %}
+      {% if host_phone %}
+      <tr>
+        <td style="padding:12px 0;color:#777;font-size:14px;vertical-align:top;">Phone</td>
+        <td style="padding:12px 0;color:#1a1a1a;font-size:14px;">
+          <a href="tel:{{ host_phone }}" style="color:#0a84ff;text-decoration:none;">{{ host_phone }}</a>
+        </td>
+      </tr>
+      {% endif %}
+    </table>
+  </td>
+</tr>

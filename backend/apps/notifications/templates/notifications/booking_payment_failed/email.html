@@ -1,0 +1,34 @@
+{% extends "_includes/base_email.html" %}
+
+{% block subject %}Payment failed — {{ property_name }}{% endblock %}
+{% block hero_color %}#d93025{% endblock %}
+
+{% block hero_title %}Payment couldn't go through{% endblock %}
+{% block hero_subtitle %}
+  Hi {{ recipient_name }}, we couldn't process the payment for your booking
+  at <strong>{{ property_name }}</strong>. Don't worry — no money has been deducted.
+  You can retry the payment from the app.
+{% endblock %}
+
+{% block content %}
+  {% include "_includes/reservation_details.html" %}
+
+  <tr>
+    <td style="padding:8px 24px 24px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fdecea;border:1px solid #f5c2c7;border-radius:6px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <p style="margin:0 0 6px 0;color:#842029;font-size:14px;font-weight:600;">What to do next</p>
+            <p style="margin:0;color:#842029;font-size:13px;line-height:1.5;">
+              Open the RoomBuddy app and retry payment with the same or a different method.
+              The room is held for you until you complete payment, but availability is not guaranteed
+              once others book the same dates.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+{% endblock %}
+
+{% block cta_label %}Retry payment{% endblock %}

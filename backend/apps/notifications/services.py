@@ -21,6 +21,8 @@ import hashlib
 import logging
 from datetime import timedelta
 from typing import Iterable, List, Optional
+from django.template.loader import render_to_string, TemplateDoesNotExist
+
 
 from django.db import transaction
 from django.template import Context, Template
@@ -93,17 +95,13 @@ def _enqueue_one(
     idempotency_key = hashlib.sha256(
         f"{idem_seed}:{user.id}:{channel}".encode()
     ).hexdigest()[:32]
-
+    
     try:
-        template = NotificationTemplate.objects.get(
-            event_type=event_type, channel=channel, is_active=True,
-        )
-    except NotificationTemplate.DoesNotExist:
-        logger.warning(f"No active template for {event_type}/{channel}; skipping")
+        body = _render_file_template(event_type, channel, "html", context)
+        subject = _render_file_template(event_type, channel, "subject", context).strip()
+    except TemplateDoesNotExist:
+        logger.warning(f"No file template for {event_type}/{channel}; skipping")
         return
-
-    subject = _render(template.subject_template, context) if template.subject_template else ""
-    body = _render(template.body_template, context)
 
     metadata: dict = {}
     if channel == NotificationChannel.SMS:
@@ -127,6 +125,13 @@ def _enqueue_one(
             },
         )
 
+def _render_file_template(event_type: str, channel: str, kind: str, context: dict) -> str:
+    """
+    Convention: notifications/<event_underscored>/<channel>.<kind>
+    """
+    event_path = event_type.replace(".", "_")
+    template_name = f"notifications/{event_path}/{channel}.{kind}"
+    return render_to_string(template_name, context)
 
 def _user_wants_channel(user, event_type: str, channel: str) -> bool:
     pref = UserNotificationPreference.objects.filter(
