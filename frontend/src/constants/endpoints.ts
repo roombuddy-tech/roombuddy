@@ -40,6 +40,12 @@ export const ENDPOINTS = {
     CREATE_ORDER: '/api/payments/create-order/',
     VERIFY: '/api/payments/verify/',
   },
+  NOTIFICATIONS: {
+    LIST: '/api/notifications/',
+    MARK_READ: (id: string) => `/api/notifications/${id}/read/`,
+    MARK_ALL_READ: '/api/notifications/read-all/',
+    PREFERENCES: '/api/notifications/preferences/',
+  },
   CHAT: {
     CONVERSATIONS: '/api/conversations/',
   },

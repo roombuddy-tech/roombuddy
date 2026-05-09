@@ -5,6 +5,9 @@ import BookTestScreen from '../screens/guest/BookTestScreen';
 import BookingConfirmScreen from '../screens/guest/BookingConfirmScreen';
 import BookingSuccessScreen from '../screens/guest/BookingSuccessScreen';
 import RazorpayCheckoutScreen from '../screens/guest/RazorpayCheckoutScreen';
+import NotificationPreferencesScreen from '../screens/shared/NotificationPreferencesScreen';
+import NotificationsScreen from '../screens/shared/NotificationsScreen';
+
 import GuestTabs from './GuestTabs';
 import type { GuestStackParamList } from './types';
 
@@ -17,11 +20,9 @@ export default function GuestStack() {
       <Stack.Screen name="BookTest" component={BookTestScreen} />
       <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
       <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutScreen} />
-      <Stack.Screen
-        name="BookingSuccess"
-        component={BookingSuccessScreen}
-        options={{ gestureEnabled: false }}
-      />
+      <Stack.Screen name="BookingSuccess" component={BookingSuccessScreen} options={{ gestureEnabled: false }}/>
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Notification preferences' }}/>
     </Stack.Navigator>
   );
 }

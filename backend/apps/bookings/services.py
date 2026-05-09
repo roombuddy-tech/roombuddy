@@ -10,6 +10,8 @@ from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from apps.notifications.models import EventType
+from apps.notifications.services import dispatch
 
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.listings.models import Listing
@@ -321,8 +323,51 @@ def cancel_booking(booking: Booking, user: User, reason: str = "") -> Booking:
         f"Booking {booking.booking_code} cancelled by {cancelled_by}; "
         f"refund=₹{refund_amount}",
     )
+    _notify_booking_cancelled(booking, cancelled_by)
     return booking
 
+def _user_first_name(user) -> str:
+    """Safely get a user's first name from their profile; falls back to 'there'."""
+    if not user:
+        return "there"
+    profile = getattr(user, "profile", None)
+    if profile and profile.first_name:
+        return profile.first_name
+    return "there"
+
+
+def _notify_booking_cancelled(booking, cancelled_by: str) -> None:
+    base = {
+        "property_name": booking.listing.title,
+        "booking_reference": booking.booking_code,
+        "check_in": booking.check_in_date.strftime("%d %b %Y"),
+        "check_out": booking.check_out_date.strftime("%d %b %Y"),
+        "amount": f"{booking.total_guest_pays:.2f}",
+        "msg91_flow_id": "",
+        "msg91_variables": {
+            "var1": booking.booking_code,
+            "var2": booking.listing.title,
+        },
+    }
+
+    if cancelled_by == Booking.CancelledBy.GUEST:
+        event_type = EventType.BOOKING_GUEST_CANCELLED
+        # Notify the host that the guest cancelled
+        recipient = booking.host_user
+    elif cancelled_by == Booking.CancelledBy.HOST:
+        event_type = EventType.BOOKING_HOST_CANCELLED
+        # Notify the guest that the host cancelled
+        recipient = booking.guest_user
+    else:
+        return  # SYSTEM cancellation — skip user notification
+
+    if recipient:
+        dispatch(
+            event_type=event_type,
+            recipients=[recipient],
+            context={**base, "recipient_name": _user_first_name(recipient)},
+            idempotency_event_id=f"cancelled:{booking.id}:{cancelled_by}",
+        )
 
 # ─── Host queries ────────────────────────────────────────────────────────
 

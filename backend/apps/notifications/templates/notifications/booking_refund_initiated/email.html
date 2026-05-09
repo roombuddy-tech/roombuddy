@@ -1,0 +1,48 @@
+{% extends "_includes/base_email.html" %}
+
+{% block subject %}Refund initiated — {{ booking_reference }}{% endblock %}
+{% block hero_color %}#0a84ff{% endblock %}
+
+{% block hero_title %}Your refund is on its way{% endblock %}
+{% block hero_subtitle %}
+  Hi {{ recipient_name }}, we've initiated a refund of <strong>₹{{ amount }}</strong>
+  for your booking at <strong>{{ property_name }}</strong>. It will be credited to your
+  original payment method within 5–7 business days.
+{% endblock %}
+
+{% block content %}
+  <tr>
+    <td style="padding:8px 24px 8px 24px;">
+      <h3 style="margin:0 0 12px 0;color:#1a1a1a;font-size:16px;font-weight:600;">Refund details</h3>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;width:35%;">Booking ID</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ booking_reference }}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;">Property</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ property_name }}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;">Refund amount</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1d8348;font-size:15px;font-weight:600;">₹{{ amount }}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0;color:#777;font-size:14px;">Estimated time</td>
+          <td style="padding:12px 0;color:#1a1a1a;font-size:14px;">5–7 business days</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 24px 24px 24px;">
+      <p style="margin:0;color:#555;font-size:13px;line-height:1.5;">
+        Refunds are processed by your bank or payment provider. The exact time
+        depends on their schedules. You'll receive another email once the refund completes.
+      </p>
+    </td>
+  </tr>
+{% endblock %}
+
+{% block cta_label %}View booking{% endblock %}

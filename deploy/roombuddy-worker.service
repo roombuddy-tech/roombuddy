@@ -1,0 +1,17 @@
+[Unit]
+Description=RoomBuddy Notification Worker
+After=network.target roombuddy.service
+Wants=roombuddy.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/roombuddy/backend
+EnvironmentFile=/etc/roombuddy/env
+ExecStart=/home/ubuntu/roombuddy/backend/venv/bin/python manage.py run_notification_worker --interval 5
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

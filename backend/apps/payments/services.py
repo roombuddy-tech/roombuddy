@@ -24,6 +24,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.payments.models import Payment, Refund, WebhookEvent, WebhookEventType
 from common.constants import StatusChangeReason
+from apps.notifications.models import EventType
+from apps.notifications.services import dispatch
 from common.error_codes import ErrorCode
 from common.redis_utils import idempotency_seen
 from third_party import razorpay as rzp
@@ -162,6 +164,7 @@ def verify_and_capture(
         _mark_booking_paid_and_maybe_accept(booking, by_user=None)
 
     logger.info(f"Booking {booking.booking_code} marked PAID via verify endpoint")
+    _notify_payment_succeeded(booking, payment)
     return booking
 
 
@@ -259,6 +262,7 @@ def _handle_payment_captured(payload: dict) -> None:
         payment.save()
 
         _mark_booking_paid_and_maybe_accept(payment.booking, by_user=None)
+        _notify_payment_succeeded(payment.booking, payment)
 
     logger.info(f"Webhook captured payment for booking {payment.booking.booking_code}")
 
@@ -292,6 +296,7 @@ def _handle_payment_failed(payload: dict) -> None:
             reason=f"{StatusChangeReason.PAYMENT_FAILED}: {payment.error_description or 'unknown'}",
         )
     booking.save()
+    _notify_payment_failed(booking)
     logger.info(
         f"Payment failed for booking {booking.booking_code}: {payment.error_description}",
     )
@@ -329,6 +334,8 @@ def _handle_refund_processed(payload: dict) -> None:
         refund.payment.status = Payment.Status.PARTIALLY_REFUNDED
     refund.payment.save(update_fields=["status", "updated_at"])
     booking.save(update_fields=["payment_status", "updated_at"])
+
+    _notify_refund_completed(booking, refund)
 
     logger.info(f"Refund {refund_id} processed; total refunded ₹{total_refunded}")
 
@@ -422,3 +429,192 @@ def _mark_booking_paid_and_maybe_accept(booking: Booking, by_user) -> None:
         )
 
     booking.save()
+
+def _user_first_name(user) -> str:
+    """Safely get a user's first name from their profile; falls back to 'there'."""
+    if not user:
+        return "there"
+    profile = getattr(user, "profile", None)
+    if profile and profile.first_name:
+        return profile.first_name
+    return "there"
+
+def _get_cover_photo(listing):
+    """
+    Return the absolute URL of the listing's cover photo, or None.
+
+    Logic:
+      1. PropertyPhoto with is_cover=True for this listing's property.
+      2. Fallback: lowest sort_order approved photo.
+      3. None if no usable photo (template handles None gracefully).
+    """
+    prop = getattr(listing, "property", None)
+    if prop is None:
+        return None
+
+    # Lazy import to avoid circular imports
+    from apps.properties.models import PropertyPhoto
+
+    cover = (
+        PropertyPhoto.objects
+        .filter(
+            property=prop,
+            is_cover=True,
+            moderation_status=PropertyPhoto.ModerationStatus.APPROVED,
+        )
+        .first()
+    )
+    if cover:
+        return cover.url
+
+    fallback = (
+        PropertyPhoto.objects
+        .filter(
+            property=prop,
+            moderation_status=PropertyPhoto.ModerationStatus.APPROVED,
+        )
+        .order_by("sort_order", "uploaded_at")
+        .first()
+    )
+    return fallback.url if fallback else None
+
+
+def _get_location_string(listing) -> str:
+    """
+    Build a human-readable address string from the listing's property.
+    Format: "<address_line1>, <address_line2>, <city_name> - <pincode>"
+    Falls back to formatted_address, then city_name.
+    """
+    prop = getattr(listing, "property", None)
+    if prop is None:
+        return ""
+
+    parts = []
+    if prop.address_line1:
+        parts.append(prop.address_line1.strip())
+    if prop.address_line2:
+        parts.append(prop.address_line2.strip())
+
+    tail_bits = []
+    if prop.city_name:
+        tail_bits.append(prop.city_name.strip())
+    if prop.pincode:
+        if tail_bits:
+            tail_bits[-1] = f"{tail_bits[-1]} - {prop.pincode.strip()}"
+        else:
+            tail_bits.append(prop.pincode.strip())
+    parts.extend(tail_bits)
+
+    if parts:
+        return ", ".join(parts)
+    if prop.formatted_address:
+        return prop.formatted_address.strip()
+    return prop.city_name or ""
+
+def _build_booking_context(booking) -> dict:
+    listing = booking.listing
+    nights = booking.nights or 1
+
+    # Free-cancellation deadline derived from the booking's cancellation policy.
+    # FLEXIBLE = until check-in, MODERATE = 5 days before, STRICT = 14 days before.
+    free_cancel_text = "the check-in date"
+    try:
+        from datetime import timedelta
+        policy = booking.cancellation_policy
+        if policy == booking.CancellationPolicy.MODERATE:
+            deadline = booking.check_in_date - timedelta(days=5)
+            free_cancel_text = deadline.strftime("%d %b %Y")
+        elif policy == booking.CancellationPolicy.STRICT:
+            deadline = booking.check_in_date - timedelta(days=14)
+            free_cancel_text = deadline.strftime("%d %b %Y")
+        else:  # FLEXIBLE or None
+            free_cancel_text = booking.check_in_date.strftime("%d %b %Y")
+    except Exception:
+        pass
+
+    return {
+        # Display fields
+        "property_name": listing.title,
+        "booking_reference": booking.booking_code,
+        "check_in": booking.check_in_date.strftime("%a, %d %b %Y"),
+        "check_out": booking.check_out_date.strftime("%a, %d %b %Y"),
+        "nights": nights,
+        "guest_count": booking.number_of_guests,
+        "amount": f"{booking.total_guest_pays:,.0f}",
+        "subtotal": f"{booking.subtotal:,.0f}",
+        "tax_amount": f"{booking.gst_amount:,.0f}",
+        "per_night_amount": f"{booking.guest_nightly_price:,.0f}",
+
+        # Property
+        "cover_photo_url": _get_cover_photo(listing),
+        "location": _get_location_string(listing),
+
+        # Contact
+        "host_name": _user_first_name(booking.host_user),
+        "host_phone": f"{booking.host_user.phone_country_code}{booking.host_user.phone_number}",
+
+        # Cancellation
+        "free_cancellation_deadline": free_cancel_text,
+
+        # Links
+        "booking_url": f"{settings.APP_BASE_URL}/bookings/{booking.id}",
+
+        # MSG91 stays the same
+        "msg91_flow_id": "",
+        "msg91_variables": {},
+    }
+
+def _notify_payment_succeeded(booking, payment) -> None:
+    base = _build_booking_context(booking)
+    idem = f"payment_succeeded:{payment.id}"
+    guest = booking.guest_user
+    host = booking.host_user
+
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=idem,
+        )
+    if host:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
+            recipients=[host],
+            context={**base, "recipient_name": _user_first_name(host)},
+            idempotency_event_id=idem,
+        )
+
+    # If payment auto-accepted the booking, notify guest of acceptance too
+    if booking.status == Booking.Status.ACCEPTED and guest:
+        dispatch(
+            event_type=EventType.BOOKING_HOST_ACCEPTED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=f"host_accepted:{booking.id}",
+        )
+
+
+def _notify_payment_failed(booking) -> None:
+    base = _build_booking_context(booking)
+    guest = booking.guest_user
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_FAILED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=f"payment_failed:{booking.id}",
+        )
+
+
+def _notify_refund_completed(booking, refund) -> None:
+    base = _build_booking_context(booking)
+    base["amount"] = f"{refund.amount:.2f}"
+    guest = booking.guest_user
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_REFUND_COMPLETED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest)},
+            idempotency_event_id=f"refund_completed:{refund.id}",
+        )

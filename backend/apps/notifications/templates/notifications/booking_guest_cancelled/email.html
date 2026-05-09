@@ -1,0 +1,21 @@
+{% extends "_includes/base_email.html" %}
+
+{% block subject %}Booking cancelled — {{ property_name }}{% endblock %}
+{% block hero_color %}#5f6368{% endblock %}
+
+{% block hero_title %}Booking cancelled{% endblock %}
+{% block hero_subtitle %}
+  Hi {{ recipient_name }}, your booking at <strong>{{ property_name }}</strong>
+  for {{ check_in }} – {{ check_out }} has been cancelled.
+  {% if refund_amount %}
+  A refund of <strong>₹{{ refund_amount }}</strong> will be processed to your original
+  payment method within 5–7 business days.
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% include "_includes/reservation_details.html" %}
+  {% include "_includes/price_details.html" %}
+{% endblock %}
+
+{% block cta_label %}View booking{% endblock %}

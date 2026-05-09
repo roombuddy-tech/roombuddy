@@ -1,0 +1,91 @@
+{% comment %}
+Base layout for all RoomBuddy transactional emails.
+Child templates fill these blocks: hero_color, hero_title, hero_subtitle,
+content, cta_url, cta_label, footer_extra.
+{% endcomment %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block subject %}RoomBuddy{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f4f5f7;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+
+        <!-- Header band -->
+        <tr>
+          <td style="padding:20px 24px;background-color:{% block hero_color %}#0a84ff{% endblock %};text-align:left;">
+            <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">RoomBuddy</span>
+            {% if booking_reference %}
+            <span style="float:right;color:rgba(255,255,255,0.85);font-size:13px;">
+              Confirmation: <strong style="color:#ffffff;">{{ booking_reference }}</strong>
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+
+        <!-- Hero -->
+        <tr>
+          <td style="padding:32px 24px 8px 24px;">
+            <h2 style="margin:0 0 8px 0;color:#1a1a1a;font-size:22px;font-weight:600;line-height:1.3;">
+              {% block hero_title %}{% endblock %}
+            </h2>
+            <p style="margin:0;color:#555;font-size:15px;line-height:1.5;">
+              {% block hero_subtitle %}{% endblock %}
+            </p>
+          </td>
+        </tr>
+
+        <!-- Cover photo -->
+        {% if cover_photo_url %}
+        <tr>
+          <td style="padding:20px 24px 0 24px;">
+            <img src="{{ cover_photo_url }}" alt="{{ property_name }}"
+                 style="width:100%;max-width:552px;height:auto;border-radius:6px;display:block;">
+          </td>
+        </tr>
+        {% endif %}
+
+        <!-- Per-event content -->
+        {% block content %}{% endblock %}
+
+        <!-- Primary CTA -->
+        {% block cta %}
+        {% if booking_url %}
+        <tr>
+          <td align="left" style="padding:8px 24px 24px 24px;">
+            <a href="{% block cta_url %}{{ booking_url }}{% endblock %}"
+               style="display:inline-block;padding:12px 28px;background-color:#0a84ff;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+              {% block cta_label %}View booking{% endblock %}
+            </a>
+          </td>
+        </tr>
+        {% endif %}
+        {% endblock %}
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 24px;background-color:#fafafa;border-top:1px solid #e8e8e8;">
+            {% block footer_extra %}{% endblock %}
+            <p style="margin:0 0 6px 0;color:#777;font-size:12px;text-align:center;">
+              Need help? Contact us at <a href="mailto:support@roombuddy.co.in" style="color:#0a84ff;text-decoration:none;">support@roombuddy.co.in</a>
+            </p>
+            <p style="margin:0;color:#999;font-size:11px;text-align:center;">
+              © RoomBuddy {{ current_year|default:"2026" }}. You're receiving this because you booked through RoomBuddy.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

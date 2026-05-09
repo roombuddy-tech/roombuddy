@@ -1,0 +1,42 @@
+{% extends "_includes/base_email.html" %}
+
+{% block subject %}Booking declined — {{ property_name }}{% endblock %}
+{% block hero_color %}#5f6368{% endblock %}
+
+{% block hero_title %}Your booking wasn't accepted{% endblock %}
+{% block hero_subtitle %}
+  Hi {{ recipient_name }}, unfortunately {{ host_name }} couldn't accept your booking
+  at <strong>{{ property_name }}</strong> for {{ check_in }}.
+  Any amount paid will be refunded to your original payment method within 5–7 business days.
+{% endblock %}
+
+{% block content %}
+  {% if rejection_reason %}
+  <tr>
+    <td style="padding:0 24px 8px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f8f9fb;border-radius:6px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <p style="margin:0 0 4px 0;color:#777;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Host's reason</p>
+            <p style="margin:0;color:#1a1a1a;font-size:14px;line-height:1.5;">{{ rejection_reason }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endif %}
+
+  {% include "_includes/reservation_details.html" %}
+
+  <tr>
+    <td style="padding:8px 24px 24px 24px;">
+      <p style="margin:0;color:#555;font-size:14px;line-height:1.6;">
+        Don't worry — there are plenty of other great rooms available on RoomBuddy.
+        We'll help you find the perfect place for your stay.
+      </p>
+    </td>
+  </tr>
+{% endblock %}
+
+{% block cta_url %}{{ search_url|default:booking_url }}{% endblock %}
+{% block cta_label %}Find another room{% endblock %}

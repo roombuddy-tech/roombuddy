@@ -1,0 +1,17 @@
+{% extends "_includes/base_email.html" %}
+
+{% block subject %}Your stay at {{ property_name }} is confirmed{% endblock %}
+{% block hero_color %}#1d8348{% endblock %}
+
+{% block hero_title %}{{ host_name }} accepted your booking 🎉{% endblock %}
+{% block hero_subtitle %}
+  Hi {{ recipient_name }}, the host has accepted your booking at
+  <strong>{{ property_name }}</strong>. You're all set for {{ check_in }}.
+{% endblock %}
+
+{% block content %}
+  {% include "_includes/reservation_details.html" %}
+  {% include "_includes/price_details.html" %}
+{% endblock %}
+
+{% block cta_label %}View booking{% endblock %}
