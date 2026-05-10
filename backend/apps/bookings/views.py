@@ -45,6 +45,7 @@ class BookingQuoteView(APIView):
             s.validated_data["listing_id"],
             s.validated_data["check_in_date"],
             s.validated_data["check_out_date"],
+            meal_option=s.validated_data.get("meal_option", False),
         )
         return Response(result)
 
@@ -71,6 +72,7 @@ class CreateBookingView(APIView):
                 number_of_guests=s.validated_data["number_of_guests"],
                 guest_purpose=s.validated_data.get("guest_purpose"),
                 special_requests=s.validated_data.get("special_requests"),
+                meal_option=s.validated_data.get("meal_option", False),
             )
         except BookingConflictError as e:
             return Response(

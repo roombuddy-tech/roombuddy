@@ -7,6 +7,7 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -25,27 +26,41 @@ type Rt = RouteProp<GuestStackParamList, 'BookingConfirm'>;
 export default function BookingConfirmScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { listingId, listingTitle, checkIn, checkOut, numberOfGuests = 1 } = route.params;
+  const {
+    listingId, listingTitle, checkIn, checkOut, numberOfGuests = 1,
+    mealOption: initialMealOption = false,
+    mealsAvailable = false,
+    mealCostPerDay,
+    mealTypes,
+    mealDescription,
+  } = route.params;
 
   const [quote, setQuote] = useState<BookingQuote | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [withMeals, setWithMeals] = useState(initialMealOption);
+
+  const fetchQuote = async (mealOpt: boolean) => {
+    setLoading(true);
+    try {
+      const q = await getQuote(listingId, checkIn, checkOut, mealOpt);
+      setQuote(q);
+    } catch (e: any) {
+      setError(getErrorMessage(e, 'Could not fetch quote'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const q = await getQuote(listingId, checkIn, checkOut);
-        if (!cancelled) setQuote(q);
-      } catch (e: any) {
-        if (!cancelled) setError(getErrorMessage(e, 'Could not fetch quote'));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    fetchQuote(withMeals);
   }, [listingId, checkIn, checkOut]);
+
+  const toggleMeals = (val: boolean) => {
+    setWithMeals(val);
+    fetchQuote(val);
+  };
 
   async function handleConfirmAndPay() {
     if (!quote) return;
@@ -56,6 +71,7 @@ export default function BookingConfirmScreen() {
         checkIn,
         checkOut,
         numberOfGuests,
+        mealOption: withMeals,
       });
 
       const order = await createPaymentOrder(booking.booking_id);
@@ -123,6 +139,35 @@ export default function BookingConfirmScreen() {
           </View>
         </View>
 
+        {/* Meal option */}
+        {quote.meals_available && (
+          <View style={styles.card}>
+            <View style={styles.mealHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Home cooked meals</Text>
+                {quote.meal_types && (
+                  <Text style={styles.mealTypes}>Includes: {quote.meal_types}</Text>
+                )}
+                {quote.meal_cost_per_day !== null && (
+                  <Text style={styles.mealCost}>
+                    ₹{quote.meal_cost_per_day.toLocaleString('en-IN')}/day
+                  </Text>
+                )}
+              </View>
+              <Switch
+                value={withMeals}
+                onValueChange={toggleMeals}
+                trackColor={{ false: COLORS.border, true: COLORS.primary }}
+                thumbColor="#fff"
+                ios_backgroundColor={COLORS.border}
+              />
+            </View>
+            {mealDescription ? (
+              <Text style={styles.mealDesc}>{mealDescription}</Text>
+            ) : null}
+          </View>
+        )}
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Price details</Text>
           <View style={styles.priceRow}>
@@ -139,6 +184,14 @@ export default function BookingConfirmScreen() {
             <Text style={styles.priceLabel}>Service fee</Text>
             <Text style={styles.priceValue}>₹{quote.platform_fee.toLocaleString('en-IN')}</Text>
           </View>
+          {withMeals && quote.meal_total !== null && quote.meal_total > 0 && (
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>
+                Meals ({quote.nights} days × ₹{(quote.meal_cost_per_day ?? 0).toLocaleString('en-IN')})
+              </Text>
+              <Text style={styles.priceValue}>₹{quote.meal_total.toLocaleString('en-IN')}</Text>
+            </View>
+          )}
           {quote.security_deposit > 0 && (
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Security deposit (refundable)</Text>
@@ -205,7 +258,11 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.md, paddingBottom: 120 },
   card: { backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md },
   listingTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
-  cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.md },
+  cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.sm },
+  mealHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mealTypes: { fontSize: 13, color: COLORS.textSec, marginBottom: 2 },
+  mealCost: { fontSize: 13, color: COLORS.primary, ...FONTS.medium },
+  mealDesc: { fontSize: 13, color: COLORS.textSec, marginTop: SPACING.sm, lineHeight: 19 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   label: { fontSize: 14, color: COLORS.textSec },
   value: { fontSize: 14, color: COLORS.text, ...FONTS.medium },

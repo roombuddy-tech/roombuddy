@@ -11,11 +11,13 @@ export async function getQuote(
   listingId: string,
   checkIn: string,
   checkOut: string,
+  mealOption: boolean = false,
 ): Promise<BookingQuote> {
   const res = await api.post<BookingQuote>(ENDPOINTS.BOOKING.QUOTE, {
     listing_id: listingId,
     check_in_date: checkIn,
     check_out_date: checkOut,
+    meal_option: mealOption,
   });
   return res.data;
 }
@@ -28,6 +30,7 @@ export async function createBooking(payload: {
   numberOfGuests?: number;
   guestPurpose?: string;
   specialRequests?: string;
+  mealOption?: boolean;
 }): Promise<Booking> {
   const res = await api.post<Booking>(ENDPOINTS.BOOKING.CREATE, {
     listing_id: payload.listingId,
@@ -36,6 +39,7 @@ export async function createBooking(payload: {
     number_of_guests: payload.numberOfGuests ?? 1,
     guest_purpose: payload.guestPurpose,
     special_requests: payload.specialRequests,
+    meal_option: payload.mealOption ?? false,
   });
   return res.data;
 }

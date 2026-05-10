@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.db import transaction
+from django.db.models import Q
 
 from apps.amenities.models import AmenityDefinition
 from apps.listings.models import Listing, ListingAmenity, ListingHouseRules
@@ -433,3 +434,191 @@ def _attach_cover_photos(listings, results: list[dict]):
         prop_id = str(listing_property_map.get(r["listing_id"], ""))
         raw_url = photo_map.get(prop_id)
         r["cover_photo_url"] = get_photo_url(raw_url) if raw_url else None
+
+
+# ─── Guest-facing ─────────────────────────────────────────────────────────────
+
+POPULAR_AMENITIES = {"AC", "WiFi", "Geyser / Hot water", "Full kitchen access", "Parking (2-wheeler)", "Parking (4-wheeler)", "Washing machine"}
+
+def search_guest_listings(query: str | None = None, area: str | None = None) -> list[dict]:
+    qs = (
+        Listing.objects
+        .filter(status=Listing.Status.LIVE)
+        .select_related("property", "room")
+        .prefetch_related("listing_amenities__amenity")
+        .order_by("-average_rating", "-created_at")
+    )
+
+    search_term = query or area
+    if search_term:
+        qs = qs.filter(
+            Q(property__address_line1__icontains=search_term)
+            | Q(property__apartment_name__icontains=search_term)
+            | Q(property__city_name__icontains=search_term)
+            | Q(property__formatted_address__icontains=search_term)
+            | Q(title__icontains=search_term)
+        )
+
+    qs = qs[:50]
+    results = [_listing_to_guest_card(l) for l in qs]
+    _attach_cover_photos(qs, results)
+    return results
+
+
+def get_guest_listing_detail(listing_id: str) -> dict | None:
+    from apps.properties.models import PropertyPhoto
+    from third_party.storage import get_photo_url
+
+    try:
+        listing = (
+            Listing.objects
+            .filter(status=Listing.Status.LIVE)
+            .select_related("property", "room", "house_rules", "host_user")
+            .prefetch_related("listing_amenities__amenity")
+            .get(id=listing_id)
+        )
+    except Listing.DoesNotExist:
+        return None
+
+    prop = listing.property
+    room = listing.room
+    rules = getattr(listing, "house_rules", None)
+
+    # Photos
+    photos = []
+    for p in PropertyPhoto.objects.filter(property=prop).order_by("sort_order", "uploaded_at"):
+        photos.append({
+            "url": get_photo_url(p.url),
+            "thumbnail_url": get_photo_url(p.thumbnail_url) if p.thumbnail_url else None,
+            "area": p.area,
+            "is_cover": p.is_cover,
+        })
+
+    # Amenities
+    amenities = [
+        {"display_name": la.amenity.display_name, "category": la.amenity.category.display_name}
+        for la in listing.listing_amenities.select_related("amenity__category").all()
+    ]
+
+    # Flatmates
+    flatmates_qs = PropertyFlatmate.objects.filter(property=prop, is_visible=True)
+    host_fm = None
+    flatmates = []
+    for fm in flatmates_qs:
+        if fm.name == "__host__":
+            host_fm = fm
+        else:
+            flatmates.append({
+                "name": fm.name,
+                "age": fm.age,
+                "gender": fm.gender or "",
+                "occupation": fm.occupation or "",
+                "hobbies": fm.hobbies or "",
+            })
+
+    # Host name
+    host_name = ""
+    try:
+        profile = listing.host_user.profile
+        host_name = f"{profile.first_name} {profile.last_name[0]}." if profile.last_name else profile.first_name
+    except Exception:
+        pass
+
+    # Food
+    meal_desc = ""
+    if listing.food_meal_description:
+        lines = [l for l in listing.food_meal_description.split("\n") if not l.startswith("Meals served: ")]
+        meal_desc = "\n".join(lines).strip()
+
+    meal_types_str = None
+    if listing.food_meal_description:
+        for line in listing.food_meal_description.split("\n"):
+            if line.startswith("Meals served: "):
+                meal_types_str = line.replace("Meals served: ", "")
+                break
+
+    return {
+        "listing_id": str(listing.id),
+        "title": listing.title,
+        "description": listing.description or "",
+        "booking_mode": listing.booking_mode,
+        "host_price_per_night": float(listing.host_price_per_night),
+        "guest_price_per_night": float(listing.guest_price_per_night),
+        "min_nights": listing.min_nights,
+        "max_nights": listing.max_nights,
+        "security_deposit": float(listing.security_deposit),
+        "property": {
+            "apartment_type": prop.apartment_type,
+            "floor_number": prop.floor_number,
+            "apartment_name": prop.apartment_name,
+            "address_line1": prop.address_line1 or "",
+            "city_name": prop.city_name,
+            "gender_preference": prop.gender_preference,
+        },
+        "room": {
+            "room_type": room.room_type,
+            "bed_type": room.bed_type,
+            "bathroom_type": room.bathroom_type,
+            "room_size_sqft": room.room_size_sqft,
+            "room_features": room.room_features if isinstance(room.room_features, list) else [],
+        },
+        "photos": photos,
+        "amenities": amenities,
+        "flatmates": flatmates,
+        "host_info": {
+            "occupation": host_fm.occupation if host_fm else "",
+            "hobbies": host_fm.hobbies if host_fm else "",
+            "gender": host_fm.gender if host_fm else "",
+        },
+        "food": {
+            "kitchen_access": listing.food_kitchen_access,
+            "meals_available": listing.food_meals_available,
+            "meal_cost": float(listing.food_meal_cost) if listing.food_meal_cost else None,
+            "meal_description": meal_desc,
+            "meal_types": meal_types_str,
+        },
+        "house_rules": {
+            "no_smoking": rules.no_smoking if rules else True,
+            "no_pets": rules.no_pets if rules else True,
+            "no_alcohol": rules.no_alcohol if rules else False,
+            "custom_rules": rules.custom_rules if rules else None,
+        },
+        "check_in_from": _format_time(rules.check_in_from) if rules else "",
+        "check_out_by": _format_time(rules.check_out_by) if rules else "",
+        "average_rating": float(listing.average_rating) if listing.average_rating else None,
+        "review_count": listing.review_count,
+        "total_bookings": listing.total_bookings,
+        "host_name": host_name,
+        "area_name": _get_area_name(listing),
+    }
+
+
+def _listing_to_guest_card(listing: Listing) -> dict:
+    amenity_names = [
+        la.amenity.display_name
+        for la in listing.listing_amenities.all()
+        if la.amenity.display_name in POPULAR_AMENITIES
+    ][:4]
+
+    desc = (listing.description or "")[:120]
+    if len(listing.description or "") > 120:
+        desc += "..."
+
+    return {
+        "listing_id": str(listing.id),
+        "title": listing.title,
+        "description": desc,
+        "area_name": _get_area_name(listing),
+        "guest_price_per_night": float(listing.guest_price_per_night),
+        "cover_photo_url": None,
+        "average_rating": float(listing.average_rating) if listing.average_rating else None,
+        "review_count": listing.review_count,
+        "room_type": listing.room.room_type,
+        "apartment_type": listing.property.apartment_type,
+        "amenity_highlights": amenity_names,
+        "booking_mode": listing.booking_mode,
+        "gender_preference": listing.property.gender_preference,
+        "min_nights": listing.min_nights,
+        "meals_available": listing.food_meals_available,
+        "meal_cost_per_day": float(listing.food_meal_cost) if listing.food_meal_cost else None,
+    }

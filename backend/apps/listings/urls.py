@@ -1,9 +1,14 @@
 from django.urls import path
 
-from apps.listings.views import CreateListingView, HostListingsListView, ListingDetailView
+from apps.listings.views import (
+    CreateListingView, HostListingsListView, ListingDetailView,
+    GuestSearchView, GuestListingDetailView,
+)
 
 urlpatterns = [
     path("", CreateListingView.as_view(), name="create-listing"),
     path("host/", HostListingsListView.as_view(), name="host-listings-list"),
+    path("search/", GuestSearchView.as_view(), name="guest-search"),
+    path("guest/<uuid:listing_id>/", GuestListingDetailView.as_view(), name="guest-listing-detail"),
     path("<uuid:listing_id>/", ListingDetailView.as_view(), name="listing-detail"),
 ]

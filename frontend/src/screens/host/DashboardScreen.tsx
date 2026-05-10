@@ -71,7 +71,7 @@ export default function DashboardScreen() {
   };
 
   const openBooking = (bookingId: string) => {
-    navigation.navigate('BookingDetail', { bookingId });
+    navigation.navigate('BookingDetail', { booking: { booking_id: bookingId } });
   };
 
   if (loading) {

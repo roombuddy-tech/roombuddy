@@ -40,6 +40,29 @@ export type HostStackParamList = {
 
 export type GuestStackParamList = {
   GuestTabs: undefined;
+  GuestListingDetail: { listingId: string };
+  BookTest: undefined;
+  BookingConfirm: {
+    listingId: string;
+    listingTitle: string;
+    checkIn: string;
+    checkOut: string;
+    numberOfGuests?: number;
+    mealOption?: boolean;
+    mealsAvailable?: boolean;
+    mealCostPerDay?: number | null;
+    mealTypes?: string | null;
+    mealDescription?: string | null;
+  };
+  RazorpayCheckout: {
+    bookingId: string;
+    bookingCode: string;
+    order: any;
+  };
+  BookingSuccess: {
+    bookingId: string;
+    bookingCode: string;
+  };
   Notifications: undefined;
   NotificationPreferences: undefined;
 };
