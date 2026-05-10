@@ -7,12 +7,14 @@ class CreateBookingRequestSerializer(serializers.Serializer):
     number_of_guests = serializers.IntegerField(min_value=1, default=1)
     guest_purpose = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     special_requests = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    meal_option = serializers.BooleanField(required=False, default=False)
 
 
 class QuoteRequestSerializer(serializers.Serializer):
     listing_id = serializers.UUIDField()
     check_in_date = serializers.DateField()
     check_out_date = serializers.DateField()
+    meal_option = serializers.BooleanField(required=False, default=False)
 
 
 class QuoteResponseSerializer(serializers.Serializer):
@@ -29,6 +31,11 @@ class QuoteResponseSerializer(serializers.Serializer):
     platform_revenue = serializers.FloatField()
     currency = serializers.CharField()
     booking_mode = serializers.CharField()
+    meals_available = serializers.BooleanField()
+    meal_cost_per_day = serializers.FloatField(allow_null=True)
+    meal_total = serializers.FloatField(allow_null=True)
+    meal_option = serializers.BooleanField()
+    meal_types = serializers.CharField(allow_null=True)
 
 
 class BookingDetailSerializer(serializers.Serializer):

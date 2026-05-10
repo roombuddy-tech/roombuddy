@@ -28,7 +28,7 @@ export const ENDPOINTS = {
   },
   GUEST: {
     SEARCH: '/api/listings/search/',
-    LISTING_DETAIL: '/api/listings/',
+    LISTING_DETAIL: (id: string) => `/api/listings/guest/${id}/`,
     BOOKINGS: '/api/bookings/',
   },
   BOOKING: {

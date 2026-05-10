@@ -100,7 +100,7 @@ def _quantize(value: Decimal) -> Decimal:
 
 # ─── Quote ───────────────────────────────────────────────────────────────
 
-def quote_booking(listing_id, check_in: date, check_out: date) -> dict:
+def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool = False) -> dict:
     """
     Return a price breakdown for the given listing/dates without creating
     anything. Used by the app to show the guest what they'll pay before
@@ -137,8 +137,24 @@ def quote_booking(listing_id, check_in: date, check_out: date) -> dict:
     gst_amount = _quantize(gst_per_night * nights)
     platform_fee = _quantize(fee_per_night * nights)
     security_deposit = listing.security_deposit
-    total_guest_pays = _quantize(subtotal + gst_amount + platform_fee + security_deposit)
-    total_host_receives = subtotal
+
+    # Meal option
+    meals_available = listing.food_meals_available
+    meal_cost_per_day = listing.food_meal_cost if meals_available else None
+    meal_total = Decimal("0")
+    if meal_option and meals_available and meal_cost_per_day:
+        meal_total = _quantize(meal_cost_per_day * nights)
+
+    # Parse meal types from description
+    meal_types = None
+    if meals_available and listing.food_meal_description:
+        for line in listing.food_meal_description.split("\n"):
+            if line.startswith("Meals served: "):
+                meal_types = line.replace("Meals served: ", "")
+                break
+
+    total_guest_pays = _quantize(subtotal + gst_amount + platform_fee + security_deposit + meal_total)
+    total_host_receives = subtotal + meal_total
     platform_revenue = _quantize(platform_fee + gst_amount)
 
     return {
@@ -155,6 +171,11 @@ def quote_booking(listing_id, check_in: date, check_out: date) -> dict:
         "platform_revenue": float(platform_revenue),
         "currency": listing.currency,
         "booking_mode": listing.booking_mode,
+        "meals_available": meals_available,
+        "meal_cost_per_day": float(meal_cost_per_day) if meal_cost_per_day else None,
+        "meal_total": float(meal_total) if meal_total else None,
+        "meal_option": meal_option,
+        "meal_types": meal_types,
     }
 
 
@@ -168,6 +189,7 @@ def create_booking(
     number_of_guests: int = 1,
     guest_purpose: str | None = None,
     special_requests: str | None = None,
+    meal_option: bool = False,
 ) -> Booking:
     """
     Create a booking row in `pending` state.
@@ -178,7 +200,7 @@ def create_booking(
     """
     _validate_dates(check_in, check_out)
 
-    quote = quote_booking(listing_id, check_in, check_out)
+    quote = quote_booking(listing_id, check_in, check_out, meal_option=meal_option)
     listing = Listing.objects.select_related("house_rules").get(id=listing_id)
 
     if listing.host_user_id == user.id:
@@ -228,6 +250,9 @@ def create_booking(
                 total_host_receives=Decimal(str(quote["total_host_receives"])),
                 platform_revenue=Decimal(str(quote["platform_revenue"])),
                 currency=quote["currency"],
+                meal_option_selected=meal_option,
+                meal_cost_per_day=Decimal(str(quote["meal_cost_per_day"])) if quote["meal_cost_per_day"] else None,
+                meal_total=Decimal(str(quote["meal_total"])) if quote["meal_total"] else None,
                 cancellation_policy=cancellation_policy,
                 host_response_deadline=host_response_deadline,
             )
@@ -262,7 +287,8 @@ def compute_refund_amount(booking: Booking, cancelled_by: str) -> Decimal:
     # Guest cancellation: depends on policy + how close to check-in
     days_to_checkin = (booking.check_in_date - date.today()).days
 
-    base_refundable = booking.subtotal + booking.gst_amount + booking.security_deposit
+    meal_total = booking.meal_total or Decimal("0")
+    base_refundable = booking.subtotal + booking.gst_amount + booking.security_deposit + meal_total
     policy = booking.cancellation_policy or DEFAULT_CANCELLATION_POLICY
     schedule = REFUND_SCHEDULES.get(policy, REFUND_SCHEDULES[DEFAULT_CANCELLATION_POLICY])
 
@@ -521,6 +547,9 @@ def get_booking_detail(booking: Booking) -> dict:
             "total_guest_pays": float(booking.total_guest_pays),
             "total_host_receives": float(booking.total_host_receives),
             "currency": booking.currency,
+            "meal_option_selected": booking.meal_option_selected,
+            "meal_cost_per_day": float(booking.meal_cost_per_day) if booking.meal_cost_per_day else None,
+            "meal_total": float(booking.meal_total) if booking.meal_total else None,
         },
         "cancellation_policy": booking.cancellation_policy,
         "cancelled_at": booking.cancelled_at.isoformat() if booking.cancelled_at else None,

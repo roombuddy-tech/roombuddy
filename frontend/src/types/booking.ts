@@ -12,6 +12,11 @@ export interface BookingQuote {
     platform_revenue: number;
     currency: string;
     booking_mode: 'instant' | 'request';
+    meals_available: boolean;
+    meal_cost_per_day: number | null;
+    meal_total: number | null;
+    meal_option: boolean;
+    meal_types: string | null;
   }
   
   export interface Booking {

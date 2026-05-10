@@ -8,7 +8,10 @@ from apps.listings.serializers import (
     CreateListingResponseSerializer,
     HostListingsResponseSerializer,
 )
-from apps.listings.services import create_listing, get_host_listings, get_listing_form_data, update_listing
+from apps.listings.services import (
+    create_listing, get_host_listings, get_listing_form_data, update_listing,
+    search_guest_listings, get_guest_listing_detail,
+)
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
 
@@ -54,3 +57,27 @@ class ListingDetailView(APIView):
         if result is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(result)
+
+
+class GuestSearchView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Guest"])
+    def get(self, request):
+        q = request.query_params.get("q")
+        area = request.query_params.get("area")
+        results = search_guest_listings(query=q, area=area)
+        return Response({"count": len(results), "results": results})
+
+
+class GuestListingDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Guest"])
+    def get(self, request, listing_id):
+        data = get_guest_listing_detail(str(listing_id))
+        if data is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(data)

@@ -93,6 +93,11 @@ class Booking(models.Model):
     platform_revenue = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="INR")
 
+    # Meal option
+    meal_option_selected = models.BooleanField(default=False)
+    meal_cost_per_day = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    meal_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     # Host response
     host_responded_at = models.DateTimeField(null=True, blank=True)
     host_response_deadline = models.DateTimeField(null=True, blank=True)
