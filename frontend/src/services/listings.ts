@@ -8,7 +8,7 @@ export interface CreateListingResponse {
   message: string;
 }
 
-export async function createListing(form: {
+export interface ListingFormInput {
   apartmentType: string;
   floorNumber: string;
   totalFloors: string;
@@ -27,7 +27,7 @@ export async function createListing(form: {
   nearbyLandmark: string;
   landmarkDistance: string;
   landmarkDetails: string;
-  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string; nativeTown: string }>;
+  flatmates: Array<{ id?: string; name: string; age: string; occupation: string; hobbies: string; gender: string; nativeTown: string }>;
   guestGenderPref: string;
   amenities: string[];
   kitchenAccess: boolean;
@@ -53,7 +53,10 @@ export async function createListing(form: {
   hostHobbies: string;
   hostGender: string;
   hostNativeTown: string;
-}): Promise<CreateListingResponse> {
+  photos?: Record<string, string[]>;
+}
+
+export async function createListing(form: ListingFormInput): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
   // Prepend host as first flatmate entry
@@ -133,7 +136,7 @@ export async function getListing(listingId: string): Promise<any> {
   return res.data;
 }
 
-export async function updateListing(listingId: string, form: Parameters<typeof createListing>[0]): Promise<CreateListingResponse> {
+export async function updateListing(listingId: string, form: ListingFormInput): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
   const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
