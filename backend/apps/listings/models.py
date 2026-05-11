@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 _property = property
 
@@ -33,7 +34,7 @@ class Listing(models.Model):
     description = models.TextField(null=True, blank=True)
 
     # Pricing
-    host_price_per_night = models.DecimalField(max_digits=10, decimal_places=2)
+    host_price_per_night = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(1)])
     gst_pct = models.DecimalField(max_digits=5, decimal_places=2, default=12.00)
     platform_fee_pct = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
     currency = models.CharField(max_length=3, default="INR")
@@ -43,8 +44,8 @@ class Listing(models.Model):
     monthly_discount_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     # Stay rules
-    min_nights = models.SmallIntegerField(default=1)
-    max_nights = models.SmallIntegerField(default=30)
+    min_nights = models.SmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(30)])
+    max_nights = models.SmallIntegerField(default=30, validators=[MinValueValidator(1), MaxValueValidator(365)])
     advance_notice_hours = models.SmallIntegerField(default=24, null=True, blank=True)
 
     # Booking mode
@@ -56,7 +57,7 @@ class Listing(models.Model):
     # Food options
     food_kitchen_access = models.BooleanField(default=False)
     food_meals_available = models.BooleanField(default=False)
-    food_meal_cost = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    food_meal_cost = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(1)])
     food_meal_description = models.TextField(null=True, blank=True)
 
     # State
@@ -128,7 +129,7 @@ class ListingHouseRules(models.Model):
     no_pets = models.BooleanField(default=True)
     no_visitors = models.BooleanField(default=False)
     no_overnight_guests = models.BooleanField(default=True)
-    min_guest_age = models.SmallIntegerField(default=18)
+    min_guest_age = models.SmallIntegerField(default=18, validators=[MinValueValidator(1), MaxValueValidator(120)])
     custom_rules = models.TextField(null=True, blank=True)
     check_in_from = models.TimeField(default="14:00")
     check_in_until = models.TimeField(default="22:00")
@@ -144,3 +145,27 @@ class ListingHouseRules(models.Model):
 
     def __str__(self):
         return f"Rules – {self.listing_id}"
+
+
+class ListingBlockedPeriod(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    listing = models.ForeignKey(
+        Listing, on_delete=models.CASCADE, related_name="blocked_periods",
+    )
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "listing_blocked_periods"
+        ordering = ["start_date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end_date__gt=models.F("start_date")),
+                name="blocked_period_valid_dates",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.listing_id}: {self.start_date} – {self.end_date}"

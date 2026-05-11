@@ -15,6 +15,8 @@ export async function createListing(form: {
   apartmentName: string;
   locality: string;
   city: string;
+  state: string;
+  pincode: string;
   roomType: string;
   bedType: string;
   bathroom: string;
@@ -22,9 +24,10 @@ export async function createListing(form: {
   roomFeatures: string[];
   title: string;
   description: string;
-  nearbyLandmarks: string[];
-  distanceToLandmark: string;
-  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string }>;
+  nearbyLandmark: string;
+  landmarkDistance: string;
+  landmarkDetails: string;
+  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string; nativeTown: string }>;
   guestGenderPref: string;
   amenities: string[];
   kitchenAccess: boolean;
@@ -49,17 +52,19 @@ export async function createListing(form: {
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  hostNativeTown: string;
 }): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
   // Prepend host as first flatmate entry
-  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostNativeTown
     ? [{
         name: '__host__',
         age: null,
         gender: form.hostGender,
         occupation: form.hostOccupation,
         hobbies: form.hostHobbies,
+        native_town: form.hostNativeTown,
       }]
     : [];
 
@@ -71,6 +76,8 @@ export async function createListing(form: {
       apartment_name: form.apartmentName,
       address_line1: form.locality,
       city_name: form.city,
+      state: form.state,
+      pincode: form.pincode ? parseInt(form.pincode, 10) : null,
       gender_preference: form.guestGenderPref,
     },
     room: {
@@ -88,6 +95,7 @@ export async function createListing(form: {
         gender: fm.gender || '',
         occupation: fm.occupation,
         hobbies: fm.hobbies,
+        native_town: fm.nativeTown,
       })),
     ],
     amenities: form.amenities,
@@ -135,6 +143,7 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
         gender: form.hostGender,
         occupation: form.hostOccupation,
         hobbies: form.hostHobbies,
+        native_town: form.hostNativeTown,
       }]
     : [];
 
@@ -146,6 +155,8 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       apartment_name: form.apartmentName,
       address_line1: form.locality,
       city_name: form.city,
+      state: form.state,
+      pincode: form.pincode ? parseInt(form.pincode, 10) : null,
       gender_preference: form.guestGenderPref,
     },
     room: {
@@ -163,6 +174,7 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
         gender: fm.gender || '',
         occupation: fm.occupation,
         hobbies: fm.hobbies,
+        native_town: fm.nativeTown,
       })),
     ],
     amenities: form.amenities,
@@ -197,19 +209,58 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
 
 function _buildDescription(form: {
   description: string;
-  nearbyLandmarks: string[];
-  distanceToLandmark: string;
+  nearbyLandmark: string;
+  landmarkDistance: string;
+  landmarkDetails: string;
 }): string {
   const parts: string[] = [];
   if (form.description.trim()) parts.push(form.description.trim());
 
-  if (form.nearbyLandmarks.length > 0) {
-    const dist = form.distanceToLandmark.trim();
-    const landmarks = form.nearbyLandmarks.join(', ');
-    parts.push(`Nearby: ${landmarks}${dist ? ` (${dist})` : ''}`);
+  if (form.nearbyLandmark) {
+    const dist = form.landmarkDistance.trim();
+    let nearby = `Nearby: ${form.nearbyLandmark}`;
+    if (dist) nearby += ` (${dist})`;
+    parts.push(nearby);
+  }
+
+  if (form.landmarkDetails.trim()) {
+    parts.push(form.landmarkDetails.trim());
   }
 
   return parts.join('\n\n');
+}
+
+export interface BlockedPeriod {
+  id: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+}
+
+export async function getBlockedPeriods(listingId: string): Promise<BlockedPeriod[]> {
+  const res = await api.get<BlockedPeriod[]>(ENDPOINTS.HOST.BLOCKED_PERIODS(listingId));
+  return res.data;
+}
+
+export async function createBlockedPeriod(
+  listingId: string,
+  startDate: string,
+  endDate: string,
+  reason: string = '',
+): Promise<BlockedPeriod> {
+  const res = await api.post<BlockedPeriod>(ENDPOINTS.HOST.BLOCKED_PERIODS(listingId), {
+    start_date: startDate,
+    end_date: endDate,
+    reason,
+  });
+  return res.data;
+}
+
+export async function deleteBlockedPeriod(
+  listingId: string,
+  periodId: string,
+): Promise<void> {
+  await api.delete(ENDPOINTS.HOST.DELETE_BLOCKED_PERIOD(listingId, periodId));
 }
 
 function _mapMinStay(val: string): number {
@@ -217,6 +268,8 @@ function _mapMinStay(val: string): number {
     case '2_nights': return 2;
     case '3_nights': return 3;
     case '1_week': return 7;
+    case '2_weeks': return 14;
+    case '1_month': return 30;
     default: return 1;
   }
 }

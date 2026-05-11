@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Property(models.Model):
@@ -33,8 +34,8 @@ class Property(models.Model):
         "users.User", on_delete=models.RESTRICT, related_name="properties",
     )
     apartment_type = models.CharField(max_length=20, choices=ApartmentType.choices)
-    floor_number = models.SmallIntegerField()
-    total_floors = models.SmallIntegerField(null=True, blank=True)
+    floor_number = models.SmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
+    total_floors = models.SmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(100)])
     apartment_name = models.CharField(max_length=255)
 
     # Location (switch to PointField when GDAL/PostGIS is available)
@@ -47,7 +48,8 @@ class Property(models.Model):
     city_id = models.UUIDField(null=True, blank=True)
     neighborhood_id = models.UUIDField(null=True, blank=True)
     city_name = models.CharField(max_length=100)
-    pincode = models.CharField(max_length=10)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    pincode = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(100000), MaxValueValidator(999999)])
 
     # Content
     title = models.CharField(max_length=255)
@@ -90,10 +92,11 @@ class PropertyFlatmate(models.Model):
         Property, on_delete=models.CASCADE, related_name="flatmates",
     )
     name = models.CharField(max_length=150)
-    age = models.SmallIntegerField(null=True, blank=True)
+    age = models.SmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(120)])
     gender = models.CharField(max_length=20, null=True, blank=True)
     occupation = models.CharField(max_length=150, null=True, blank=True)
     hobbies = models.TextField(null=True, blank=True)
+    native_town = models.CharField(max_length=150, null=True, blank=True)
     is_visible = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

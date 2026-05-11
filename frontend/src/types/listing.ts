@@ -30,6 +30,7 @@ export interface ListingFlatmate {
   gender: string;
   occupation: string;
   hobbies: string;
+  native_town: string;
 }
 
 export interface GuestListingDetail {
@@ -45,7 +46,6 @@ export interface GuestListingDetail {
   property: {
     apartment_type: string;
     floor_number: number;
-    apartment_name: string;
     city_name: string;
     gender_preference: string;
   };
@@ -59,7 +59,7 @@ export interface GuestListingDetail {
   photos: ListingPhoto[];
   amenities: Array<{ display_name: string; category: string }>;
   flatmates: ListingFlatmate[];
-  host_info: { occupation: string; hobbies: string; gender: string };
+  host_info: { occupation: string; hobbies: string; gender: string; native_town: string };
   food: {
     kitchen_access: boolean;
     meals_available: boolean;

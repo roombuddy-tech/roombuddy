@@ -34,6 +34,8 @@ export type HostStackParamList = {
     };
   };
   BookingDetail: { booking: any };
+  PauseListing: { listingId: string };
+  GuestProfile: { userId: string };
   Notifications: undefined;
   NotificationPreferences: undefined;
 };

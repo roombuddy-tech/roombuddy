@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from django.db import transaction
 from django.db.models import Q
+from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.amenities.models import AmenityDefinition
-from apps.listings.models import Listing, ListingAmenity, ListingHouseRules
+from apps.listings.models import Listing, ListingAmenity, ListingBlockedPeriod, ListingHouseRules
 from apps.listings.serializers import CreateListingRequestSerializer
 from apps.properties.models import Property, PropertyFlatmate
 from apps.rooms.models import Room
@@ -32,7 +33,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
 
     flatmates_qs = list(
         PropertyFlatmate.objects.filter(property=prop)
-        .values("id", "name", "age", "gender", "occupation", "hobbies")
+        .values("id", "name", "age", "gender", "occupation", "hobbies", "native_town")
     )
 
     rules = getattr(listing, "house_rules", None)
@@ -93,6 +94,8 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "apartment_name": prop.apartment_name,
             "address_line1": prop.address_line1 or "",
             "city_name": prop.city_name,
+            "state": prop.state or "",
+            "pincode": prop.pincode,
             "gender_preference": prop.gender_preference,
         },
         "room": {
@@ -110,6 +113,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
                 "gender": f["gender"] or "",
                 "occupation": f["occupation"] or "",
                 "hobbies": f["hobbies"] or "",
+                "native_town": f["native_town"] or "",
             }
             for f in real_flatmates
         ],
@@ -141,6 +145,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "occupation": host_fm["occupation"] if host_fm else "",
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
+            "native_town": host_fm["native_town"] if host_fm else "",
         },
         "photos": photos_by_category,
     }
@@ -170,6 +175,8 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         prop.apartment_name = prop_data["apartment_name"]
         prop.address_line1 = prop_data.get("address_line1", "")
         prop.city_name = prop_data["city_name"]
+        prop.state = prop_data.get("state", "")
+        prop.pincode = prop_data.get("pincode")
         prop.gender_preference = prop_data["gender_preference"]
         prop.title = d["title"]
         prop.description = d.get("description", "")
@@ -184,6 +191,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
                 gender=fm.get("gender", "") or None,
                 occupation=fm.get("occupation", ""),
                 hobbies=fm.get("hobbies", ""),
+                native_town=fm.get("native_town", ""),
             )
 
         room = listing.room
@@ -268,6 +276,8 @@ def create_listing(user: User, data: dict) -> dict:
             apartment_name=prop_data["apartment_name"],
             address_line1=prop_data.get("address_line1", ""),
             city_name=prop_data["city_name"],
+            state=prop_data.get("state", ""),
+            pincode=prop_data.get("pincode"),
             gender_preference=prop_data["gender_preference"],
             title=d["title"],
             description=d.get("description", ""),
@@ -282,6 +292,7 @@ def create_listing(user: User, data: dict) -> dict:
                 gender=fm.get("gender", "") or None,
                 occupation=fm.get("occupation", ""),
                 hobbies=fm.get("hobbies", ""),
+                native_town=fm.get("native_town", ""),
             )
 
         room_data = d["room"]
@@ -440,7 +451,12 @@ def _attach_cover_photos(listings, results: list[dict]):
 
 POPULAR_AMENITIES = {"AC", "WiFi", "Geyser / Hot water", "Full kitchen access", "Parking (2-wheeler)", "Parking (4-wheeler)", "Washing machine"}
 
-def search_guest_listings(query: str | None = None, area: str | None = None) -> list[dict]:
+def search_guest_listings(
+    query: str | None = None,
+    area: str | None = None,
+    check_in_date: date | None = None,
+    check_out_date: date | None = None,
+) -> list[dict]:
     qs = (
         Listing.objects
         .filter(status=Listing.Status.LIVE)
@@ -458,6 +474,16 @@ def search_guest_listings(query: str | None = None, area: str | None = None) -> 
             | Q(property__formatted_address__icontains=search_term)
             | Q(title__icontains=search_term)
         )
+
+    if check_in_date and check_out_date:
+        stay_nights = (check_out_date - check_in_date).days
+        if stay_nights > 0:
+            qs = qs.filter(min_nights__lte=stay_nights)
+            blocked_ids = ListingBlockedPeriod.objects.filter(
+                start_date__lt=check_out_date,
+                end_date__gt=check_in_date,
+            ).values_list("listing_id", flat=True)
+            qs = qs.exclude(id__in=blocked_ids)
 
     qs = qs[:50]
     results = [_listing_to_guest_card(l) for l in qs]
@@ -514,6 +540,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
                 "gender": fm.gender or "",
                 "occupation": fm.occupation or "",
                 "hobbies": fm.hobbies or "",
+                "native_town": fm.native_town or "",
             })
 
     # Host name
@@ -550,8 +577,6 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         "property": {
             "apartment_type": prop.apartment_type,
             "floor_number": prop.floor_number,
-            "apartment_name": prop.apartment_name,
-            "address_line1": prop.address_line1 or "",
             "city_name": prop.city_name,
             "gender_preference": prop.gender_preference,
         },
@@ -569,6 +594,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
             "occupation": host_fm.occupation if host_fm else "",
             "hobbies": host_fm.hobbies if host_fm else "",
             "gender": host_fm.gender if host_fm else "",
+            "native_town": host_fm.native_town if host_fm else "",
         },
         "food": {
             "kitchen_access": listing.food_kitchen_access,
@@ -622,3 +648,82 @@ def _listing_to_guest_card(listing: Listing) -> dict:
         "meals_available": listing.food_meals_available,
         "meal_cost_per_day": float(listing.food_meal_cost) if listing.food_meal_cost else None,
     }
+
+
+# ─── Blocked periods ──────────────────────────────────────────────────────
+
+def get_blocked_periods(user, listing_id: str) -> list[dict]:
+    """Return all future blocked periods for a listing owned by this user."""
+    try:
+        listing = Listing.objects.get(id=listing_id, host_user=user)
+    except Listing.DoesNotExist:
+        raise NotFound({"error": "Listing not found", "code": "listing_not_found"})
+
+    periods = listing.blocked_periods.filter(end_date__gt=date.today()).order_by("start_date")
+    return [
+        {
+            "id": str(p.id),
+            "start_date": p.start_date.isoformat(),
+            "end_date": p.end_date.isoformat(),
+            "reason": p.reason,
+        }
+        for p in periods
+    ]
+
+
+def create_blocked_period(user, listing_id: str, start_date: date, end_date: date, reason: str = None) -> dict:
+    """Block a date range on a listing. Validates no existing bookings overlap."""
+    from apps.bookings.models import Booking
+
+    if end_date <= start_date:
+        raise ValidationError({"error": "End date must be after start date"})
+    if start_date < date.today():
+        raise ValidationError({"error": "Cannot block dates in the past"})
+
+    try:
+        listing = Listing.objects.get(id=listing_id, host_user=user)
+    except Listing.DoesNotExist:
+        raise NotFound({"error": "Listing not found", "code": "listing_not_found"})
+
+    # Check for existing bookings in the range
+    has_booking = Booking.objects.filter(
+        listing=listing,
+        status__in=Booking.BLOCKING_STATUSES,
+        check_in_date__lt=end_date,
+        check_out_date__gt=start_date,
+    ).exists()
+    if has_booking:
+        raise ValidationError({"error": "There are existing bookings in this date range. Please cancel them first."})
+
+    # Check for overlapping blocked periods
+    overlap = listing.blocked_periods.filter(
+        start_date__lt=end_date,
+        end_date__gt=start_date,
+    ).exists()
+    if overlap:
+        raise ValidationError({"error": "This date range overlaps with an existing blocked period"})
+
+    period = ListingBlockedPeriod.objects.create(
+        listing=listing,
+        start_date=start_date,
+        end_date=end_date,
+        reason=reason,
+    )
+    return {
+        "id": str(period.id),
+        "start_date": period.start_date.isoformat(),
+        "end_date": period.end_date.isoformat(),
+        "reason": period.reason,
+    }
+
+
+def delete_blocked_period(user, listing_id: str, period_id: str) -> None:
+    """Delete a blocked period."""
+    try:
+        listing = Listing.objects.get(id=listing_id, host_user=user)
+    except Listing.DoesNotExist:
+        raise NotFound({"error": "Listing not found", "code": "listing_not_found"})
+
+    deleted, _ = listing.blocked_periods.filter(id=period_id).delete()
+    if not deleted:
+        raise NotFound({"error": "Blocked period not found"})

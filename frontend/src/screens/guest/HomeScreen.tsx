@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   RefreshControl,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
@@ -52,11 +54,80 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchListings = useCallback(async (q?: string, area?: string) => {
+  const [checkIn, setCheckIn] = useState<string | null>(null);
+  const [checkOut, setCheckOut] = useState<string | null>(null);
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [tempCheckIn, setTempCheckIn] = useState<string | null>(null);
+  const [tempCheckOut, setTempCheckOut] = useState<string | null>(null);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const onDateDayPress = (day: DateData) => {
+    if (!tempCheckIn || (tempCheckIn && tempCheckOut)) {
+      setTempCheckIn(day.dateString);
+      setTempCheckOut(null);
+    } else {
+      if (day.dateString <= tempCheckIn) {
+        setTempCheckIn(day.dateString);
+        setTempCheckOut(null);
+      } else {
+        setTempCheckOut(day.dateString);
+      }
+    }
+  };
+
+  const getDateMarks = () => {
+    const marks: Record<string, any> = {};
+    const ci = tempCheckIn;
+    const co = tempCheckOut;
+    if (!ci) return marks;
+    if (!co) {
+      marks[ci] = { startingDay: true, endingDay: true, color: COLORS.primary, textColor: '#fff' };
+      return marks;
+    }
+    const cur = new Date(ci);
+    const end = new Date(co);
+    while (cur <= end) {
+      const key = cur.toISOString().slice(0, 10);
+      const isStart = key === ci;
+      const isEnd = key === co;
+      marks[key] = {
+        startingDay: isStart,
+        endingDay: isEnd,
+        color: isStart || isEnd ? COLORS.primary : COLORS.primaryAlpha,
+        textColor: isStart || isEnd ? '#fff' : COLORS.primary,
+      };
+      cur.setDate(cur.getDate() + 1);
+    }
+    return marks;
+  };
+
+  const applyDates = () => {
+    setCheckIn(tempCheckIn);
+    setCheckOut(tempCheckOut);
+    setShowDateModal(false);
+  };
+
+  const clearDates = () => {
+    setTempCheckIn(null);
+    setTempCheckOut(null);
+    setCheckIn(null);
+    setCheckOut(null);
+    setShowDateModal(false);
+  };
+
+  const formatShortDate = (d: string) => {
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  };
+
+  const fetchListings = useCallback(async (q?: string, area?: string, ci?: string, co?: string) => {
     try {
-      const params: { q?: string; area?: string } = {};
+      const params: { q?: string; area?: string; check_in_date?: string; check_out_date?: string } = {};
       if (q?.trim()) params.q = q.trim();
       if (area) params.area = area;
+      if (ci) params.check_in_date = ci;
+      if (co) params.check_out_date = co;
       const data = await searchListings(Object.keys(params).length ? params : undefined);
       setListings(data.results);
     } catch {
@@ -66,18 +137,18 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setLoading(true);
-    fetchListings(query, selectedArea ?? undefined).finally(() => setLoading(false));
-  }, [selectedArea]);
+    fetchListings(query, selectedArea ?? undefined, checkIn ?? undefined, checkOut ?? undefined).finally(() => setLoading(false));
+  }, [selectedArea, checkIn, checkOut]);
 
   const onSearch = useCallback(() => {
     setLoading(true);
-    fetchListings(query, selectedArea ?? undefined).finally(() => setLoading(false));
-  }, [query, selectedArea, fetchListings]);
+    fetchListings(query, selectedArea ?? undefined, checkIn ?? undefined, checkOut ?? undefined).finally(() => setLoading(false));
+  }, [query, selectedArea, checkIn, checkOut, fetchListings]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchListings(query, selectedArea ?? undefined).finally(() => setRefreshing(false));
-  }, [query, selectedArea, fetchListings]);
+    fetchListings(query, selectedArea ?? undefined, checkIn ?? undefined, checkOut ?? undefined).finally(() => setRefreshing(false));
+  }, [query, selectedArea, checkIn, checkOut, fetchListings]);
 
   const toggleArea = (area: string) => {
     setSelectedArea((prev) => (prev === area ? null : area));
@@ -189,6 +260,25 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* Date picker bar */}
+      <TouchableOpacity
+        style={styles.dateBar}
+        onPress={() => { setTempCheckIn(checkIn); setTempCheckOut(checkOut); setShowDateModal(true); }}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="calendar-outline" size={16} color={checkIn ? COLORS.primary : COLORS.textMut} />
+        <Text style={[styles.dateBarText, checkIn && { color: COLORS.primary, ...FONTS.semibold }]}>
+          {checkIn && checkOut
+            ? `${formatShortDate(checkIn)} — ${formatShortDate(checkOut)}`
+            : 'Select dates'}
+        </Text>
+        {checkIn && (
+          <TouchableOpacity onPress={clearDates} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="close-circle" size={16} color={COLORS.textMut} />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+
       {/* Area chips */}
       <FlatList
         data={AREAS}
@@ -259,6 +349,53 @@ export default function HomeScreen() {
       />
 
       <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />
+
+      {/* Date picker modal */}
+      <Modal visible={showDateModal} transparent animationType="slide">
+        <View style={styles.dateModalOverlay}>
+          <View style={styles.dateModalContent}>
+            <View style={styles.dateModalHeader}>
+              <Text style={styles.dateModalTitle}>When are you visiting?</Text>
+              <TouchableOpacity onPress={() => setShowDateModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.dateModalHint}>
+              {!tempCheckIn ? 'Select check-in date' : !tempCheckOut ? 'Select check-out date' : `${formatShortDate(tempCheckIn)} — ${formatShortDate(tempCheckOut)}`}
+            </Text>
+
+            <Calendar
+              minDate={todayStr}
+              markingType="period"
+              markedDates={getDateMarks()}
+              onDayPress={onDateDayPress}
+              theme={{
+                todayTextColor: COLORS.primary,
+                arrowColor: COLORS.primary,
+                textDayFontWeight: '500',
+                textMonthFontWeight: '700',
+                textDayHeaderFontWeight: '600',
+                textDayFontSize: 14,
+                textMonthFontSize: 16,
+              }}
+            />
+
+            <View style={styles.dateModalActions}>
+              <TouchableOpacity style={styles.dateModalClear} onPress={clearDates}>
+                <Text style={styles.dateModalClearText}>Clear dates</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateModalApply, (!tempCheckIn || !tempCheckOut) && { opacity: 0.5 }]}
+                onPress={applyDates}
+                disabled={!tempCheckIn || !tempCheckOut}
+              >
+                <Text style={styles.dateModalApplyText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -393,4 +530,67 @@ const styles = StyleSheet.create({
   emptyWrap: { alignItems: 'center', paddingVertical: SPACING.xxl },
   emptyTitle: { fontSize: 18, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md },
   emptySub: { fontSize: 14, color: COLORS.textMut, marginTop: 4 },
+
+  dateBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    marginBottom: SPACING.md,
+  },
+  dateBarText: { flex: 1, fontSize: 14, color: COLORS.textMut, ...FONTS.medium },
+
+  dateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  dateModalContent: {
+    backgroundColor: COLORS.bg,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: 36,
+  },
+  dateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  dateModalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
+  dateModalHint: {
+    fontSize: 14,
+    color: COLORS.textSec,
+    ...FONTS.medium,
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
+  },
+  dateModalActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.md,
+  },
+  dateModalClear: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  dateModalClearText: { fontSize: 15, ...FONTS.semibold, color: COLORS.textSec },
+  dateModalApply: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+  },
+  dateModalApplyText: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
 });

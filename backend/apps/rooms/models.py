@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Room(models.Model):
@@ -30,7 +31,7 @@ class Room(models.Model):
     max_guests = models.SmallIntegerField(default=1)
     bathroom_type = models.CharField(max_length=20, choices=BathroomType.choices)
     room_features = models.JSONField(default=dict)
-    room_size_sqft = models.IntegerField(null=True, blank=True)
+    room_size_sqft = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(10000)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

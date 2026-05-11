@@ -23,6 +23,9 @@ export const ENDPOINTS = {
     LISTINGS: '/api/listings/host/',
     CREATE_LISTING: '/api/listings/',
     LISTING_DETAIL: (id: string) => `/api/listings/${id}/`,
+    BLOCKED_PERIODS: (id: string) => `/api/listings/${id}/blocked-periods/`,
+    DELETE_BLOCKED_PERIOD: (listingId: string, periodId: string) =>
+      `/api/listings/${listingId}/blocked-periods/${periodId}/`,
     PROPERTIES: '/api/properties/',
     PROPERTY_PHOTOS: (propertyId: string) => `/api/properties/${propertyId}/photos/`,
   },

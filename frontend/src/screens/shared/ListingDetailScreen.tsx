@@ -482,13 +482,23 @@ export default function ListingDetailScreen() {
             )}
             <Text style={styles.stickyPriceSub}>Your earnings per night</Text>
           </View>
-          <TouchableOpacity
-            style={styles.bookBtn}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('ListingEditor', { listingId: item.listing_id })}
-          >
-            <Text style={styles.bookBtnTxt}>Edit listing</Text>
-          </TouchableOpacity>
+          <View style={styles.stickyActions}>
+            <TouchableOpacity
+              style={styles.pauseBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('PauseListing', { listingId: item.listing_id })}
+            >
+              <Ionicons name="pause-circle-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.pauseBtnTxt}>Pause</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bookBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('ListingEditor', { listingId: item.listing_id })}
+            >
+              <Text style={styles.bookBtnTxt}>Edit listing</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -697,6 +707,19 @@ const styles = StyleSheet.create({
   stickyPrice: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyPriceSub: { fontSize: 11, color: COLORS.textSec, marginTop: 2 },
+  stickyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pauseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.bg,
+  },
+  pauseBtnTxt: { color: COLORS.primary, fontSize: 14, ...FONTS.semibold },
   bookBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 13,

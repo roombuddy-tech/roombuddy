@@ -282,6 +282,9 @@ export default function GuestListingDetailScreen() {
                     {listing.host_info.hobbies ? (
                       <Text style={styles.flatmateDetail}>{listing.host_info.hobbies}</Text>
                     ) : null}
+                    {listing.host_info.native_town ? (
+                      <Text style={styles.flatmateDetail}>From {listing.host_info.native_town}</Text>
+                    ) : null}
                   </View>
                 </View>
               )}
@@ -300,6 +303,9 @@ export default function GuestListingDetailScreen() {
                     ) : null}
                     {fm.hobbies ? (
                       <Text style={styles.flatmateDetail}>{fm.hobbies}</Text>
+                    ) : null}
+                    {fm.native_town ? (
+                      <Text style={styles.flatmateDetail}>From {fm.native_town}</Text>
                     ) : null}
                   </View>
                 </View>
@@ -544,20 +550,32 @@ export default function GuestListingDetailScreen() {
                   }}
                 />
 
-                {listing.min_nights > 1 && (
-                  <Text style={styles.modalHint}>
-                    Minimum stay: {listing.min_nights} nights
-                  </Text>
-                )}
-
-                <TouchableOpacity
-                  style={[styles.modalBtn, (!checkIn || !checkOut) && styles.modalBtnDisabled]}
-                  onPress={handleBookNow}
-                  activeOpacity={0.85}
-                  disabled={!checkIn || !checkOut}
-                >
-                  <Text style={styles.modalBtnText}>Continue to booking</Text>
-                </TouchableOpacity>
+                {(() => {
+                  const selectedNights = checkIn && checkOut
+                    ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)
+                    : 0;
+                  const tooShort = checkIn && checkOut && selectedNights < listing.min_nights;
+                  const canContinue = checkIn && checkOut && !tooShort;
+                  return (
+                    <>
+                      {listing.min_nights > 1 && (
+                        <Text style={[styles.modalHint, tooShort ? { color: COLORS.danger } : undefined]}>
+                          {tooShort
+                            ? `Minimum stay is ${listing.min_nights} nights (you selected ${selectedNights})`
+                            : `Minimum stay: ${listing.min_nights} nights`}
+                        </Text>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.modalBtn, !canContinue && styles.modalBtnDisabled]}
+                        onPress={handleBookNow}
+                        activeOpacity={0.85}
+                        disabled={!canContinue}
+                      >
+                        <Text style={styles.modalBtnText}>Continue to booking</Text>
+                      </TouchableOpacity>
+                    </>
+                  );
+                })()}
               </>
             )}
           </View>

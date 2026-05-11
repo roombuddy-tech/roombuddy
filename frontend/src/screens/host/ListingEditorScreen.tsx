@@ -14,6 +14,7 @@ import {
   ActionSheetIOS,
   Image,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +40,7 @@ interface Flatmate {
   occupation: string;
   hobbies: string;
   gender: string;
+  nativeTown: string;
 }
 
 interface FormData {
@@ -48,6 +50,8 @@ interface FormData {
   apartmentName: string;
   locality: string;
   city: string;
+  state: string;
+  pincode: string;
   roomType: string;
   bedType: string;
   bathroom: string;
@@ -55,8 +59,9 @@ interface FormData {
   roomFeatures: string[];
   title: string;
   description: string;
-  nearbyLandmarks: string[];
-  distanceToLandmark: string;
+  nearbyLandmark: string;
+  landmarkDistance: string;
+  landmarkDetails: string;
   flatmates: Flatmate[];
   guestGenderPref: string;
   amenities: string[];
@@ -83,6 +88,7 @@ interface FormData {
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  hostNativeTown: string;
 }
 
 const INIT: FormData = {
@@ -92,6 +98,8 @@ const INIT: FormData = {
   apartmentName: '',
   locality: '',
   city: 'Bengaluru',
+  state: 'Karnataka',
+  pincode: '',
   roomType: '',
   bedType: '',
   bathroom: '',
@@ -99,8 +107,9 @@ const INIT: FormData = {
   roomFeatures: [],
   title: '',
   description: '',
-  nearbyLandmarks: [],
-  distanceToLandmark: '',
+  nearbyLandmark: '',
+  landmarkDistance: '',
+  landmarkDetails: '',
   flatmates: [],
   guestGenderPref: 'any',
   amenities: [],
@@ -127,6 +136,7 @@ const INIT: FormData = {
   hostOccupation: '',
   hostHobbies: '',
   hostGender: '',
+  hostNativeTown: '',
 };
 
 const TOTAL_STEPS = 9;
@@ -206,6 +216,8 @@ const MIN_STAY_OPTIONS = [
   { value: '2_nights', label: '2 nights' },
   { value: '3_nights', label: '3 nights' },
   { value: '1_week', label: '1 week' },
+  { value: '2_weeks', label: '2 weeks' },
+  { value: '1_month', label: '1 month' },
 ];
 
 const TIMES: string[] = (() => {
@@ -288,12 +300,19 @@ function BottomNav({
   isValid?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (isValid) setError(null);
-  }, [isValid]);
+    if (!touched) return;
+    if (validate) {
+      setError(validate());
+    } else if (isValid) {
+      setError(null);
+    }
+  }, [isValid, touched, validate]);
 
   const handleNext = () => {
+    setTouched(true);
     if (validate) {
       const err = validate();
       if (err) {
@@ -440,6 +459,7 @@ function Field({
   multiline,
   keyboardType,
   optional,
+  maxLength,
 }: {
   label?: string;
   placeholder?: string;
@@ -448,6 +468,7 @@ function Field({
   multiline?: boolean;
   keyboardType?: any;
   optional?: boolean;
+  maxLength?: number;
 }) {
   return (
     <View style={{ marginBottom: 14 }}>
@@ -465,6 +486,7 @@ function Field({
         onChangeText={onChange}
         multiline={multiline}
         keyboardType={keyboardType}
+        maxLength={maxLength}
       />
     </View>
   );
@@ -708,14 +730,26 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
     form.floorNumber.trim().length > 0 &&
     form.apartmentName.trim().length > 0 &&
     form.locality.trim().length > 0 &&
-    form.city.trim().length > 0;
+    form.city.trim().length > 0 &&
+    form.state.trim().length > 0 &&
+    form.pincode.trim().length === 6;
 
   const validate = (): string | null => {
     if (!form.apartmentType) return 'Please select an apartment type';
     if (!form.floorNumber.trim()) return 'Please enter the floor number';
+    const floor = parseInt(form.floorNumber, 10);
+    if (isNaN(floor) || floor < 0 || floor > 100) return 'Floor number must be between 0 and 100';
+    if (form.totalFloors.trim()) {
+      const total = parseInt(form.totalFloors, 10);
+      if (isNaN(total) || total < 1 || total > 100) return 'Total floors must be between 1 and 100';
+      if (floor > total) return 'Floor number cannot be greater than total floors';
+    }
     if (!form.apartmentName.trim()) return 'Please enter the society / apartment name';
     if (!form.locality.trim()) return 'Please enter the locality / area';
     if (!form.city.trim()) return 'Please enter the city';
+    if (!form.state.trim()) return 'Please enter the state';
+    if (!form.pincode.trim()) return 'Please enter the pincode';
+    if (form.pincode.trim().length !== 6) return 'Pincode must be exactly 6 digits';
     return null;
   };
 
@@ -756,16 +790,19 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
 
         <Field
           label="Floor number"
-          placeholder="e.g. 3rd floor"
+          placeholder="e.g. 3"
           value={form.floorNumber}
-          onChange={(v) => update({ floorNumber: v })}
+          onChange={(v) => update({ floorNumber: v.replace(/[^0-9]/g, '') })}
+          keyboardType="number-pad"
+          maxLength={3}
         />
         <Field
           label="Total floors in building"
           placeholder="e.g. 5"
           value={form.totalFloors}
-          onChange={(v) => update({ totalFloors: v })}
+          onChange={(v) => update({ totalFloors: v.replace(/[^0-9]/g, '') })}
           keyboardType="number-pad"
+          maxLength={3}
           optional
         />
         <Field
@@ -786,11 +823,25 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           value={form.city}
           onChange={(v) => update({ city: v })}
         />
+        <Field
+          label="State"
+          placeholder="e.g. Karnataka"
+          value={form.state}
+          onChange={(v) => update({ state: v })}
+        />
+        <Field
+          label="Pincode"
+          placeholder="e.g. 560034"
+          value={form.pincode}
+          onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '') })}
+          keyboardType="number-pad"
+          maxLength={6}
+        />
 
         <View style={stSt.infoBox}>
           <Ionicons name="information-circle" size={16} color={COLORS.primary} style={{ marginRight: 8, marginTop: 1 }} />
           <Text style={{ fontSize: 12, color: COLORS.primaryDark, lineHeight: 18, flex: 1 }}>
-            Your full address is only shared with guests after a confirmed booking. On the map, guests see only the neighbourhood.
+            Exact room details will be shared post booking.
           </Text>
         </View>
 
@@ -834,6 +885,10 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
     if (!form.roomType) return 'Please select a room type';
     if (!form.bedType) return 'Please select a bed type';
     if (!form.bathroom) return 'Please select a bathroom type';
+    if (form.roomSize.trim()) {
+      const size = parseInt(form.roomSize, 10);
+      if (isNaN(size) || size < 1 || size > 10000) return 'Room size must be between 1 and 10,000 sq ft';
+    }
     return null;
   };
 
@@ -902,10 +957,12 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <Field
-          label="Room size"
-          placeholder="e.g. 12x14 ft"
+          label="Room size (sq ft)"
+          placeholder="e.g. 120"
           value={form.roomSize}
-          onChange={(v) => update({ roomSize: v })}
+          onChange={(v) => update({ roomSize: v.replace(/[^0-9]/g, '') })}
+          keyboardType="number-pad"
+          maxLength={5}
           optional
         />
 
@@ -947,11 +1004,6 @@ const rdSt = StyleSheet.create({
 function StepTitle({ form, update, onNext, onBack }: StepProps) {
   const LANDMARKS = ['Metro station', 'Bus stop', 'Tech park', 'Mall', 'Hospital', 'Restaurant hub'];
 
-  const toggleLandmark = (l: string) => {
-    const cur = form.nearbyLandmarks;
-    update({ nearbyLandmarks: cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l] });
-  };
-
   const isValid = form.title.trim().length > 0 && form.description.trim().length > 0;
 
   const validate = (): string | null => {
@@ -973,36 +1025,44 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
 
         <Field
           label="Listing title"
-          placeholder='e.g. Cozy private room in 2BHK, Koramangala'
+          placeholder='e.g. Private room in Koramangala'
           value={form.title}
           onChange={(v) => update({ title: v })}
         />
 
         <Field
           label="Description"
-          placeholder="Describe your space — what makes it special, what guests can expect, nearby landmarks, transport access, what your flatmates are like to live with..."
+          placeholder="What makes your space special?"
           value={form.description}
           onChange={(v) => update({ description: v })}
           multiline
         />
 
-        <SectionLabel label="Nearby landmarks" optional />
+        <SectionLabel label="Nearest landmark" optional />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {LANDMARKS.map((l) => (
             <Chip
               key={l}
               label={l}
-              selected={form.nearbyLandmarks.includes(l)}
-              onPress={() => toggleLandmark(l)}
+              selected={form.nearbyLandmark === l}
+              onPress={() => update({ nearbyLandmark: form.nearbyLandmark === l ? '' : l })}
             />
           ))}
         </View>
 
         <Field
-          label="Distance to nearest landmark"
-          placeholder="e.g. 5 min walk from Koramangala bus stop"
-          value={form.distanceToLandmark}
-          onChange={(v) => update({ distanceToLandmark: v })}
+          label="Distance"
+          placeholder="e.g. 5 min walk"
+          value={form.landmarkDistance}
+          onChange={(v) => update({ landmarkDistance: v })}
+          optional
+        />
+
+        <Field
+          label="Additional details"
+          placeholder="e.g. Near Jyoti Nivas College"
+          value={form.landmarkDetails}
+          onChange={(v) => update({ landmarkDetails: v })}
           optional
         />
 
@@ -1018,11 +1078,12 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [hostModalOpen, setHostModalOpen] = useState(false);
-  const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '', gender: '' });
+  const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '', gender: '', nativeTown: '' });
   const [hostDraft, setHostDraft] = useState({
     occupation: form.hostOccupation,
     hobbies: form.hostHobbies,
     gender: form.hostGender,
+    nativeTown: form.hostNativeTown,
   });
 
   const displayName: string =
@@ -1038,9 +1099,10 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       occupation: draft.occupation,
       hobbies: draft.hobbies,
       gender: draft.gender,
+      nativeTown: draft.nativeTown,
     };
     update({ flatmates: [...form.flatmates, flatmate] });
-    setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '' });
+    setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', nativeTown: '' });
     setModalVisible(false);
   };
 
@@ -1066,7 +1128,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       <Text style={stSt.title}>Your flatmates</Text>
 
       <View style={fmSt.banner}>
-        <Text style={fmSt.bannerTxt}>⭐ Listings with flatmate profiles get 3x more bookings</Text>
+        <Text style={fmSt.bannerTxt}>Adding flatmate profiles helps guests feel more comfortable booking</Text>
       </View>
 
       {/* Host card — tappable to add occupation/hobbies/gender */}
@@ -1082,9 +1144,10 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
             </Text>
           ) : (
             <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: 2 }}>
-              Tap to add occupation & hobbies
+              Tap to add your details
             </Text>
           )}
+          {form.hostNativeTown ? <Text style={fmSt.detail}>From {form.hostNativeTown}</Text> : null}
           {city ? <Text style={fmSt.detail}>{city}</Text> : null}
         </View>
         <Ionicons name="pencil-outline" size={16} color={COLORS.textMut} />
@@ -1110,6 +1173,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                 {[fm.occupation, fm.hobbies].filter(Boolean).join(' · ')}
               </Text>
             ) : null}
+            {fm.nativeTown ? <Text style={fmSt.detail}>From {fm.nativeTown}</Text> : null}
           </View>
           <TouchableOpacity onPress={() => removeFlatmate(fm.id)} style={{ padding: 6 }}>
             <Ionicons name="close-circle-outline" size={20} color={COLORS.textMut} />
@@ -1187,6 +1251,13 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   onChange={(v) => setHostDraft((d) => ({ ...d, hobbies: v }))}
                   optional
                 />
+                <Field
+                  label="Native town"
+                  placeholder="e.g. Jaipur, Rajasthan"
+                  value={hostDraft.nativeTown}
+                  onChange={(v) => setHostDraft((d) => ({ ...d, nativeTown: v }))}
+                  optional
+                />
                 <TouchableOpacity
                   style={fmSt.saveBtn}
                   onPress={() => {
@@ -1194,6 +1265,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                       hostOccupation: hostDraft.occupation,
                       hostHobbies: hostDraft.hobbies,
                       hostGender: hostDraft.gender,
+                      hostNativeTown: hostDraft.nativeTown,
                     });
                     setHostModalOpen(false);
                   }}
@@ -1232,8 +1304,9 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   label="Age"
                   placeholder="e.g. 26"
                   value={draft.age}
-                  onChange={(v) => setDraft((d) => ({ ...d, age: v }))}
+                  onChange={(v) => setDraft((d) => ({ ...d, age: v.replace(/[^0-9]/g, '') }))}
                   keyboardType="number-pad"
+                  maxLength={3}
                   optional
                 />
                 <SectionLabel label="Gender" optional />
@@ -1259,6 +1332,13 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   placeholder="e.g. Cricket, Cooking"
                   value={draft.hobbies}
                   onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
+                  optional
+                />
+                <Field
+                  label="Native town"
+                  placeholder="e.g. Pune, Maharashtra"
+                  value={draft.nativeTown}
+                  onChange={(v) => setDraft((d) => ({ ...d, nativeTown: v }))}
                   optional
                 />
                 <TouchableOpacity
@@ -1461,7 +1541,14 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
     if (useCamera) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow camera access to take photos.');
+        Alert.alert(
+          'Camera access needed',
+          'Allow camera access to take photos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
         return;
       }
       setLoading(category);
@@ -1477,7 +1564,14 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to your photo library.');
+        Alert.alert(
+          'Photo library access needed',
+          'Allow photo library access to choose photos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
         return;
       }
       setLoading(category);
@@ -1647,7 +1741,6 @@ const phSt = StyleSheet.create({
     borderRadius: RADIUS.md,
     marginBottom: SPACING.sm,
     backgroundColor: COLORS.bg,
-    overflow: 'hidden',
     ...SHADOW.sm,
   },
   categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
@@ -1670,11 +1763,11 @@ const phSt = StyleSheet.create({
   },
 
   thumbStrip: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.md, gap: 8, flexDirection: 'row' },
-  thumbWrap: { position: 'relative' },
+  thumbWrap: { position: 'relative', marginTop: 4, marginRight: 4 },
   thumbImg: { width: 110, height: 82, borderRadius: RADIUS.sm },
   coverBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   coverBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
-  removeBtn: { position: 'absolute', top: -7, right: -7, backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 12 },
+  removeBtn: { position: 'absolute', top: -4, right: -4, backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 12, zIndex: 10 },
 
   emptyPrompt: {
     flexDirection: 'row',
@@ -1735,6 +1828,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             value={form.nightlyRate}
             onChangeText={(v) => update({ nightlyRate: v.replace(/[^0-9]/g, '') })}
             keyboardType="number-pad"
+            maxLength={7}
             placeholder={rateFocused ? '' : '850'}
             placeholderTextColor="#D4D9DF"
             onFocus={() => setRateFocused(true)}
@@ -1751,6 +1845,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               value={form.mealCost}
               onChange={(v) => update({ mealCost: v.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
+              maxLength={6}
             />
             <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: -8 }}>
               Charged separately from the room rate.
@@ -1781,13 +1876,21 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
           </>
         )}
 
-        <SectionLabel label="Minimum stay" optional />
-        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <SectionLabel label="Minimum stay" optional />
+          <TouchableOpacity
+            onPress={() => Alert.alert('Minimum stay', 'Set the minimum number of nights a guest must book. If a guest tries to book fewer nights, they won\'t be able to proceed. Leave unselected for no minimum.')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="information-circle-outline" size={18} color={COLORS.textMut} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
           {MIN_STAY_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.value}
               style={[prSt.minStayBtn, form.minStay === opt.value && prSt.minStayBtnSel]}
-              onPress={() => update({ minStay: opt.value })}
+              onPress={() => update({ minStay: form.minStay === opt.value ? '' : opt.value })}
               activeOpacity={0.7}
             >
               <Text style={[prSt.minStayTxt, form.minStay === opt.value && prSt.minStayTxtSel]}>
@@ -1834,7 +1937,7 @@ const prSt = StyleSheet.create({
   breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
-  minStayBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: RADIUS.sm, borderWidth: 1.5, borderColor: COLORS.border },
+  minStayBtn: { paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center', borderRadius: RADIUS.sm, borderWidth: 1.5, borderColor: COLORS.border },
   minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   minStayTxt: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec },
   minStayTxtSel: { color: COLORS.primary, ...FONTS.semibold },
@@ -2233,7 +2336,7 @@ function mapListingToForm(data: any): FormData {
   const aptTypeMap: Record<string, string> = {
     '1bhk': '1BHK', '2bhk': '2BHK', '3bhk': '3BHK', '4bhk': '4BHK+',
   };
-  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 3: '3_nights', 7: '1_week' };
+  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 3: '3_nights', 7: '1_week', 14: '2_weeks', 30: '1_month' };
 
   const allFlatmates: any[] = data.flatmates || [];
   const hostFm = allFlatmates.find((f: any) => f.name === '__host__');
@@ -2247,6 +2350,8 @@ function mapListingToForm(data: any): FormData {
     apartmentName: p.apartment_name,
     locality: p.address_line1 || '',
     city: p.city_name,
+    state: p.state || '',
+    pincode: p.pincode != null ? String(p.pincode) : '',
     roomType: r.room_type,
     bedType: r.bed_type,
     bathroom: r.bathroom_type,
@@ -2261,6 +2366,7 @@ function mapListingToForm(data: any): FormData {
       occupation: f.occupation || '',
       hobbies: f.hobbies || '',
       gender: f.gender || '',
+      nativeTown: f.native_town || '',
     })),
     guestGenderPref: p.gender_preference,
     amenities: data.amenities || [],
@@ -2286,6 +2392,7 @@ function mapListingToForm(data: any): FormData {
     hostOccupation: data.host?.occupation || '',
     hostHobbies: data.host?.hobbies || '',
     hostGender: data.host?.gender || '',
+    hostNativeTown: data.host?.native_town || '',
     photos: {
       bedroom: data.photos?.bedroom ?? [],
       bathroom: data.photos?.bathroom ?? [],

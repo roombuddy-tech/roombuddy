@@ -63,6 +63,7 @@ function formatStatus(status: string): string {
 }
 
 export default function BookingsScreen() {
+  const navigation = useNavigation<NavProp>();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

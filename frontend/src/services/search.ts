@@ -5,6 +5,8 @@ import type { GuestListingCard, GuestListingDetail } from '../types/listing';
 export async function searchListings(params?: {
   q?: string;
   area?: string;
+  check_in_date?: string;
+  check_out_date?: string;
 }): Promise<{ count: number; results: GuestListingCard[] }> {
   const res = await api.get(ENDPOINTS.GUEST.SEARCH, { params });
   return res.data;

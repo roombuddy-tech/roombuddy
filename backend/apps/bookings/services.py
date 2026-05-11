@@ -116,6 +116,19 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
             "code": ErrorCode.LISTING_NOT_FOUND,
         })
 
+    # Check for blocked periods
+    from apps.listings.models import ListingBlockedPeriod
+    has_blocked = ListingBlockedPeriod.objects.filter(
+        listing=listing,
+        start_date__lt=check_out,
+        end_date__gt=check_in,
+    ).exists()
+    if has_blocked:
+        raise ValidationError({
+            "error": "This listing is not available for the selected dates",
+            "code": "dates_blocked",
+        })
+
     nights = (check_out - check_in).days
     if nights < listing.min_nights:
         raise ValidationError({

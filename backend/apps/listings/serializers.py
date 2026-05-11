@@ -25,19 +25,22 @@ class HostListingsResponseSerializer(serializers.Serializer):
 
 class FlatmateInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150)
-    age = serializers.IntegerField(required=False, allow_null=True)
+    age = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=120)
     gender = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
     occupation = serializers.CharField(required=False, allow_blank=True, default="")
     hobbies = serializers.CharField(required=False, allow_blank=True, default="")
+    native_town = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class PropertyInputSerializer(serializers.Serializer):
     apartment_type = serializers.ChoiceField(choices=["1bhk", "2bhk", "3bhk", "4bhk"])
-    floor_number = serializers.IntegerField()
-    total_floors = serializers.IntegerField(required=False, allow_null=True)
+    floor_number = serializers.IntegerField(min_value=0, max_value=100)
+    total_floors = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=100)
     apartment_name = serializers.CharField(max_length=255)
     address_line1 = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     city_name = serializers.CharField(max_length=100)
+    state = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    pincode = serializers.IntegerField(required=False, allow_null=True, min_value=100000, max_value=999999)
     gender_preference = serializers.ChoiceField(
         choices=["male_only", "female_only", "any"], default="any"
     )
@@ -47,7 +50,7 @@ class RoomInputSerializer(serializers.Serializer):
     room_type = serializers.ChoiceField(choices=["private", "shared"])
     bed_type = serializers.ChoiceField(choices=["single", "double", "queen", "king", "mattress"])
     bathroom_type = serializers.ChoiceField(choices=["attached", "shared"])
-    room_size_sqft = serializers.IntegerField(required=False, allow_null=True)
+    room_size_sqft = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=10000)
     room_features = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
     )
@@ -66,8 +69,8 @@ class HouseRulesInputSerializer(serializers.Serializer):
     cancellation_policy = serializers.ChoiceField(
         choices=["flexible", "moderate", "strict"], default="moderate"
     )
-    check_in_time = serializers.CharField()
-    check_out_time = serializers.CharField()
+    check_in_time = serializers.RegexField(regex=r'^\d{1,2}:\d{2}\s?(AM|PM)$', error_messages={'invalid': 'Time must be in format like "2:00 PM"'})
+    check_out_time = serializers.RegexField(regex=r'^\d{1,2}:\d{2}\s?(AM|PM)$', error_messages={'invalid': 'Time must be in format like "11:00 AM"'})
 
 
 class CreateListingRequestSerializer(serializers.Serializer):
@@ -77,11 +80,11 @@ class CreateListingRequestSerializer(serializers.Serializer):
     amenities = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     title = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True, default="")
-    host_price_per_night = serializers.DecimalField(max_digits=10, decimal_places=2)
-    min_nights = serializers.IntegerField(default=1)
+    host_price_per_night = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=1)
+    min_nights = serializers.IntegerField(default=1, min_value=1, max_value=30)
     food_kitchen_access = serializers.BooleanField(default=False)
     food_meals_available = serializers.BooleanField(default=False)
-    food_meal_cost = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    food_meal_cost = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True, min_value=1)
     food_meal_description = serializers.CharField(required=False, allow_blank=True, default="")
     food_meal_types = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     house_rules = HouseRulesInputSerializer()
