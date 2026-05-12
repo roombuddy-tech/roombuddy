@@ -240,7 +240,11 @@ export default function HomeScreen() {
             <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            {user?.profile_photo_url ? (
+              <Image source={{ uri: user.profile_photo_url }} style={{ width: 38, height: 38, borderRadius: 19 }} />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>

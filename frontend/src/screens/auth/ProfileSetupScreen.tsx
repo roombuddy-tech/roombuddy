@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
+import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 import { isValidEmail } from '../../utils/validators';
+
 
 
 type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
@@ -29,11 +31,29 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
-  const nameParts = fullName.trim().split(/\s+/);
-  const firstName = nameParts[0] || '';
-  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-  const isFormValid = firstName.length >= 2 && gender && city.trim().length >= 2;
+  const isFormValid = firstName.trim().length >= 2 && gender && city.trim().length >= 2;
+
+  const handleVerifyEmail = async () => {
+    if (!email.trim() || !isValidEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, { email: email.trim() });
+      setEmailSent(true);
+      Alert.alert('Verification Sent', 'Check your inbox and click the verification link.');
+    } catch (err: any) {
+      Alert.alert('Error', getErrorMessage(err, 'Failed to send verification email.'));
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
  const handleSubmit = async () => {
     if (!isFormValid) return;
@@ -54,17 +74,15 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       });
 
       // Upload photo if selected
+      let profilePhotoUrl = null;
       if (photoUri) {
         try {
           const formData = new FormData();
-          formData.append('image', {
-            uri: photoUri,
-            type: 'image/jpeg',
-            name: 'profile.jpg',
-          } as any);
-          await api.post('/api/users/profile/upload-photo/', formData, {
+          formData.append('image', { uri: photoUri, type: 'image/jpeg', name: 'profile.jpg' } as any);
+          const photoRes = await api.post('/api/users/profile/upload-photo/', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
+          profilePhotoUrl = photoRes.data.profile_photo_url;
         } catch (photoErr) {
           console.log('Photo upload error (non-blocking):', photoErr);
         }
@@ -72,10 +90,11 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
       await completeProfile({
         first_name: firstName,
-        last_name: lastName || firstName,
+        last_name: lastName.trim() || firstName.trim(),
         display_name: `${firstName} ${lastName || firstName}`.trim(),
         city: city.trim(),
         gender,
+        profile_photo_url: profilePhotoUrl,
       });
     } catch (err: any) {
       Alert.alert('Error', getErrorMessage(err, 'Failed to save profile.'));
@@ -142,14 +161,25 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
         {/* Full name */}
         <View style={styles.field}>
-          <Text style={styles.label}>Full name</Text>
+          <Text style={styles.label}>First name</Text>
           <TextInput
             style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Enter your full name"
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="Enter your first name"
             placeholderTextColor={COLORS.textMut}
             autoFocus
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Last name</Text>
+          <TextInput
+            style={styles.input}
+            value={lastName}
+            onChangeText={setLastName}
+            placeholder="Enter your last name"
+            placeholderTextColor={COLORS.textMut}
           />
         </View>
 
@@ -159,12 +189,28 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           <TextInput
             style={styles.input}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t) => { setEmail(t); setEmailSent(false); }}
             placeholder="Enter your email address"
             placeholderTextColor={COLORS.textMut}
             keyboardType="email-address"
             autoCapitalize="none"
           />
+          {email.trim() && isValidEmail(email) && !emailSent && (
+            <TouchableOpacity
+              style={{ marginTop: 8, alignSelf: 'flex-start' }}
+              onPress={handleVerifyEmail}
+              disabled={sendingEmail}
+            >
+              <Text style={{ color: COLORS.primary, ...FONTS.semibold, fontSize: 14 }}>
+                {sendingEmail ? 'Sending...' : 'Verify email now'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {emailSent && (
+            <Text style={{ marginTop: 8, fontSize: 13, color: '#10B981', ...FONTS.medium }}>
+              ✓ Verification link sent — check your inbox
+            </Text>
+          )}
         </View>
 
         {/* Gender */}

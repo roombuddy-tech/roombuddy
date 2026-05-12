@@ -1,12 +1,13 @@
-import api from './api';
 import { ENDPOINTS } from '../constants/endpoints';
 import type { OTPSendResponse, OTPVerifyResponse, ProfileCompleteResponse } from '../types/user';
+import api from './api';
 
 export const authService = {
-  async sendOTP(phoneNumber: string, countryCode: string = '+91'): Promise<OTPSendResponse> {
+  async sendOTP(phoneNumber: string, countryCode: string = '+91', mode: string = 'login'): Promise<OTPSendResponse> {
     const { data } = await api.post(ENDPOINTS.AUTH.SEND_OTP, {
       phone_number: phoneNumber,
       country_code: countryCode,
+      mode,
     });
     return data;
   },
