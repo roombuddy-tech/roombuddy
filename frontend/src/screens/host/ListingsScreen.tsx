@@ -5,7 +5,7 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
@@ -131,6 +131,24 @@ export default function ListingsScreen() {
     navigation.navigate('ListingEditor', { resumeDraft: true });
   };
 
+  const handleDeleteDraft = () => {
+    Alert.alert(
+      'Delete draft',
+      'Are you sure you want to discard this draft? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem(DRAFT_KEY);
+            setDraft(null);
+          },
+        },
+      ],
+    );
+  };
+
   const handleAddNew = () => {
     navigation.navigate('ListingEditor', {});
   };
@@ -157,8 +175,13 @@ export default function ListingsScreen() {
             {draft && (
               <View style={styles.draftSection}>
                 <View style={styles.draftSectionHeader}>
-                  <Ionicons name="pencil-outline" size={16} color="#92400E" />
-                  <Text style={styles.draftSectionTitle}>Unfinished listing</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="pencil-outline" size={16} color="#92400E" />
+                    <Text style={styles.draftSectionTitle}>Unfinished listing</Text>
+                  </View>
+                  <TouchableOpacity onPress={handleDeleteDraft} hitSlop={8}>
+                    <Ionicons name="close-circle" size={20} color="#D97706" />
+                  </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -282,7 +305,7 @@ const styles = StyleSheet.create({
   draftSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
   draftSectionTitle: { fontSize: 13, ...FONTS.semibold, color: '#92400E' },

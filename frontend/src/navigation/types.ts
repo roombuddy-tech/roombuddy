@@ -40,7 +40,7 @@ export type HostStackParamList = {
 
 export type GuestStackParamList = {
   GuestTabs: undefined;
-  GuestListingDetail: { listingId: string };
+  GuestListingDetail: { listingId: string; checkIn?: string; checkOut?: string };
   BookTest: undefined;
   BookingConfirm: {
     listingId: string;

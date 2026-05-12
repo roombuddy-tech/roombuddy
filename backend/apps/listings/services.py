@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from apps.amenities.models import AmenityDefinition
-from apps.listings.models import Listing, ListingAmenity, ListingHouseRules
+from apps.listings.models import Listing, ListingAmenity, ListingBlockedDate, ListingHouseRules
 from apps.listings.serializers import CreateListingRequestSerializer
 from apps.properties.models import Property, PropertyFlatmate
 from apps.rooms.models import Room
@@ -138,11 +138,16 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "check_out_time": _format_time(rules.check_out_by) if rules else "",
         },
         "host": {
+            "age": host_fm["age"] if host_fm else None,
             "occupation": host_fm["occupation"] if host_fm else "",
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
         },
         "photos": photos_by_category,
+        "blocked_dates": [
+            {"start_date": bd.start_date.isoformat(), "end_date": bd.end_date.isoformat(), "reason": bd.reason or ""}
+            for bd in ListingBlockedDate.objects.filter(listing=listing)
+        ],
     }
 
 
@@ -231,11 +236,61 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         hr.check_out_by = _parse_time(rules_data["check_out_time"])
         hr.save()
 
+        ListingBlockedDate.objects.filter(listing=listing).delete()
+        for bd in d.get("blocked_dates", []):
+            ListingBlockedDate.objects.create(
+                listing=listing,
+                start_date=bd["start_date"],
+                end_date=bd["end_date"],
+                reason=bd.get("reason", ""),
+            )
+
     return {
         "listing_id": str(listing.id),
         "property_id": str(listing.property_id),
         "status": listing.status,
         "message": "Listing updated successfully.",
+    }
+
+
+def delete_listing(user: User, listing_id: str) -> bool:
+    """Delete a listing and its associated property, room, and related data."""
+    try:
+        listing = Listing.objects.select_related("property", "room").get(id=listing_id, host_user=user)
+    except Listing.DoesNotExist:
+        return False
+
+    with transaction.atomic():
+        prop = listing.property
+        listing.delete()
+        prop.delete()
+
+    return True
+
+
+def update_blocked_dates(user: User, listing_id: str, blocked_dates: list[dict]) -> dict | None:
+    """Replace all blocked dates for a listing."""
+    try:
+        listing = Listing.objects.get(id=listing_id, host_user=user)
+    except Listing.DoesNotExist:
+        return None
+
+    with transaction.atomic():
+        ListingBlockedDate.objects.filter(listing=listing).delete()
+        for bd in blocked_dates:
+            ListingBlockedDate.objects.create(
+                listing=listing,
+                start_date=bd["start_date"],
+                end_date=bd["end_date"],
+                reason=bd.get("reason", ""),
+            )
+
+    return {
+        "listing_id": str(listing.id),
+        "blocked_dates": [
+            {"start_date": bd.start_date.isoformat(), "end_date": bd.end_date.isoformat()}
+            for bd in ListingBlockedDate.objects.filter(listing=listing)
+        ],
     }
 
 
@@ -334,6 +389,14 @@ def create_listing(user: User, data: dict) -> dict:
             check_in_from=_parse_time(rules["check_in_time"]),
             check_out_by=_parse_time(rules["check_out_time"]),
         )
+
+        for bd in d.get("blocked_dates", []):
+            ListingBlockedDate.objects.create(
+                listing=listing,
+                start_date=bd["start_date"],
+                end_date=bd["end_date"],
+                reason=bd.get("reason", ""),
+            )
 
     return {
         "listing_id": str(listing.id),
@@ -440,7 +503,14 @@ def _attach_cover_photos(listings, results: list[dict]):
 
 POPULAR_AMENITIES = {"AC", "WiFi", "Geyser / Hot water", "Full kitchen access", "Parking (2-wheeler)", "Parking (4-wheeler)", "Washing machine"}
 
-def search_guest_listings(query: str | None = None, area: str | None = None) -> list[dict]:
+def search_guest_listings(
+    query: str | None = None,
+    area: str | None = None,
+    check_in: str | None = None,
+    check_out: str | None = None,
+) -> list[dict]:
+    from datetime import date as date_type
+
     qs = (
         Listing.objects
         .filter(status=Listing.Status.LIVE)
@@ -458,6 +528,19 @@ def search_guest_listings(query: str | None = None, area: str | None = None) -> 
             | Q(property__formatted_address__icontains=search_term)
             | Q(title__icontains=search_term)
         )
+
+    if check_in and check_out:
+        try:
+            ci = date_type.fromisoformat(check_in)
+            co = date_type.fromisoformat(check_out)
+            stay_nights = (co - ci).days
+            qs = qs.filter(min_nights__lte=stay_nights)
+            blocked_ids = ListingBlockedDate.objects.filter(
+                start_date__lt=co, end_date__gt=ci
+            ).values_list("listing_id", flat=True)
+            qs = qs.exclude(id__in=blocked_ids)
+        except (ValueError, TypeError):
+            pass
 
     qs = qs[:50]
     results = [_listing_to_guest_card(l) for l in qs]
@@ -590,6 +673,10 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         "total_bookings": listing.total_bookings,
         "host_name": host_name,
         "area_name": _get_area_name(listing),
+        "blocked_dates": [
+            {"start_date": bd.start_date.isoformat(), "end_date": bd.end_date.isoformat()}
+            for bd in ListingBlockedDate.objects.filter(listing=listing)
+        ],
     }
 
 

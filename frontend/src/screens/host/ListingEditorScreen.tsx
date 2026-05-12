@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -39,6 +39,7 @@ interface Flatmate {
   occupation: string;
   hobbies: string;
   gender: string;
+  hometown: string;
 }
 
 interface FormData {
@@ -80,9 +81,11 @@ interface FormData {
   checkInTime: string;
   checkOutTime: string;
   photos: Record<string, string[]>;
+  hostAge: string;
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  blockedDates: Array<{ startDate: string; endDate: string }>;
 }
 
 const INIT: FormData = {
@@ -124,9 +127,11 @@ const INIT: FormData = {
   checkInTime: '',
   checkOutTime: '',
   photos: { bedroom: [], bathroom: [], kitchen: [], living: [], entrance: [], balcony: [], other: [] },
+  hostAge: '',
   hostOccupation: '',
   hostHobbies: '',
   hostGender: '',
+  blockedDates: [],
 };
 
 const TOTAL_STEPS = 9;
@@ -204,8 +209,9 @@ const PHOTO_CATEGORIES = [
 const MIN_STAY_OPTIONS = [
   { value: '1_night', label: '1 night' },
   { value: '2_nights', label: '2 nights' },
-  { value: '3_nights', label: '3 nights' },
   { value: '1_week', label: '1 week' },
+  { value: '2_weeks', label: '2 weeks' },
+  { value: '1_month', label: '1 month' },
 ];
 
 const TIMES: string[] = (() => {
@@ -287,21 +293,18 @@ function BottomNav({
   validate?: () => string | null;
   isValid?: boolean;
 }) {
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
 
-  useEffect(() => {
-    if (isValid) setError(null);
-  }, [isValid]);
+  const error = touched && validate ? validate() : null;
 
   const handleNext = () => {
     if (validate) {
       const err = validate();
       if (err) {
-        setError(err);
+        setTouched(true);
         return;
       }
     }
-    setError(null);
     onNext();
   };
 
@@ -358,18 +361,28 @@ function Chip({
   label,
   selected,
   onPress,
+  icon,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
+  icon?: (color: string) => React.ReactNode;
 }) {
+  const color = selected ? COLORS.primary : COLORS.textSec;
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       style={[cpSt.chip, selected && cpSt.sel]}
     >
-      <Text style={[cpSt.lbl, selected && cpSt.lblSel]}>{label}</Text>
+      {icon ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {icon(color)}
+          <Text style={[cpSt.lbl, selected && cpSt.lblSel]}>{label}</Text>
+        </View>
+      ) : (
+        <Text style={[cpSt.lbl, selected && cpSt.lblSel]}>{label}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -385,8 +398,8 @@ const cpSt = StyleSheet.create({
     marginBottom: 8,
   },
   sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
-  lbl: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  lblSel: { color: COLORS.primary, ...FONTS.semibold },
+  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
+  lblSel: { color: COLORS.primary },
 });
 
 function AmenityChip({
@@ -424,8 +437,8 @@ const acSt = StyleSheet.create({
     marginBottom: 8,
   },
   sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
-  lbl: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  lblSel: { color: COLORS.primary, ...FONTS.semibold },
+  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
+  lblSel: { color: COLORS.primary },
 });
 
 function OptionalMark() {
@@ -450,7 +463,7 @@ function Field({
   optional?: boolean;
 }) {
   return (
-    <View style={{ marginBottom: 14 }}>
+    <View style={{ marginTop: 16 }}>
       {label ? (
         <Text style={fldSt.label}>
           {label}
@@ -471,7 +484,7 @@ function Field({
 }
 
 const fldSt = StyleSheet.create({
-  label: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec, marginBottom: 6 },
+  label: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -482,12 +495,12 @@ const fldSt = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: COLORS.bg,
   },
-  multiline: { height: 100, textAlignVertical: 'top', paddingTop: 12 },
+  multiline: { minHeight: 72, textAlignVertical: 'top', paddingTop: 12 },
 });
 
 function SectionLabel({ label, optional }: { label: string; optional?: boolean }) {
   return (
-    <Text style={{ fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginTop: 16, marginBottom: 8 }}>
+    <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 16, marginBottom: 8 }}>
       {label}
       {optional && <OptionalMark />}
     </Text>
@@ -498,13 +511,15 @@ function RuleRow({
   label,
   value,
   onChange,
+  noBorder,
 }: {
   label: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  noBorder?: boolean;
 }) {
   return (
-    <View style={rrSt.row}>
+    <View style={[rrSt.row, noBorder && { borderBottomWidth: 0 }]}>
       <Text style={rrSt.label}>{label}</Text>
       <Switch
         value={value}
@@ -652,7 +667,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
         <Text style={{ fontSize: 56, marginBottom: SPACING.md }}>🏠</Text>
         <Text style={wlSt.title}>List your spare room</Text>
         <Text style={wlSt.sub}>
-          Turn your temporarily empty room into income.{'\n'}Takes just 8 minutes.
+          Turn your temporarily empty room into income.{'\n'}Takes just a few minutes.
         </Text>
       </View>
 
@@ -728,7 +743,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={stSt.title}>Your property</Text>
-        <Text style={stSt.sub}>Tell us about the apartment where the room is located.</Text>
+        <Text style={stSt.sub}>Share your apartment details so guests know what to expect.</Text>
 
         <SectionLabel label="Apartment type" />
         <View style={prpSt.aptGrid}>
@@ -855,7 +870,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
             onPress={() => update({ roomType: 'private' })}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 22, marginBottom: 4 }}>🚪</Text>
+            <MaterialCommunityIcons name="door-closed-lock" size={24} color={COLORS.text} style={{ marginBottom: 4 }} />
             <Text style={[rdSt.typeTitle, form.roomType === 'private' && { color: COLORS.primary }]}>
               Private room
             </Text>
@@ -866,7 +881,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
             onPress={() => update({ roomType: 'shared' })}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 22, marginBottom: 4 }}>🛏️</Text>
+            <MaterialCommunityIcons name="bunk-bed-outline" size={24} color={COLORS.text} style={{ marginBottom: 4 }} />
             <Text style={[rdSt.typeTitle, form.roomType === 'shared' && { color: COLORS.primary }]}>
               Shared room
             </Text>
@@ -876,27 +891,57 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
 
         <SectionLabel label="Bed type" />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {['Single', 'Double', 'Queen', 'King', 'Mattress'].map((b) => (
+          {([
+            { label: 'Single', icon: 'bed-single-outline' },
+            { label: 'Double', icon: 'bed-double-outline' },
+            { label: 'Queen', icon: 'bed-queen-outline' },
+            { label: 'King', icon: 'bed-king-outline' },
+            { label: 'Mattress', icon: 'bed-outline' },
+          ] as const).map((b) => (
             <Chip
-              key={b}
-              label={b}
-              selected={form.bedType === b.toLowerCase()}
-              onPress={() => update({ bedType: b.toLowerCase() })}
+              key={b.label}
+              label={b.label}
+              selected={form.bedType === b.label.toLowerCase()}
+              onPress={() => update({ bedType: b.label.toLowerCase() })}
+              icon={(c) => <MaterialCommunityIcons name={b.icon} size={16} color={c} />}
             />
           ))}
         </View>
 
         <SectionLabel label="Bathroom" />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {[
-            { value: 'attached', label: 'Attached' },
-            { value: 'shared', label: 'Common / Shared' },
-          ].map((b) => (
+          {([
+            { value: 'attached', label: 'Attached', icon: 'shower-head' },
+            { value: 'shared', label: 'Common / Shared', icon: 'toilet' },
+          ] as const).map((b) => (
             <Chip
               key={b.value}
               label={b.label}
               selected={form.bathroom === b.value}
               onPress={() => update({ bathroom: b.value })}
+              icon={(c) => <MaterialCommunityIcons name={b.icon} size={16} color={c} />}
+            />
+          ))}
+        </View>
+
+        <SectionLabel label="Room has" optional />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {([
+            { label: 'Door lock', icon: 'lock-outline' },
+            { label: 'Window', icon: 'window-open-variant' },
+            { label: 'Balcony', icon: 'balcony' },
+            { label: 'Wardrobe', icon: 'wardrobe-outline' },
+            { label: 'Study table', icon: 'desk' },
+            { label: 'Mirror', icon: 'mirror' },
+            { label: 'Bookshelf', icon: 'bookshelf' },
+            { label: 'Curtains', icon: 'curtains' },
+          ] as const).map((f) => (
+            <Chip
+              key={f.label}
+              label={f.label}
+              selected={form.roomFeatures.includes(f.label)}
+              onPress={() => toggleFeature(f.label)}
+              icon={(c) => <MaterialCommunityIcons name={f.icon} size={16} color={c} />}
             />
           ))}
         </View>
@@ -908,20 +953,6 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
           onChange={(v) => update({ roomSize: v })}
           optional
         />
-
-        <SectionLabel label="Room has" optional />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {['Door lock', 'Window', 'Balcony', 'Wardrobe', 'Study table', 'Mirror', 'Bookshelf', 'Curtains'].map(
-            (f) => (
-              <Chip
-                key={f}
-                label={f}
-                selected={form.roomFeatures.includes(f)}
-                onPress={() => toggleFeature(f)}
-              />
-            )
-          )}
-        </View>
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
@@ -973,14 +1004,14 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
 
         <Field
           label="Listing title"
-          placeholder='e.g. Cozy private room in 2BHK, Koramangala'
+          placeholder='Cozy private room in 2BHK'
           value={form.title}
           onChange={(v) => update({ title: v })}
         />
 
         <Field
           label="Description"
-          placeholder="Describe your space — what makes it special, what guests can expect, nearby landmarks, transport access, what your flatmates are like to live with..."
+          placeholder="Describe your space — what makes it special, what guests can expect, nearby landmarks, what your flatmates are like to live with."
           value={form.description}
           onChange={(v) => update({ description: v })}
           multiline
@@ -1018,12 +1049,22 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [hostModalOpen, setHostModalOpen] = useState(false);
-  const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '', gender: '' });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' });
+
+  const profileGender: string = user?.gender || user?.profile?.gender || '';
   const [hostDraft, setHostDraft] = useState({
+    age: form.hostAge,
     occupation: form.hostOccupation,
     hobbies: form.hostHobbies,
-    gender: form.hostGender,
+    gender: form.hostGender || profileGender,
   });
+
+  useEffect(() => {
+    if (!form.hostGender && profileGender) {
+      update({ hostGender: profileGender });
+    }
+  }, [profileGender]);
 
   const displayName: string =
     user?.display_name || user?.first_name || user?.profile?.first_name || 'You';
@@ -1031,17 +1072,33 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
 
   const saveFlatmate = () => {
     if (!draft.name.trim()) return;
-    const flatmate: Flatmate = {
-      id: Date.now().toString(),
-      name: draft.name,
-      age: draft.age,
-      occupation: draft.occupation,
-      hobbies: draft.hobbies,
-      gender: draft.gender,
-    };
-    update({ flatmates: [...form.flatmates, flatmate] });
-    setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '' });
+    if (editingId) {
+      update({
+        flatmates: form.flatmates.map((f) =>
+          f.id === editingId ? { ...f, ...draft } : f
+        ),
+      });
+    } else {
+      const flatmate: Flatmate = {
+        id: Date.now().toString(),
+        name: draft.name,
+        age: draft.age,
+        occupation: draft.occupation,
+        hobbies: draft.hobbies,
+        gender: draft.gender,
+        hometown: draft.hometown,
+      };
+      update({ flatmates: [...form.flatmates, flatmate] });
+    }
+    setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' });
+    setEditingId(null);
     setModalVisible(false);
+  };
+
+  const editFlatmate = (fm: Flatmate) => {
+    setEditingId(fm.id);
+    setDraft({ name: fm.name, age: fm.age, occupation: fm.occupation, hobbies: fm.hobbies, gender: fm.gender, hometown: fm.hometown });
+    setModalVisible(true);
   };
 
   const removeFlatmate = (id: string) => {
@@ -1064,10 +1121,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       showsVerticalScrollIndicator={false}
     >
       <Text style={stSt.title}>Your flatmates</Text>
-
-      <View style={fmSt.banner}>
-        <Text style={fmSt.bannerTxt}>⭐ Listings with flatmate profiles get 3x more bookings</Text>
-      </View>
+      <Text style={[stSt.sub, { marginBottom: SPACING.md }]}>Let guests know who they'll be sharing the space with.</Text>
 
       {/* Host card — tappable to add occupation/hobbies/gender */}
       <TouchableOpacity style={fmSt.card} onPress={() => setHostModalOpen(true)} activeOpacity={0.7}>
@@ -1075,7 +1129,12 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
           <Text style={fmSt.avatarTxt}>{initials(displayName)}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={fmSt.name}>{displayName}</Text>
+          <Text style={fmSt.name}>{displayName}{form.hostAge ? `, ${form.hostAge}` : ''}</Text>
+          {form.hostGender ? (
+            <Text style={fmSt.detail}>
+              {form.hostGender.charAt(0).toUpperCase() + form.hostGender.slice(1)}
+            </Text>
+          ) : null}
           {form.hostOccupation || form.hostHobbies ? (
             <Text style={fmSt.detail} numberOfLines={1}>
               {[form.hostOccupation, form.hostHobbies].filter(Boolean).join(' · ')}
@@ -1091,7 +1150,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       </TouchableOpacity>
 
       {form.flatmates.map((fm) => (
-        <View key={fm.id} style={fmSt.card}>
+        <TouchableOpacity key={fm.id} style={fmSt.card} onPress={() => editFlatmate(fm)} activeOpacity={0.7}>
           <View style={fmSt.avatar}>
             <Text style={fmSt.avatarTxt}>{initials(fm.name)}</Text>
           </View>
@@ -1110,16 +1169,17 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                 {[fm.occupation, fm.hobbies].filter(Boolean).join(' · ')}
               </Text>
             ) : null}
+            {fm.hometown ? <Text style={fmSt.detail}>{fm.hometown}</Text> : null}
           </View>
           <TouchableOpacity onPress={() => removeFlatmate(fm.id)} style={{ padding: 6 }}>
             <Ionicons name="close-circle-outline" size={20} color={COLORS.textMut} />
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       ))}
 
       <TouchableOpacity
         style={fmSt.addCard}
-        onPress={() => setModalVisible(true)}
+        onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setModalVisible(true); }}
         activeOpacity={0.7}
       >
         <Ionicons name="add" size={24} color={COLORS.primary} />
@@ -1158,10 +1218,15 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   <Ionicons name="close" size={22} color={COLORS.textSec} />
                 </TouchableOpacity>
               </View>
-              <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.md }}>
-                Help guests know who they'll be living with.
-              </Text>
               <ScrollView keyboardShouldPersistTaps="handled">
+                <Field
+                  label="Age"
+                  placeholder="e.g. 26"
+                  value={hostDraft.age}
+                  onChange={(v) => { const n = parseInt(v, 10); setHostDraft((d) => ({ ...d, age: !v ? '' : (n > 99 ? '99' : v.replace(/[^0-9]/g, '')) })); }}
+                  keyboardType="number-pad"
+                  optional
+                />
                 <SectionLabel label="Gender" optional />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
                   {GENDER_OPTIONS.map((g) => (
@@ -1191,6 +1256,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   style={fmSt.saveBtn}
                   onPress={() => {
                     update({
+                      hostAge: hostDraft.age,
                       hostOccupation: hostDraft.occupation,
                       hostHobbies: hostDraft.hobbies,
                       hostGender: hostDraft.gender,
@@ -1216,8 +1282,8 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
           <View style={fmSt.modalOverlay}>
             <View style={fmSt.modalSheet}>
               <View style={fmSt.modalHeader}>
-                <Text style={fmSt.modalTitle}>Add flatmate</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={fmSt.modalTitle}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
+                <TouchableOpacity onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setModalVisible(false); }}>
                   <Ionicons name="close" size={22} color={COLORS.textSec} />
                 </TouchableOpacity>
               </View>
@@ -1232,7 +1298,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   label="Age"
                   placeholder="e.g. 26"
                   value={draft.age}
-                  onChange={(v) => setDraft((d) => ({ ...d, age: v }))}
+                  onChange={(v) => { const n = parseInt(v, 10); setDraft((d) => ({ ...d, age: !v ? '' : (n > 99 ? '99' : v.replace(/[^0-9]/g, '')) })); }}
                   keyboardType="number-pad"
                   optional
                 />
@@ -1259,6 +1325,13 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   placeholder="e.g. Cricket, Cooking"
                   value={draft.hobbies}
                   onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
+                  optional
+                />
+                <Field
+                  label="Hometown"
+                  placeholder="e.g. Jaipur"
+                  value={draft.hometown}
+                  onChange={(v) => setDraft((d) => ({ ...d, hometown: v }))}
                   optional
                 />
                 <TouchableOpacity
@@ -1331,7 +1404,7 @@ const fmSt = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xs,
   },
   modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   saveBtn: {
@@ -1378,7 +1451,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={stSt.title}>Amenities & food</Text>
-      <Text style={stSt.sub}>What does your apartment offer? Select all that apply.</Text>
+      <Text style={stSt.sub}>What's included in the stay? Guests see this before booking.</Text>
 
       {AMENITY_GROUPS.map((group) => (
         <View key={group.label}>
@@ -1406,6 +1479,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
         label="I can provide home-cooked meals (extra charge)"
         value={form.homeCooked}
         onChange={(v) => update({ homeCooked: v })}
+        noBorder
       />
 
       {form.homeCooked && (
@@ -1440,10 +1514,11 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
 
 const amSt = StyleSheet.create({
   mealBox: {
-    backgroundColor: COLORS.primaryAlpha,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
   },
 });
 
@@ -1541,18 +1616,10 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={stSt.content} showsVerticalScrollIndicator={false}>
         <Text style={stSt.title}>Photos</Text>
-        <Text style={stSt.sub}>
-          Great photos = more bookings.{' '}
-          <Text style={{ color: totalPhotos >= 5 ? COLORS.success : COLORS.accent }}>
-            {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''} added
-          </Text>
-        </Text>
 
-        <View style={phSt.tipBox}>
-          <Text style={phSt.tipTxt}>
-            💡 Bedroom & Bathroom required · Natural light · Landscape · Clean & tidy
-          </Text>
-        </View>
+        <Text style={[stSt.sub, { marginBottom: SPACING.md }]}>
+          Add more photos to get more bookings
+        </Text>
 
         {ALL_PHOTO_CATEGORIES.map((cat) => {
           const photos = form.photos[cat.key] ?? [];
@@ -1595,6 +1662,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
+                  style={{ overflow: 'visible' }}
                   contentContainerStyle={phSt.thumbStrip}
                 >
                   {photos.map((uri, idx) => (
@@ -1669,8 +1737,8 @@ const phSt = StyleSheet.create({
     alignItems: 'center',
   },
 
-  thumbStrip: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.md, gap: 8, flexDirection: 'row' },
-  thumbWrap: { position: 'relative' },
+  thumbStrip: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.md, paddingTop: 8, gap: 12, flexDirection: 'row' },
+  thumbWrap: { position: 'relative', overflow: 'visible' },
   thumbImg: { width: 110, height: 82, borderRadius: RADIUS.sm },
   coverBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   coverBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
@@ -1700,9 +1768,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
-  const serviceFee = Math.round(rate * 0.08);
   const gst = Math.round((rate + mealCost) * 0.18);
-  const guestTotal = rate + mealCost + serviceFee + gst;
+  const guestTotal = rate + mealCost + gst;
   const hostFee = Math.round(rate * 0.03);
   const hostEarning = rate + mealCost - hostFee;
 
@@ -1752,7 +1819,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               onChange={(v) => update({ mealCost: v.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
             />
-            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: -8 }}>
+            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: 4 }}>
               Charged separately from the room rate.
             </Text>
           </View>
@@ -1764,7 +1831,6 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label="Service fee (8% on room)" value={`₹${serviceFee}`} />
               <PriceRow label={`GST (18% on room${mealCost > 0 ? ' + meals' : ''})`} value={`₹${gst}`} />
               <View style={prSt.divider} />
               <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
@@ -1782,7 +1848,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         )}
 
         <SectionLabel label="Minimum stay" optional />
-        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
           {MIN_STAY_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.value}
@@ -1873,21 +1939,9 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         <RuleRow label="Guests must remove shoes indoors" value={form.shoesOff} onChange={(v) => update({ shoesOff: v })} />
         <RuleRow label="Keep kitchen clean after use" value={form.kitchenClean} onChange={(v) => update({ kitchenClean: v })} />
         <RuleRow label="No alcohol in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
-        <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} />
+        <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} noBorder />
 
-        <Field
-          label="Custom rules"
-          placeholder="e.g. Please don't use the washing machine after 9 PM..."
-          value={form.customRules}
-          onChange={(v) => update({ customRules: v })}
-          multiline
-          optional
-        />
-
-        <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md, marginBottom: 4 }}>
-          Check-in / Check-out
-        </Text>
-
+        <View style={{ marginTop: SPACING.md }} />
         <TimePicker
           label="Check-in time"
           value={form.checkInTime}
@@ -1899,6 +1953,15 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
           value={form.checkOutTime}
           onChange={(v) => update({ checkOutTime: v })}
           placeholder="e.g. 11:00 AM"
+        />
+
+        <Field
+          label="Custom rules"
+          placeholder="e.g. Please don't use the washing machine after 9 PM..."
+          value={form.customRules}
+          onChange={(v) => update({ customRules: v })}
+          multiline
+          optional
         />
 
         <BottomNav onBack={onBack} onNext={onNext} nextLabel="Review & list" validate={validate} isValid={isValid} />
@@ -2233,7 +2296,7 @@ function mapListingToForm(data: any): FormData {
   const aptTypeMap: Record<string, string> = {
     '1bhk': '1BHK', '2bhk': '2BHK', '3bhk': '3BHK', '4bhk': '4BHK+',
   };
-  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 3: '3_nights', 7: '1_week' };
+  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 7: '1_week', 14: '2_weeks', 30: '1_month' };
 
   const allFlatmates: any[] = data.flatmates || [];
   const hostFm = allFlatmates.find((f: any) => f.name === '__host__');
@@ -2261,6 +2324,7 @@ function mapListingToForm(data: any): FormData {
       occupation: f.occupation || '',
       hobbies: f.hobbies || '',
       gender: f.gender || '',
+      hometown: f.hometown || '',
     })),
     guestGenderPref: p.gender_preference,
     amenities: data.amenities || [],
@@ -2283,9 +2347,14 @@ function mapListingToForm(data: any): FormData {
     cancellationPolicy: hr.cancellation_policy,
     checkInTime: hr.check_in_time,
     checkOutTime: hr.check_out_time,
+    hostAge: data.host?.age != null ? String(data.host.age) : '',
     hostOccupation: data.host?.occupation || '',
     hostHobbies: data.host?.hobbies || '',
     hostGender: data.host?.gender || '',
+    blockedDates: (data.blocked_dates || []).map((bd: any) => ({
+      startDate: bd.start_date,
+      endDate: bd.end_date,
+    })),
     photos: {
       bedroom: data.photos?.bedroom ?? [],
       bathroom: data.photos?.bathroom ?? [],
@@ -2366,13 +2435,13 @@ export default function ListingEditorScreen() {
   );
 
   const saveExit = useCallback(async () => {
-    if (step > 0) {
+    if (!listingId && step > 0) {
       try {
         await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form }));
       } catch {}
     }
     navigation.goBack();
-  }, [step, form, navigation]);
+  }, [step, form, listingId, navigation]);
 
   const goToStep = useCallback((s: number) => setStep(s), []);
 
@@ -2425,7 +2494,7 @@ export default function ListingEditorScreen() {
         </View>
       )}
       {step > 0 && <EditorHeader onSaveExit={saveExit} />}
-      {step > 0 && step < 9 && <ProgressBar step={step} />}
+      {step > 0 && step < 10 && <ProgressBar step={step} />}
       {renderStep()}
     </View>
   );

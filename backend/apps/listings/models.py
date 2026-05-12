@@ -91,6 +91,27 @@ class Listing(models.Model):
         return self.title
 
 
+class ListingBlockedDate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    listing = models.ForeignKey(
+        Listing, on_delete=models.CASCADE, related_name="blocked_dates",
+    )
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "listing_blocked_dates"
+        ordering = ["start_date"]
+        indexes = [
+            models.Index(fields=["listing", "start_date", "end_date"], name="idx_blocked_dates_range"),
+        ]
+
+    def __str__(self):
+        return f"{self.listing_id}: {self.start_date} → {self.end_date}"
+
+
 class ListingAmenity(models.Model):
     listing = models.ForeignKey(
         Listing, on_delete=models.CASCADE, related_name="listing_amenities",

@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Calendar, DateData } from 'react-native-calendars';
 
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -40,56 +42,109 @@ const AMENITY_SHORT: Record<string, { icon: string; label: string }> = {
   'Workspace / Desk': { icon: 'desktop-outline', label: 'Desk' },
 };
 
+const today = new Date().toISOString().split('T')[0];
+
+function fmtDate(d: string) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const { switchRole, user } = useAuth();
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
   const [showProfile, setShowProfile] = useState(false);
+
+  // Search form state
   const [query, setQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [checkIn, setCheckIn] = useState<string | null>(null);
+  const [checkOut, setCheckOut] = useState<string | null>(null);
+
+  // Results state
+  const [hasSearched, setHasSearched] = useState(false);
   const [listings, setListings] = useState<GuestListingCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
-  const fetchListings = useCallback(async (q?: string, area?: string) => {
-    try {
-      const params: { q?: string; area?: string } = {};
-      if (q?.trim()) params.q = q.trim();
-      if (area) params.area = area;
-      const data = await searchListings(Object.keys(params).length ? params : undefined);
-      setListings(data.results);
-    } catch {
-      setListings([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchListings(query, selectedArea ?? undefined).finally(() => setLoading(false));
-  }, [selectedArea]);
-
-  const onSearch = useCallback(() => {
-    setLoading(true);
-    fetchListings(query, selectedArea ?? undefined).finally(() => setLoading(false));
-  }, [query, selectedArea, fetchListings]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchListings(query, selectedArea ?? undefined).finally(() => setRefreshing(false));
-  }, [query, selectedArea, fetchListings]);
 
   const toggleArea = (area: string) => {
     setSelectedArea((prev) => (prev === area ? null : area));
   };
 
+  const onDayPress = (day: DateData) => {
+    if (day.dateString < today) return;
+    if (!checkIn || (checkIn && checkOut)) {
+      setCheckIn(day.dateString);
+      setCheckOut(null);
+    } else {
+      if (day.dateString < checkIn) {
+        setCheckIn(day.dateString);
+      } else {
+        setCheckOut(day.dateString);
+      }
+    }
+  };
+
+  const getMarkedDates = () => {
+    const marks: Record<string, any> = {};
+    if (!checkIn) return marks;
+    if (!checkOut) {
+      marks[checkIn] = { startingDay: true, endingDay: true, color: COLORS.primary, textColor: '#fff' };
+      return marks;
+    }
+    const cur = new Date(checkIn);
+    const end = new Date(checkOut);
+    while (cur <= end) {
+      const key = cur.toISOString().split('T')[0];
+      marks[key] = {
+        color: key === checkIn || key === checkOut ? COLORS.primary : COLORS.primaryAlpha,
+        textColor: key === checkIn || key === checkOut ? '#fff' : COLORS.primary,
+        startingDay: key === checkIn,
+        endingDay: key === checkOut,
+      };
+      cur.setDate(cur.getDate() + 1);
+    }
+    return marks;
+  };
+
+  const canSearch = (query.trim().length > 0 || selectedArea) && checkIn && checkOut;
+
+  const doSearch = useCallback(async () => {
+    setLoading(true);
+    setHasSearched(true);
+    try {
+      const params: { q?: string; area?: string; check_in?: string; check_out?: string } = {};
+      const searchTerm = query.trim() || selectedArea;
+      if (query.trim()) params.q = query.trim();
+      if (selectedArea) params.area = selectedArea;
+      if (checkIn) params.check_in = checkIn;
+      if (checkOut) params.check_out = checkOut;
+      const data = await searchListings(Object.keys(params).length ? params : undefined);
+      setListings(data.results);
+    } catch {
+      setListings([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [query, selectedArea, checkIn, checkOut]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    doSearch().finally(() => setRefreshing(false));
+  }, [doSearch]);
+
+  const goBackToSearch = () => {
+    setHasSearched(false);
+  };
+
+  // ─── Results view ───────────────────────────────────────────────────────────
+
   const renderCard = ({ item }: { item: GuestListingCard }) => (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.7}
-      onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id })}
+      onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id, checkIn: checkIn ?? undefined, checkOut: checkOut ?? undefined })}
     >
-      {/* Cover image */}
       <Image
         source={
           item.cover_photo_url
@@ -100,17 +155,14 @@ export default function HomeScreen() {
         resizeMode="cover"
       />
 
-      {/* Card content */}
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-
         <Text style={styles.cardArea}>{item.area_name}</Text>
 
         {item.description ? (
           <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
         ) : null}
 
-        {/* Amenity icons */}
         {item.amenity_highlights.length > 0 && (
           <View style={styles.chipRow}>
             {item.amenity_highlights.slice(0, 4).map((a) => {
@@ -137,7 +189,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Price */}
         <View style={styles.cardFooter}>
           <Text style={styles.cardPrice}>
             ₹{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
@@ -156,61 +207,28 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  const header = (
-    <>
-      {/* Toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity style={[styles.toggleBtn, styles.toggleActive]}>
-          <Ionicons name="search-outline" size={16} color={COLORS.primary} />
-          <Text style={styles.toggleActiveText}>Find a room</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.toggleBtn} onPress={() => switchRole('host')}>
-          <Ionicons name="home-outline" size={16} color={COLORS.textSec} />
-          <Text style={styles.toggleText}>Host a room</Text>
-        </TouchableOpacity>
+  const resultsHeader = (
+    <View style={{ marginBottom: SPACING.md }}>
+      <TouchableOpacity onPress={goBackToSearch} style={styles.modifyBtn}>
+        <Ionicons name="arrow-back" size={16} color={COLORS.primary} />
+        <Text style={styles.modifyTxt}>Modify search</Text>
+      </TouchableOpacity>
+
+      <View style={styles.searchSummary}>
+        <View style={styles.summaryChip}>
+          <Ionicons name="location-outline" size={14} color={COLORS.primary} />
+          <Text style={styles.summaryTxt}>{query.trim() || selectedArea || 'All areas'}</Text>
+        </View>
+        <View style={styles.summaryChip}>
+          <Ionicons name="calendar-outline" size={14} color={COLORS.primary} />
+          <Text style={styles.summaryTxt}>{fmtDate(checkIn!)} — {fmtDate(checkOut!)}</Text>
+        </View>
       </View>
 
-      {/* Search bar */}
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color={COLORS.textMut} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by area, landmark..."
-          placeholderTextColor={COLORS.textMut}
-          value={query}
-          onChangeText={setQuery}
-          returnKeyType="search"
-          onSubmitEditing={onSearch}
-        />
-        {query.length > 0 && (
-          <TouchableOpacity onPress={() => { setQuery(''); onSearch(); }}>
-            <Ionicons name="close-circle" size={18} color={COLORS.textMut} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Area chips */}
-      <FlatList
-        data={AREAS}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(a) => a}
-        contentContainerStyle={styles.areaList}
-        renderItem={({ item: area }) => (
-          <TouchableOpacity
-            style={[styles.areaChip, selectedArea === area && styles.areaChipActive]}
-            onPress={() => toggleArea(area)}
-          >
-            <Text style={[styles.areaChipText, selectedArea === area && styles.areaChipTextActive]}>
-              {area}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      {/* Section title */}
-      <Text style={styles.sectionTitle}>Available rooms</Text>
-    </>
+      <Text style={styles.sectionTitle}>
+        {loading ? 'Searching…' : `${listings.length} room${listings.length !== 1 ? 's' : ''} found`}
+      </Text>
+    </View>
   );
 
   const empty = loading ? (
@@ -221,9 +239,11 @@ export default function HomeScreen() {
     <View style={styles.emptyWrap}>
       <Text style={{ fontSize: 48 }}>🏠</Text>
       <Text style={styles.emptyTitle}>No rooms found</Text>
-      <Text style={styles.emptySub}>Try adjusting your search or area filter</Text>
+      <Text style={styles.emptySub}>Try adjusting your search or dates</Text>
     </View>
   );
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -249,18 +269,130 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={listings}
-        keyExtractor={(item) => item.listing_id}
-        renderItem={renderCard}
-        ListHeaderComponent={header}
-        ListEmptyComponent={empty}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
-        }
-      />
+      {hasSearched ? (
+        /* ── Results list ── */
+        <FlatList
+          data={listings}
+          keyExtractor={(item) => item.listing_id}
+          renderItem={renderCard}
+          ListHeaderComponent={resultsHeader}
+          ListEmptyComponent={empty}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          }
+        />
+      ) : (
+        /* ── Search form ── */
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Toggle */}
+          <View style={styles.toggleRow}>
+            <TouchableOpacity style={[styles.toggleBtn, styles.toggleActive]}>
+              <Ionicons name="search-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.toggleActiveText}>Find a room</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toggleBtn} onPress={() => switchRole('host')}>
+              <Ionicons name="home-outline" size={16} color={COLORS.textSec} />
+              <Text style={styles.toggleText}>Host a room</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Where */}
+          <Text style={styles.formLabel}>Where are you looking?</Text>
+          <View style={styles.searchBar}>
+            <Ionicons name="location-outline" size={18} color={COLORS.textMut} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Area, landmark, or city..."
+              placeholderTextColor={COLORS.textMut}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="done"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')}>
+                <Ionicons name="close-circle" size={18} color={COLORS.textMut} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <FlatList
+            data={AREAS}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(a) => a}
+            contentContainerStyle={styles.areaList}
+            renderItem={({ item: area }) => (
+              <TouchableOpacity
+                style={[styles.areaChip, selectedArea === area && styles.areaChipActive]}
+                onPress={() => toggleArea(area)}
+              >
+                <Text style={[styles.areaChipText, selectedArea === area && styles.areaChipTextActive]}>
+                  {area}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+
+          {/* When */}
+          <Text style={styles.formLabel}>When are you staying?</Text>
+          <Text style={styles.formSub}>
+            {!checkIn
+              ? 'Tap a date to select check-in'
+              : !checkOut
+              ? 'Now tap your check-out date'
+              : `${fmtDate(checkIn)} — ${fmtDate(checkOut)}`}
+          </Text>
+
+          <Calendar
+            minDate={today}
+            markingType="period"
+            markedDates={getMarkedDates()}
+            onDayPress={onDayPress}
+            theme={{
+              todayTextColor: COLORS.primary,
+              arrowColor: COLORS.primary,
+              textDayFontFamily: FONTS.medium.fontFamily,
+              textMonthFontFamily: FONTS.semibold.fontFamily,
+              textDayHeaderFontFamily: FONTS.medium.fontFamily,
+            }}
+            style={styles.calendar}
+          />
+
+          {checkIn && checkOut && (
+            <TouchableOpacity onPress={() => { setCheckIn(null); setCheckOut(null); }} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
+              <Text style={{ fontSize: 13, color: COLORS.primary, ...FONTS.medium }}>Clear dates</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Search button */}
+          <TouchableOpacity
+            style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
+            activeOpacity={0.85}
+            onPress={doSearch}
+            disabled={!canSearch}
+          >
+            <Ionicons name="search" size={18} color="#fff" />
+            <Text style={styles.searchBtnTxt}>Search rooms</Text>
+          </TouchableOpacity>
+
+          {!canSearch && (
+            <Text style={styles.searchHint}>
+              {!query.trim() && !selectedArea
+                ? 'Enter an area or pick one above'
+                : !checkIn || !checkOut
+                ? 'Select check-in and check-out dates'
+                : ''}
+            </Text>
+          )}
+        </ScrollView>
+      )}
 
       <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />
     </SafeAreaView>
@@ -319,6 +451,9 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   toggleActiveText: { fontSize: 14, color: COLORS.primary, ...FONTS.semibold },
 
+  formLabel: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.sm },
+  formSub: { fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm },
+
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,6 +480,47 @@ const styles = StyleSheet.create({
   areaChipActive: { backgroundColor: COLORS.primaryAlpha, borderColor: COLORS.primary },
   areaChipText: { fontSize: 13, ...FONTS.medium, color: COLORS.text },
   areaChipTextActive: { color: COLORS.primary, ...FONTS.semibold },
+
+  calendar: {
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  searchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: 16,
+    marginTop: SPACING.lg,
+  },
+  searchBtnDisabled: { opacity: 0.5 },
+  searchBtnTxt: { color: '#fff', fontSize: 16, ...FONTS.semibold },
+  searchHint: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: SPACING.sm },
+
+  modifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.md,
+  },
+  modifyTxt: { fontSize: 14, color: COLORS.primary, ...FONTS.semibold },
+  searchSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.md },
+  summaryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primaryAlpha,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  summaryTxt: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
 
   sectionTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
 
