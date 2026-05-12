@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
 import { ENDPOINTS } from '../../constants/endpoints';
@@ -32,9 +32,10 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const isFormValid =
-    firstName.trim().length >= 2 && gender && city.trim().length >= 2;
+    firstName.trim().length >= 2 && gender && city.trim().length >= 2 && acceptedTerms;
 
   const handleVerifyEmail = async () => {
     if (!email.trim() || !isValidEmail(email)) {
@@ -298,6 +299,26 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           </Text>
         </View>
 
+        {/* Terms checkbox */}
+        <TouchableOpacity
+          style={styles.termsRow}
+          onPress={() => setAcceptedTerms(!acceptedTerms)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.checkbox, acceptedTerms && styles.checkboxActive]}>
+            {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.termsText}>
+            I have read and agree to the{' '}
+            <Text style={styles.termsLink} onPress={() => Linking.openURL('https://roombuddy.co.in/terms/')}>
+              Terms of Service
+            </Text>{' '}and{' '}
+            <Text style={styles.termsLink} onPress={() => Linking.openURL('https://roombuddy.co.in/privacy/')}>
+              Privacy Policy
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
         {/* Submit */}
         <Button
           title="Start exploring"
@@ -399,4 +420,40 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   photoImage: { width: 78, height: 78, borderRadius: 39 },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: SPACING.xl,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  checkboxActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 13,
+    ...FONTS.bold,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSec,
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: COLORS.primary,
+    ...FONTS.semibold,
+    textDecorationLine: 'underline',
+  },
 });
