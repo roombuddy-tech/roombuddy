@@ -1,17 +1,16 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
-import type { CompositeNavigationProp } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../services/api';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
-import type { HostTabParamList, HostStackParamList } from '../../navigation/types';
+import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
+import api from '../../services/api';
 
 const DRAFT_KEY = 'LISTING_DRAFT_NEW';
 const TOTAL_STEPS = 9;

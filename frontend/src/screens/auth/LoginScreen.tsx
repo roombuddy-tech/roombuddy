@@ -10,8 +10,6 @@ import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 import { isValidIndianPhone } from '../../utils/validators';
 
-
-
 type Props = NativeStackScreenProps<any, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
@@ -20,8 +18,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [accountNotFound, setAccountNotFound] = useState(false);
 
-
-  const handleSendOTP = async () => {
+  const handleContinue = async () => {
     if (!phone) {
       setError('Please enter your phone number');
       return;
@@ -35,8 +32,9 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
 
     try {
+      // Try auto mode first — works for existing users
       await authService.sendOTP(phone, '+91', 'login');
-      navigation.navigate('OTP', { phoneNumber: phone });
+      navigation.navigate('OTP', { phoneNumber: phone, isSignup: false });
     } catch (err: any) {
       const code = err?.response?.data?.code;
       if (code === 'ACCOUNT_NOT_FOUND') {
@@ -49,17 +47,30 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
+  const handleSignUp = async () => {
+    setAccountNotFound(false);
+    setLoading(true);
+    try {
+      await authService.sendOTP(phone, '+91', 'signup');
+      navigation.navigate('OTP', { phoneNumber: phone, isSignup: true });
+    } catch (err: any) {
+      Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        {/* Header */}
+        {/* Brand */}
         <View style={styles.header}>
           <Text style={styles.brand}>
             Room<Text style={styles.brandAccent}>Buddy</Text>
           </Text>
         </View>
 
-        {/* Main content */}
+        {/* Main */}
         <View style={styles.main}>
           <Text style={styles.title}>Welcome to RoomBuddy</Text>
           <Text style={styles.subtitle}>Enter your phone number to continue</Text>
@@ -67,14 +78,18 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.form}>
             <PhoneInput
               value={phone}
-              onChangeText={(text) => { setPhone(text); setError(''); setAccountNotFound(false); }}
+              onChangeText={(text) => {
+                setPhone(text);
+                setError('');
+                setAccountNotFound(false);
+              }}
               error={error}
               autoFocus
             />
 
             <Button
-              title="Send OTP"
-              onPress={handleSendOTP}
+              title="Continue"
+              onPress={handleContinue}
               variant="primary"
               size="lg"
               loading={loading}
@@ -84,42 +99,40 @@ export default function LoginScreen({ navigation }: Props) {
 
             {accountNotFound && (
               <View style={styles.notFoundBox}>
-                <Ionicons name="information-circle-outline" size={20} color={COLORS.accent} />
-                <Text style={styles.notFoundText}>
-                  No account found with this number.{' '}
-                  <Text
-                    style={styles.signUpLink}
-                    onPress={async () => {
-                      setAccountNotFound(false);
-                      setLoading(true);
-                      try {
-                        await authService.sendOTP(phone, '+91', 'signup');
-                        navigation.navigate('OTP', { phoneNumber: phone });
-                      } catch (err: any) {
-                        Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP.'));
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                  >
-                    Sign up instead
+                <View style={styles.notFoundIconWrap}>
+                  <Ionicons name="person-add-outline" size={20} color={COLORS.accent} />
+                </View>
+                <View style={styles.notFoundContent}>
+                  <Text style={styles.notFoundTitle}>No account found</Text>
+                  <Text style={styles.notFoundDesc}>
+                    We couldn't find an account with this number.
                   </Text>
-                </Text>
+                  <Text style={styles.signUpLink} onPress={handleSignUp}>
+                    Create a new account →
+                  </Text>
+                </View>
               </View>
             )}
           </View>
         </View>
 
+        {/* Footer */}
         <Text style={styles.terms}>
           By continuing, you agree to our{' '}
-          <Text style={styles.link} onPress={() => Linking.openURL('https://roombuddy.co.in/terms')}>
+          <Text
+            style={styles.link}
+            onPress={() => Linking.openURL('https://roombuddy.co.in/terms')}
+          >
             Terms of Service
-          </Text>{' '}and{' '}
-          <Text style={styles.link} onPress={() => Linking.openURL('https://roombuddy.co.in/privacy')}>
+          </Text>{' '}
+          and{' '}
+          <Text
+            style={styles.link}
+            onPress={() => Linking.openURL('https://roombuddy.co.in/privacy')}
+          >
             Privacy Policy
           </Text>
         </Text>
-        
       </View>
     </ScreenWrapper>
   );
@@ -163,9 +176,6 @@ const styles = StyleSheet.create({
   form: {
     gap: SPACING.lg,
   },
-  footer: {
-    marginTop: SPACING.xl,
-  },
   terms: {
     fontSize: 13,
     color: COLORS.textMut,
@@ -175,26 +185,44 @@ const styles = StyleSheet.create({
   link: {
     color: COLORS.primary,
     ...FONTS.medium,
-    textDecorationLine: 'underline'
+    textDecorationLine: 'underline',
   },
-notFoundBox: {
+  // "No account found" card
+  notFoundBox: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    gap: 14,
     backgroundColor: COLORS.warm,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: '#FFE0D6',
   },
-  notFoundText: {
+  notFoundIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.accentAlpha,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  notFoundContent: {
     flex: 1,
-    fontSize: 14,
+  },
+  notFoundTitle: {
+    fontSize: 15,
+    ...FONTS.bold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  notFoundDesc: {
+    fontSize: 13,
     color: COLORS.textSec,
-    ...FONTS.medium,
-    lineHeight: 21,
+    lineHeight: 19,
+    marginBottom: 8,
   },
   signUpLink: {
+    fontSize: 14,
     color: COLORS.accent,
     ...FONTS.bold,
   },

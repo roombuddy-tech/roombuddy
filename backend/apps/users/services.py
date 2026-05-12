@@ -42,10 +42,6 @@ class AuthServiceError(Exception):
 # ─── Auth services ───────────────────────────────────────────
 
 def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") -> dict:
-    """
-    Finds or creates user, generates OTP, sends via SMS.
-    Returns response dict or raises AuthServiceError.
-    """
     full_phone = f"{country_code}{phone_number}"
 
     # Rate limit
@@ -53,20 +49,30 @@ def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") 
     recent_count = OTPCode.objects.filter(
         phone=full_phone, created_at__gte=one_hour_ago
     ).count()
-
     if recent_count >= OTP_RATE_LIMIT_PER_HOUR:
         raise AuthServiceError(
             "Too many OTP requests. Please try again later.",
             "RATE_LIMITED",
             status_code=429,
         )
-    
-    if mode == "login":
-        if not User.objects.filter(phone_number=phone_number, phone_country_code=country_code).exists():
-            raise AuthServiceError(
-                "No account found with this phone number.",
-                "ACCOUNT_NOT_FOUND",
-                status_code=404,
+
+    existing_user = User.objects.filter(
+        phone_number=phone_number,
+        phone_country_code=country_code,
+    ).first()
+
+    if mode == "login" and not existing_user:
+        raise AuthServiceError(
+            "No account found with this phone number.",
+            "ACCOUNT_NOT_FOUND",
+            status_code=404,
+        )
+
+    if mode == "signup" and existing_user:
+        raise AuthServiceError(
+            "An account already exists with this number. Please log in.",
+            "ACCOUNT_EXISTS",
+            status_code=409,
         )
 
     # Find or create user
@@ -113,6 +119,8 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
     Returns response dict or raises AuthServiceError.
     """
     full_phone = f"{country_code}{phone_number}"
+    print(f"[OTP DEBUG] Looking for phone={full_phone}, unconsumed OTPs: {OTPCode.objects.filter(phone=full_phone, is_consumed=False).count()}, ALL OTPs for phone: {OTPCode.objects.filter(phone=full_phone).count()}")
+
 
     # Find user
     try:
@@ -212,14 +220,13 @@ def complete_user_profile(user: User, data: dict) -> dict:
                 )
             user.email = new_email
             user.email_verified_at = None
-            user.save(update_fields=["email", "email_verified_at", "updated_at"])
         elif not new_email and user.email:
             user.email = None
             user.email_verified_at = None
-            user.save(update_fields=["email", "email_verified_at", "updated_at"])
-    elif not user.is_profile_complete:
-        user.is_profile_complete = True
-        user.save(update_fields=["is_profile_complete", "updated_at"])
+
+    # Always mark profile as complete
+    user.is_profile_complete = True
+    user.save(update_fields=["email", "email_verified_at", "is_profile_complete", "updated_at"])
 
     return {
         "user_id": str(user.id),

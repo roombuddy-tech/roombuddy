@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import OTPInput from '../../components/forms/OTPInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
@@ -13,13 +13,17 @@ import { getErrorMessage } from '../../utils/errors';
 type Props = NativeStackScreenProps<any, 'OTP'>;
 
 export default function OTPScreen({ navigation, route }: Props) {
-  const { phoneNumber } = route.params as { phoneNumber: string };
+  const { phoneNumber, isSignup = false } = route.params as {
+    phoneNumber: string;
+    isSignup?: boolean;
+  };
   const { login } = useAuth();
 
   const [otpValue, setOtpValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
+  const verifyingRef = useRef(false);
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -31,7 +35,8 @@ export default function OTPScreen({ navigation, route }: Props) {
   }, [countdown]);
 
   const handleVerify = async (otpCode: string) => {
-    if (otpCode.length < 6) return;
+    if (otpCode.length < 6 || verifyingRef.current) return;
+    verifyingRef.current = true;
     setLoading(true);
     try {
       const response = await authService.verifyOTP(phoneNumber, otpCode);
@@ -42,11 +47,15 @@ export default function OTPScreen({ navigation, route }: Props) {
         is_profile_complete: response.is_profile_complete,
       });
 
-      if (!response.is_profile_complete) {
-        navigation.replace('ProfileSetup');
-      }
+      // AuthContext now drives navigation:
+      // - isProfileComplete=true  → root navigator switches to Guest/Host stack
+      // - isProfileComplete=false → root navigator shows ProfileIncompleteStack
     } catch (err: any) {
-      Alert.alert('Error', getErrorMessage(err, 'Verification failed. Please try again.'));
+      verifyingRef.current = false;
+      Alert.alert(
+        'Error',
+        getErrorMessage(err, 'Verification failed. Please try again.')
+      );
     } finally {
       setLoading(false);
     }
@@ -54,7 +63,8 @@ export default function OTPScreen({ navigation, route }: Props) {
 
   const handleResend = async () => {
     try {
-      await authService.sendOTP(phoneNumber);
+      const mode = isSignup ? 'signup' : 'login';
+      await authService.sendOTP(phoneNumber, '+91', mode);
       setCountdown(30);
       setCanResend(false);
       Alert.alert('OTP Sent', 'A new OTP has been sent to your phone.');
@@ -68,34 +78,42 @@ export default function OTPScreen({ navigation, route }: Props) {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        {/* Back button */}
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        {/* Back */}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
-          <Text style={styles.backText}>Edit number</Text>
+          <Text style={styles.backText}>Change number</Text>
         </TouchableOpacity>
 
         {/* Brand */}
         <View style={styles.brandRow}>
-          <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
+          <Text style={styles.brand}>
+            Room<Text style={styles.brandAccent}>Buddy</Text>
+          </Text>
         </View>
 
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Verify your number</Text>
           <Text style={styles.subtitle}>
-            We sent a 6-digit code to <Text style={styles.phone}>{maskedPhone}</Text>
+            We sent a 6-digit code to{' '}
+            <Text style={styles.phone}>{maskedPhone}</Text>
           </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.changeNumber}>Wrong number? Change it</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* OTP Input */}
+        {/* OTP */}
         <View style={styles.otpSection}>
-          <OTPInput onComplete={(code) => { setOtpValue(code); handleVerify(code); }} />
+          <OTPInput
+            onComplete={(code) => {
+              setOtpValue(code);
+              handleVerify(code);
+            }}
+          />
         </View>
 
-        {/* Verify button */}
+        {/* Verify */}
         <Button
           title="Verify"
           onPress={() => handleVerify(otpValue)}
@@ -111,12 +129,14 @@ export default function OTPScreen({ navigation, route }: Props) {
           {canResend ? (
             <TouchableOpacity onPress={handleResend}>
               <Text style={styles.resendText}>
-                Didn't receive? <Text style={styles.resendActive}>Resend OTP</Text>
+                Didn't receive?{' '}
+                <Text style={styles.resendActive}>Resend OTP</Text>
               </Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.resendText}>
-              Didn't receive? <Text style={styles.resendActive}>Resend in {countdown}s</Text>
+              Didn't receive?{' '}
+              <Text style={styles.resendActive}>Resend in {countdown}s</Text>
             </Text>
           )}
         </View>
@@ -127,16 +147,35 @@ export default function OTPScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: SPACING.md },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.lg },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.lg,
+  },
   backText: { fontSize: 15, color: COLORS.text, ...FONTS.medium },
   brandRow: { alignItems: 'flex-start', marginBottom: SPACING.xxl },
-  brand: { fontSize: 24, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
+  brand: {
+    fontSize: 24,
+    ...FONTS.extrabold,
+    color: COLORS.primaryDark,
+    letterSpacing: -0.5,
+  },
   brandAccent: { color: COLORS.accent },
   header: { alignItems: 'center', marginBottom: SPACING.xl },
-  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
-  subtitle: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
+  title: {
+    fontSize: 24,
+    ...FONTS.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.textSec,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   phone: { color: COLORS.text, ...FONTS.semibold },
-  changeNumber: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold, marginTop: SPACING.sm },
   otpSection: { marginBottom: SPACING.xl },
   resendSection: { alignItems: 'center', marginTop: SPACING.lg },
   resendText: { fontSize: 14, color: COLORS.textMut },

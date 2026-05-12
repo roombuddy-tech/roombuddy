@@ -1,33 +1,99 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { COLORS, FONTS } from '../../constants/theme';
 
 type Props = NativeStackScreenProps<any, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
+  const logoScale = useRef(new Animated.Value(0.3)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const taglineTranslateY = useRef(new Animated.Value(20)).current;
+  const dotScale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      // Logo bounces in
+      Animated.parallel([
+        Animated.spring(logoScale, {
+          toValue: 1,
+          friction: 4,
+          tension: 60,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Tagline slides up
+      Animated.parallel([
+        Animated.timing(taglineOpacity, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(taglineTranslateY, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Pause
+      Animated.delay(600),
+      // Dot pulse out
+      Animated.sequence([
+        Animated.timing(dotScale, {
+          toValue: 1.2,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotScale, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      navigation.replace('Login');
+    });
+  }, []);
+
   return (
     <View style={styles.container}>
+      <View style={styles.circleTopRight} />
+      <View style={styles.circleBottomLeft} />
+
       <View style={styles.content}>
-        <Text style={styles.icon}>🏠</Text>
-        <Text style={styles.brand}>
-          Room<Text style={styles.brandAccent}>Buddy</Text>
-        </Text>
-        <Text style={styles.subtitle}>
-          Affordable short-term stays in shared homes.{'\n'}Book a room, not a hotel.
-        </Text>
-      </View>
+        <Animated.View
+          style={[
+            styles.logoContainer,
+            { opacity: logoOpacity, transform: [{ scale: logoScale }] },
+          ]}
+        >
+          <Animated.Text style={styles.brand}>
+            Room<Animated.Text style={styles.brandAccent}>Buddy</Animated.Text>
+          </Animated.Text>
+        </Animated.View>
 
-      <View style={styles.bottom}>
-        <TouchableOpacity style={styles.getStartedBtn} onPress={() => navigation.replace('Login')}>
-          <Text style={styles.getStartedText}>Get started</Text>
-        </TouchableOpacity>
+        <Animated.Text
+          style={[
+            styles.tagline,
+            { opacity: taglineOpacity, transform: [{ translateY: taglineTranslateY }] },
+          ]}
+        >
+          Book a room, not a hotel.
+        </Animated.Text>
 
-        <TouchableOpacity onPress={() => navigation.replace('Login')} style={styles.loginRow}>
-          <Text style={styles.loginText}>
-            Already have an account? <Text style={styles.loginLink}>Log in</Text>
-          </Text>
-        </TouchableOpacity>
+        <Animated.View
+          style={[styles.dot, { transform: [{ scale: dotScale }] }]}
+        />
       </View>
     </View>
   );
@@ -37,59 +103,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.primaryDark,
-    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -60,
+    left: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,107,74,0.08)',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: SPACING.xl,
   },
-  icon: {
-    fontSize: 72,
-    marginBottom: SPACING.lg,
+  logoContainer: {
+    marginBottom: 16,
   },
   brand: {
-    fontSize: 42,
+    fontSize: 48,
     ...FONTS.extrabold,
     color: '#FFFFFF',
-    letterSpacing: -1,
-    marginBottom: SPACING.md,
+    letterSpacing: -1.5,
   },
   brandAccent: {
     color: COLORS.accent,
   },
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  bottom: {
-    paddingHorizontal: 0,
-    paddingBottom: SPACING.xxl,
-  },
-  getStartedBtn: {
-    backgroundColor: COLORS.accent,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  getStartedText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    ...FONTS.bold,
-  },
-  loginRow: {
-    alignItems: 'center',
-    paddingTop: SPACING.lg,
-  },
-  loginText: {
-    fontSize: 15,
+  tagline: {
+    fontSize: 17,
     color: 'rgba(255,255,255,0.6)',
-  },
-  loginLink: {
-    color: 'rgba(255,255,255,0.8)',
-    textDecorationLine: 'underline',
     ...FONTS.medium,
+    letterSpacing: 0.3,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.accent,
+    marginTop: 32,
   },
 });
