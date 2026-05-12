@@ -12,7 +12,7 @@ type ApiTarget = 'local' | 'aws' | 'prod';
 const API_TARGET: ApiTarget = 'local';
 
 const API_URLS: Record<ApiTarget, string> = {
-  local: 'http://192.168.1.3:8000',
+  local: 'http://192.168.1.5:8000',
   aws: 'https://api.roombuddy.co.in',
   prod: 'https://api.roombuddy.co.in',
 };

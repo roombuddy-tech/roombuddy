@@ -70,6 +70,12 @@ class HouseRulesInputSerializer(serializers.Serializer):
     check_out_time = serializers.CharField()
 
 
+class BlockedDateInputSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class CreateListingRequestSerializer(serializers.Serializer):
     property = PropertyInputSerializer()
     room = RoomInputSerializer()
@@ -85,6 +91,7 @@ class CreateListingRequestSerializer(serializers.Serializer):
     food_meal_description = serializers.CharField(required=False, allow_blank=True, default="")
     food_meal_types = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     house_rules = HouseRulesInputSerializer()
+    blocked_dates = BlockedDateInputSerializer(many=True, required=False, default=list)
 
 
 class CreateListingResponseSerializer(serializers.Serializer):

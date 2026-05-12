@@ -24,7 +24,7 @@ export async function createListing(form: {
   description: string;
   nearbyLandmarks: string[];
   distanceToLandmark: string;
-  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string }>;
+  flatmates: Array<{ name: string; age: string; occupation: string; hobbies: string; gender: string; hometown: string }>;
   guestGenderPref: string;
   amenities: string[];
   kitchenAccess: boolean;
@@ -46,17 +46,19 @@ export async function createListing(form: {
   cancellationPolicy: string;
   checkInTime: string;
   checkOutTime: string;
+  hostAge: string;
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  blockedDates: Array<{ startDate: string; endDate: string }>;
 }): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
   // Prepend host as first flatmate entry
-  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge
     ? [{
         name: '__host__',
-        age: null,
+        age: form.hostAge ? parseInt(form.hostAge, 10) : null,
         gender: form.hostGender,
         occupation: form.hostOccupation,
         hobbies: form.hostHobbies,
@@ -88,6 +90,7 @@ export async function createListing(form: {
         gender: fm.gender || '',
         occupation: fm.occupation,
         hobbies: fm.hobbies,
+        hometown: fm.hometown || '',
       })),
     ],
     amenities: form.amenities,
@@ -114,6 +117,10 @@ export async function createListing(form: {
       check_in_time: form.checkInTime,
       check_out_time: form.checkOutTime,
     },
+    blocked_dates: (form.blockedDates || []).map((bd) => ({
+      start_date: bd.startDate,
+      end_date: bd.endDate,
+    })),
   };
 
   const res = await api.post<CreateListingResponse>(ENDPOINTS.HOST.CREATE_LISTING, body);
@@ -125,13 +132,27 @@ export async function getListing(listingId: string): Promise<any> {
   return res.data;
 }
 
+export async function updateBlockedDates(
+  listingId: string,
+  blockedDates: Array<{ start_date: string; end_date: string }>,
+): Promise<any> {
+  const res = await api.patch(ENDPOINTS.HOST.LISTING_BLOCKED_DATES(listingId), {
+    blocked_dates: blockedDates,
+  });
+  return res.data;
+}
+
+export async function deleteListing(listingId: string): Promise<void> {
+  await api.delete(ENDPOINTS.HOST.LISTING_DETAIL(listingId));
+}
+
 export async function updateListing(listingId: string, form: Parameters<typeof createListing>[0]): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
-  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge
     ? [{
         name: '__host__',
-        age: null,
+        age: form.hostAge ? parseInt(form.hostAge, 10) : null,
         gender: form.hostGender,
         occupation: form.hostOccupation,
         hobbies: form.hostHobbies,
@@ -163,6 +184,7 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
         gender: fm.gender || '',
         occupation: fm.occupation,
         hobbies: fm.hobbies,
+        hometown: fm.hometown || '',
       })),
     ],
     amenities: form.amenities,
@@ -189,6 +211,10 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       check_in_time: form.checkInTime,
       check_out_time: form.checkOutTime,
     },
+    blocked_dates: (form.blockedDates || []).map((bd) => ({
+      start_date: bd.startDate,
+      end_date: bd.endDate,
+    })),
   };
 
   const res = await api.patch<CreateListingResponse>(ENDPOINTS.HOST.LISTING_DETAIL(listingId), body);
@@ -217,6 +243,8 @@ function _mapMinStay(val: string): number {
     case '2_nights': return 2;
     case '3_nights': return 3;
     case '1_week': return 7;
+    case '2_weeks': return 14;
+    case '1_month': return 30;
     default: return 1;
   }
 }

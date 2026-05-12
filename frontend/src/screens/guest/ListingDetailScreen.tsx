@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -78,7 +78,7 @@ function getDateInDays(days: number): string {
 export default function GuestListingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { listingId } = route.params;
+  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut } = route.params;
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,8 +87,10 @@ export default function GuestListingDetailScreen() {
 
   const [showBookModal, setShowBookModal] = useState(false);
   const [bookStep, setBookStep] = useState<'rules' | 'dates'>('rules');
-  const [checkIn, setCheckIn] = useState<string | null>(null);
-  const [checkOut, setCheckOut] = useState<string | null>(null);
+  const [checkIn, setCheckIn] = useState<string | null>(passedCheckIn ?? null);
+  const [checkOut, setCheckOut] = useState<string | null>(passedCheckOut ?? null);
+
+  const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
   const onDayPress = (day: DateData) => {
     if (!checkIn || (checkIn && checkOut)) {
@@ -369,7 +371,11 @@ export default function GuestListingDetailScreen() {
               )}
             </View>
             <View style={styles.spaceCard}>
-              <Ionicons name="bed-outline" size={22} color={COLORS.primary} />
+              <MaterialCommunityIcons
+                name={listing.room.room_type === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
+                size={22}
+                color={COLORS.primary}
+              />
               <Text style={styles.spaceCardLabel}>
                 {listing.room.room_type === 'private' ? 'Private room' : 'Shared room'}
               </Text>
@@ -508,7 +514,7 @@ export default function GuestListingDetailScreen() {
                   )}
                 </ScrollView>
 
-                <TouchableOpacity style={styles.modalBtn} onPress={() => setBookStep('dates')} activeOpacity={0.85}>
+                <TouchableOpacity style={styles.modalBtn} onPress={() => hasDatesFromSearch ? handleBookNow() : setBookStep('dates')} activeOpacity={0.85}>
                   <Text style={styles.modalBtnText}>I agree, continue</Text>
                 </TouchableOpacity>
               </>

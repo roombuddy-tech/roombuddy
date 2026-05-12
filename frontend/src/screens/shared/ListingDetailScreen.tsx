@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,18 @@ import {
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Calendar, DateData } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
 import type { HostStackParamList } from '../../navigation/types';
-import { getListing } from '../../services/listings';
+import { getListing, updateBlockedDates, deleteListing } from '../../services/listings';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'ListingDetail'>;
 type Route = RouteProp<HostStackParamList, 'ListingDetail'>;
@@ -79,7 +82,14 @@ export default function ListingDetailScreen() {
   const f = preview;
 
   const [fetchedPhotos, setFetchedPhotos] = useState<string[]>([]);
+  const [blockedDates, setBlockedDates] = useState<Array<{ start_date: string; end_date: string }>>([]);
+  const [savedDates, setSavedDates] = useState<Array<{ start_date: string; end_date: string }>>([]);
+  const [selectingStart, setSelectingStart] = useState<string | null>(null);
+  const [savingDates, setSavingDates] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+
+  const hasUnsavedDates = JSON.stringify(blockedDates) !== JSON.stringify(savedDates);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,11 +98,97 @@ export default function ListingDetailScreen() {
           .then((data: any) => {
             const all = Object.values(data.photos as Record<string, string[]>).flat();
             setFetchedPhotos(all);
+            const dates = data.blocked_dates || [];
+            setBlockedDates(dates);
+            setSavedDates(dates);
           })
           .catch(() => {});
       }
     }, [item?.listing_id, isPreview]),
   );
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const onDayPress = (day: DateData) => {
+    if (day.dateString < today) return;
+    if (!selectingStart) {
+      setSelectingStart(day.dateString);
+    } else {
+      const start = selectingStart <= day.dateString ? selectingStart : day.dateString;
+      const end = selectingStart <= day.dateString ? day.dateString : selectingStart;
+      setBlockedDates((prev) => [...prev, { start_date: start, end_date: end }]);
+      setSelectingStart(null);
+    }
+  };
+
+  const removeRange = (index: number) => {
+    setBlockedDates((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveBlockedDates = async () => {
+    if (!item?.listing_id) return;
+    setSavingDates(true);
+    try {
+      await updateBlockedDates(item.listing_id, blockedDates);
+      setSavedDates(blockedDates);
+      Alert.alert('Saved', 'Availability updated successfully.');
+    } catch {
+      Alert.alert('Error', 'Failed to update availability. Please try again.');
+    } finally {
+      setSavingDates(false);
+    }
+  };
+
+  const handleDeleteListing = () => {
+    if (!item?.listing_id) return;
+    Alert.alert(
+      'Delete listing',
+      'Are you sure you want to permanently delete this listing? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteListing(item.listing_id);
+              Alert.alert('Deleted', 'Your listing has been removed.', [
+                { text: 'OK', onPress: () => navigation.goBack() },
+              ]);
+            } catch {
+              Alert.alert('Error', 'Failed to delete listing. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const getMarkedDates = () => {
+    const marks: Record<string, any> = {};
+    if (selectingStart) {
+      marks[selectingStart] = { startingDay: true, endingDay: true, color: COLORS.accent, textColor: '#fff' };
+    }
+    for (const range of blockedDates) {
+      const s = new Date(range.start_date);
+      const e = new Date(range.end_date);
+      const cur = new Date(s);
+      while (cur <= e) {
+        const key = cur.toISOString().split('T')[0];
+        marks[key] = {
+          color: '#FECACA',
+          textColor: '#991B1B',
+          startingDay: key === range.start_date,
+          endingDay: key === range.end_date,
+        };
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return marks;
+  };
 
   // Derive display data from preview form or from list item
   const title = f?.title || item?.title || 'Listing';
@@ -256,7 +352,11 @@ export default function ListingDetailScreen() {
                 ) : null}
                 {f.roomType ? (
                   <View style={styles.spaceCard}>
-                    <Ionicons name="bed-outline" size={22} color={COLORS.primary} />
+                    <MaterialCommunityIcons
+                      name={f.roomType === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
+                      size={22}
+                      color={COLORS.primary}
+                    />
                     <Text style={styles.spaceCardLabel}>
                       {f.roomType === 'private' ? 'Private room' : 'Shared room'}
                     </Text>
@@ -434,6 +534,68 @@ export default function ListingDetailScreen() {
             </>
           )}
 
+          {/* Availability — interactive calendar (host view only) */}
+          {!isPreview && item && (
+            <>
+              <SectionHeader title="Availability" />
+              <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm }}>
+                Tap a date to start, then tap another to block a range
+              </Text>
+              <Calendar
+                minDate={today}
+                markingType="period"
+                markedDates={getMarkedDates()}
+                onDayPress={onDayPress}
+                theme={{
+                  todayTextColor: COLORS.primary,
+                  arrowColor: COLORS.primary,
+                  textDayFontFamily: FONTS.medium.fontWeight,
+                  textMonthFontFamily: FONTS.semibold.fontWeight,
+                  textDayHeaderFontFamily: FONTS.medium.fontWeight,
+                }}
+                style={{ borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}
+              />
+
+              {selectingStart && (
+                <Text style={{ fontSize: 13, color: COLORS.accent, marginTop: SPACING.sm, ...FONTS.medium }}>
+                  Tap another date to complete the range
+                </Text>
+              )}
+
+              {blockedDates.length > 0 && (
+                <View style={{ marginTop: SPACING.md, gap: 6 }}>
+                  {blockedDates.map((range, index) => {
+                    const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    return (
+                      <View key={index} style={styles.blockedRow}>
+                        <Ionicons name="calendar-outline" size={16} color="#DC2626" />
+                        <Text style={styles.blockedTxt}>{fmt(range.start_date)} — {fmt(range.end_date)}</Text>
+                        <TouchableOpacity onPress={() => removeRange(index)} style={{ padding: 4 }}>
+                          <Ionicons name="close-circle-outline" size={20} color={COLORS.textMut} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
+              {hasUnsavedDates && (
+                <TouchableOpacity
+                  style={[styles.saveAvailBtn, savingDates && { opacity: 0.7 }]}
+                  onPress={handleSaveBlockedDates}
+                  activeOpacity={0.85}
+                  disabled={savingDates}
+                >
+                  {savingDates ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.saveAvailTxt}>Save availability</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
           {/* Check-in / Check-out */}
           {f && (f.checkInTime || f.checkOutTime) && (
             <>
@@ -458,36 +620,36 @@ export default function ListingDetailScreen() {
             </>
           )}
 
-          {/* Limited info from list API */}
-          {!isPreview && item && (
-            <View style={styles.limitedInfoBox}>
-              <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.limitedInfoTxt}>
-                Full listing details require a dedicated API endpoint — coming soon.
-              </Text>
-            </View>
-          )}
         </View>
       </ScrollView>
 
       {/* Sticky bottom bar — host view */}
       {!isPreview && item && (
         <View style={styles.stickyBar}>
-          <View>
-            {hostPrice > 0 && (
-              <Text style={styles.stickyPrice}>
-                ₹{hostPrice.toLocaleString('en-IN')}
-                <Text style={styles.stickyPriceUnit}>/night</Text>
-              </Text>
+          <TouchableOpacity
+            style={[styles.deleteBarBtn, deleting && { opacity: 0.7 }]}
+            onPress={handleDeleteListing}
+            activeOpacity={0.85}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#DC2626" />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                <Text style={styles.deleteBarTxt}>Delete listing</Text>
+              </View>
             )}
-            <Text style={styles.stickyPriceSub}>Your earnings per night</Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.bookBtn}
             activeOpacity={0.85}
             onPress={() => navigation.navigate('ListingEditor', { listingId: item.listing_id })}
           >
-            <Text style={styles.bookBtnTxt}>Edit listing</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="create-outline" size={16} color="#fff" />
+              <Text style={styles.bookBtnTxt}>Edit listing</Text>
+            </View>
           </TouchableOpacity>
         </View>
       )}
@@ -667,6 +829,33 @@ const styles = StyleSheet.create({
   checkinLabel: { fontSize: 12, color: COLORS.textSec },
   checkinTime: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
 
+  blockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  blockedTxt: { flex: 1, fontSize: 14, color: COLORS.text, ...FONTS.medium },
+  saveAvailBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  saveAvailTxt: { color: '#fff', fontSize: 15, ...FONTS.semibold },
+  deleteBarBtn: {
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: RADIUS.md,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  deleteBarTxt: { color: '#DC2626', fontSize: 15, ...FONTS.semibold },
+
 
   limitedInfoBox: {
     flexDirection: 'row',
@@ -694,9 +883,6 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     ...SHADOW.md,
   },
-  stickyPrice: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
-  stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
-  stickyPriceSub: { fontSize: 11, color: COLORS.textSec, marginTop: 2 },
   bookBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 13,
