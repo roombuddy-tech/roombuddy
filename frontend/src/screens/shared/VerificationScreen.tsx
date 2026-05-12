@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
@@ -48,10 +48,6 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
   };
 
   const handleSendVerification = async () => {
-    if (!emailInput.trim()) {
-      Alert.alert('Error', 'Please enter your email address.');
-      return;
-    }
     setSendingEmail(true);
     try {
       await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, { email: emailInput.trim() });
@@ -134,18 +130,21 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
               <View style={styles.emailSection}>
                 {!emailSent ? (
                   <>
-                    <TextInput
-                      style={styles.input}
-                      value={emailInput}
-                      onChangeText={setEmailInput}
-                      placeholder="Enter email address"
-                      placeholderTextColor={COLORS.textMut}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity style={styles.sendBtn} onPress={handleSendVerification} disabled={sendingEmail}>
-                      <Text style={styles.sendBtnText}>{sendingEmail ? 'Sending...' : 'Send verification email'}</Text>
-                    </TouchableOpacity>
+                    <View style={[styles.input, { backgroundColor: '#F5F5F5', flexDirection: 'row', alignItems: 'center' }]}>
+                      <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 15, color: emailInput ? COLORS.text : COLORS.textMut, ...FONTS.medium, flex: 1 }}>
+                        {emailInput || 'No email saved — add one in Edit Profile'}
+                      </Text>
+                    </View>
+                    {emailInput ? (
+                      <TouchableOpacity style={styles.sendBtn} onPress={handleSendVerification} disabled={sendingEmail}>
+                        <Text style={styles.sendBtnText}>{sendingEmail ? 'Sending...' : 'Send verification email'}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={{ fontSize: 13, color: COLORS.textMut, marginTop: 4 }}>
+                        Please add your email in Edit Profile first.
+                      </Text>
+                    )}
                   </>
                 ) : (
                   <View style={styles.sentSection}>

@@ -21,6 +21,7 @@ class PhoneValidationMixin:
 class SendOTPSerializer(PhoneValidationMixin, serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     country_code = serializers.CharField(max_length=5, default="+91")
+    mode = serializers.ChoiceField(choices=["auto", "login", "signup"], default="auto", required=False)
 
 
 class VerifyOTPSerializer(PhoneValidationMixin, serializers.Serializer):

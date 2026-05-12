@@ -80,6 +80,7 @@ class SendOTPView(APIView):
             result = send_otp_to_phone(
                 phone_number=serializer.validated_data["phone_number"],
                 country_code=serializer.validated_data["country_code"],
+                mode=serializer.validated_data.get("mode", "auto"),
             )
         except AuthServiceError as e:
             return _error_response(e)
@@ -123,7 +124,10 @@ class CompleteProfileView(APIView):
     def post(self, request):
         serializer = CompleteProfileSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = complete_user_profile(request.user, serializer.validated_data)
+        try:
+            result = complete_user_profile(request.user, serializer.validated_data)
+        except AuthServiceError as e:
+            return _error_response(e)
         return Response(result, status=status.HTTP_200_OK)
 
 

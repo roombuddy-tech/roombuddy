@@ -1,13 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import PhoneInput from '../../components/forms/PhoneInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
+import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 import { isValidIndianPhone } from '../../utils/validators';
+
+
 
 type Props = NativeStackScreenProps<any, 'Login'>;
 
@@ -15,6 +18,8 @@ export default function LoginScreen({ navigation }: Props) {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [accountNotFound, setAccountNotFound] = useState(false);
+
 
   const handleSendOTP = async () => {
     if (!phone) {
@@ -30,11 +35,15 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
 
     try {
-      await authService.sendOTP(phone);
+      await authService.sendOTP(phone, '+91', 'login');
       navigation.navigate('OTP', { phoneNumber: phone });
     } catch (err: any) {
-      Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP. Please try again.'));
-
+      const code = err?.response?.data?.code;
+      if (code === 'ACCOUNT_NOT_FOUND') {
+        setAccountNotFound(true);
+      } else {
+        Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP. Please try again.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -58,7 +67,7 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.form}>
             <PhoneInput
               value={phone}
-              onChangeText={(text) => { setPhone(text); setError(''); }}
+              onChangeText={(text) => { setPhone(text); setError(''); setAccountNotFound(false); }}
               error={error}
               autoFocus
             />
@@ -72,27 +81,45 @@ export default function LoginScreen({ navigation }: Props) {
               disabled={phone.length < 10}
               full
             />
+
+            {accountNotFound && (
+              <View style={styles.notFoundBox}>
+                <Ionicons name="information-circle-outline" size={20} color={COLORS.accent} />
+                <Text style={styles.notFoundText}>
+                  No account found with this number.{' '}
+                  <Text
+                    style={styles.signUpLink}
+                    onPress={async () => {
+                      setAccountNotFound(false);
+                      setLoading(true);
+                      try {
+                        await authService.sendOTP(phone, '+91', 'signup');
+                        navigation.navigate('OTP', { phoneNumber: phone });
+                      } catch (err: any) {
+                        Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP.'));
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Sign up instead
+                  </Text>
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.terms}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.link}>Terms of Service</Text> and{' '}
-            <Text style={styles.link}>Privacy Policy</Text>
+        <Text style={styles.terms}>
+          By continuing, you agree to our{' '}
+          <Text style={styles.link} onPress={() => Linking.openURL('https://roombuddy.co.in/terms')}>
+            Terms of Service
+          </Text>{' '}and{' '}
+          <Text style={styles.link} onPress={() => Linking.openURL('https://roombuddy.co.in/privacy')}>
+            Privacy Policy
           </Text>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.secureRow}>
-            <Text style={styles.secureIcon}>🔒</Text>
-            <Text style={styles.secureText}>
-              Your number is encrypted and never shared with hosts or guests
-            </Text>
-          </View>
-        </View>
+        </Text>
+        
       </View>
     </ScreenWrapper>
   );
@@ -148,22 +175,27 @@ const styles = StyleSheet.create({
   link: {
     color: COLORS.primary,
     ...FONTS.medium,
+    textDecorationLine: 'underline'
   },
-  secureRow: {
+notFoundBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    backgroundColor: COLORS.warm,
     padding: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#FFE0D6',
   },
-  secureIcon: {
-    fontSize: 16,
-  },
-  secureText: {
+  notFoundText: {
     flex: 1,
-    fontSize: 13,
-    color: COLORS.textMut,
-    lineHeight: 18,
+    fontSize: 14,
+    color: COLORS.textSec,
+    ...FONTS.medium,
+    lineHeight: 21,
+  },
+  signUpLink: {
+    color: COLORS.accent,
+    ...FONTS.bold,
   },
 });

@@ -10,6 +10,7 @@ from apps.users.models import User, OTPCode, UserSession, UserProfile, EmailVeri
 from apps.bookings.models import Booking
 from apps.reviews.models import Review
 from apps.users.models import PayoutAccount
+from third_party.storage import get_photo_url
 from third_party.email import send_verification_email
 from third_party.storage import upload_image, delete_image, StorageError
 
@@ -40,7 +41,7 @@ class AuthServiceError(Exception):
 
 # ─── Auth services ───────────────────────────────────────────
 
-def send_otp_to_phone(phone_number: str, country_code: str) -> dict:
+def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") -> dict:
     """
     Finds or creates user, generates OTP, sends via SMS.
     Returns response dict or raises AuthServiceError.
@@ -58,6 +59,14 @@ def send_otp_to_phone(phone_number: str, country_code: str) -> dict:
             "Too many OTP requests. Please try again later.",
             "RATE_LIMITED",
             status_code=429,
+        )
+    
+    if mode == "login":
+        if not User.objects.filter(phone_number=phone_number, phone_country_code=country_code).exists():
+            raise AuthServiceError(
+                "No account found with this phone number.",
+                "ACCOUNT_NOT_FOUND",
+                status_code=404,
         )
 
     # Find or create user
@@ -172,6 +181,15 @@ def complete_user_profile(user: User, data: dict) -> dict:
     """Creates or updates user profile. Email saved to users table."""
     email = data.get("email") or None
 
+   
+    email = data.get("email") or None
+
+    if email:
+        existing = User.objects.filter(email=email, email_verified_at__isnull=False).exclude(id=user.id).first()
+        if existing:
+            raise AuthServiceError("This email is already associated with another account.", "EMAIL_TAKEN", 409)
+
+
     profile, _ = UserProfile.objects.update_or_create(
         user=user,
         defaults={
@@ -182,10 +200,23 @@ def complete_user_profile(user: User, data: dict) -> dict:
         },
     )
 
-    if email:
-        user.email = email
-        user.is_profile_complete = True
-        user.save(update_fields=["email", "is_profile_complete", "updated_at"])
+    if "email" in data:
+        new_email = data["email"] or None
+        if new_email and new_email != user.email:
+            # Check if another user already has this email
+            if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+                raise AuthServiceError(
+                    "This email is already associated with another account.",
+                    "EMAIL_TAKEN",
+                    409,
+                )
+            user.email = new_email
+            user.email_verified_at = None
+            user.save(update_fields=["email", "email_verified_at", "updated_at"])
+        elif not new_email and user.email:
+            user.email = None
+            user.email_verified_at = None
+            user.save(update_fields=["email", "email_verified_at", "updated_at"])
     elif not user.is_profile_complete:
         user.is_profile_complete = True
         user.save(update_fields=["is_profile_complete", "updated_at"])
@@ -240,7 +271,7 @@ def get_user_profile(user: User) -> dict:
         city = profile.city
         gender = profile.gender
         date_of_birth = profile.date_of_birth.isoformat() if profile.date_of_birth else None
-        profile_photo_url = profile.profile_photo_url
+        profile_photo_url = get_photo_url(profile.profile_photo_url) if profile.profile_photo_url else None
     except UserProfile.DoesNotExist:
         first_name = ""
         last_name = ""
@@ -270,6 +301,8 @@ def get_user_profile(user: User) -> dict:
         "email_verified": user.email_verified_at is not None,
         "aadhaar_verified": False,
         "member_since": member_since,
+        "phone_number": user.phone_number,
+        "phone_country_code": user.phone_country_code,
     }
 
 def update_user_profile(user: User, data: dict) -> dict:
@@ -293,9 +326,20 @@ def update_user_profile(user: User, data: dict) -> dict:
 
     if "email" in data:
         new_email = data["email"] or None
-        if new_email != user.email:
+        if new_email and new_email != user.email:
+            # Check if another user already has this email
+            if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+                raise AuthServiceError(
+                    "This email is already associated with another account.",
+                    "EMAIL_TAKEN",
+                    409,
+                )
             user.email = new_email
-            user.email_verified_at = None  # Reset verification when email changes
+            user.email_verified_at = None
+            user.save(update_fields=["email", "email_verified_at", "updated_at"])
+        elif not new_email and user.email:
+            user.email = None
+            user.email_verified_at = None
             user.save(update_fields=["email", "email_verified_at", "updated_at"])
 
     return {
@@ -338,7 +382,7 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
         first_name = profile.first_name
         last_name = profile.last_name
         city = profile.city
-        profile_photo_url = profile.profile_photo_url
+        profile_photo_url = get_photo_url(profile.profile_photo_url) if profile.profile_photo_url else None
     except UserProfile.DoesNotExist:
         first_name = ""
         last_name = ""
@@ -417,6 +461,16 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
 
 def send_email_verification(user: User, email: str) -> dict:
     """Generates a verification token and sends it via email."""
+
+     # Check if another user already has this email verified
+    existing = User.objects.filter(email=email, email_verified_at__isnull=False).exclude(id=user.id).first()
+    if existing:
+        raise AuthServiceError(
+            "This email is already verified by another account.",
+            "EMAIL_ALREADY_TAKEN",
+            status_code=409,
+        )
+    
     one_hour_ago = timezone.now() - timedelta(hours=1)
     recent_count = EmailVerification.objects.filter(user=user, email=email, created_at__gte=one_hour_ago).count()
 
@@ -705,8 +759,8 @@ def upload_profile_photo(user: User, image_file) -> dict:
     profile.save(update_fields=["profile_photo_url", "updated_at"])
 
     return {
-        "profile_photo_url": result["url"],
-        "thumbnail_url": result["thumbnail_url"],
+        "profile_photo_url": get_photo_url(result["url"]),
+        "thumbnail_url": get_photo_url(result["thumbnail_url"]),
     }
 
 
@@ -766,7 +820,7 @@ def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
         "user_id": str(viewed_user.id),
         "display_name": get_display_name(viewed_user),
         "initials": get_initials(viewed_user),
-        "profile_photo_url": profile.profile_photo_url if profile else None,
+        "profile_photo_url" : get_photo_url(profile.profile_photo_url) if profile.profile_photo_url else None,
         "city": profile.city if profile else None,
         "member_since": (
             viewed_user.created_at.strftime("%B %Y")

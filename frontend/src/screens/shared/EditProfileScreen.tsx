@@ -31,6 +31,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
   const [gender, setGender] = useState('');
   const [city, setCity] = useState('');
   const [dob, setDob] = useState<Date | null>(null);
+  const [phone, setPhone] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
       setGender(p.gender || '');
       setCity(p.city || '');
       setDob(p.date_of_birth ? new Date(p.date_of_birth) : null);
+      setPhone(p.phone_number ? `${p.phone_country_code || '+91'} ${p.phone_number}` : '');   
     } catch (err) {
       console.log('Fetch profile error:', err);
     } finally {
@@ -152,6 +154,13 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
           <View style={styles.field}>
             <Text style={styles.label}>Last name</Text>
             <TextInput style={styles.input} value={lastName} onChangeText={setLastName} placeholder="Last name" placeholderTextColor={COLORS.textMut} />
+          </View>
+          <View style={styles.field}>
+            <Text style={styles.label}>Mobile number</Text>
+            <View style={[styles.input, { backgroundColor: '#F5F5F5', flexDirection: 'row', alignItems: 'center' }]}>
+              <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>{phone || 'Not available'}</Text>
+            </View>
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>

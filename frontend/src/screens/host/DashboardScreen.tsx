@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ENDPOINTS } from '../../constants/endpoints';
@@ -95,7 +95,11 @@ export default function DashboardScreen() {
         <View style={styles.topBar}>
           <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
           <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            {user?.profile_photo_url ? (
+              <Image source={{ uri: user.profile_photo_url }} style={{ width: 38, height: 38, borderRadius: 19 }} />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
           </TouchableOpacity>
         </View>
 
