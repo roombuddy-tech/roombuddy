@@ -1,11 +1,23 @@
 import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 import AuthStack from './AuthStack';
 import GuestStack from './GuestStack';
 import HostStack from './HostStack';
+
+const ProfileStack = createNativeStackNavigator();
+
+function ProfileIncompleteStack() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+    </ProfileStack.Navigator>
+  );
+}
 
 export default function Navigation() {
   const { isLoading, isAuthenticated, isProfileComplete, userRole } = useAuth();
@@ -20,8 +32,10 @@ export default function Navigation() {
 
   return (
     <NavigationContainer>
-      {!isAuthenticated || !isProfileComplete ? (
+      {!isAuthenticated ? (
         <AuthStack />
+      ) : !isProfileComplete ? (
+        <ProfileIncompleteStack />
       ) : userRole === 'host' ? (
         <HostStack />
       ) : (

@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { ENDPOINTS } from '../constants/endpoints';
+import api, { setAuthFailureHandler } from '../services/api';
 import { storage } from '../services/storage';
-import { setAuthFailureHandler } from '../services/api';
 
 type UserRole = 'guest' | 'host';
 
@@ -44,12 +45,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthFailureHandler(forceLogout);
   }, [forceLogout]);
 
+  // Session restore: if we have a token, fetch fresh profile from backend
   useEffect(() => {
     (async () => {
       try {
         const token = await storage.getAccessToken();
         const userData = await storage.getUserData();
-        if (token && userData) {
+        if (!token || !userData) {
+          setState((prev) => ({ ...prev, isLoading: false }));
+          return;
+        }
+
+        // Fetch fresh profile to get real is_profile_complete status
+        try {
+          const res = await api.get(ENDPOINTS.USER.PROFILE);
+          const profile = res.data;
+          const isComplete = !!(profile.first_name && profile.first_name.length > 0);
+          const freshUser = { ...userData, ...profile, is_profile_complete: isComplete };
+          await storage.saveUserData(freshUser);
+          setState({
+            isLoading: false,
+            isAuthenticated: true,
+            isProfileComplete: isComplete,
+            userRole: 'guest',
+            user: freshUser,
+          });
+        } catch {
+          // Backend unreachable or 401 — fall back to local data
+          // (401 will trigger token refresh → forceLogout if refresh also fails)
           setState({
             isLoading: false,
             isAuthenticated: true,
@@ -57,8 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             userRole: 'guest',
             user: userData,
           });
-        } else {
-          setState((prev) => ({ ...prev, isLoading: false }));
         }
       } catch {
         setState((prev) => ({ ...prev, isLoading: false }));

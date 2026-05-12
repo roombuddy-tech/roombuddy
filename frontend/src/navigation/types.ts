@@ -1,7 +1,7 @@
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
-  OTP: { phoneNumber: string };
+  OTP: { phoneNumber: string; isSignup: boolean };
   ProfileSetup: undefined;
 };
 

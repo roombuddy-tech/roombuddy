@@ -12,8 +12,6 @@ import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 import { isValidEmail } from '../../utils/validators';
 
-
-
 type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
 
 const GENDERS = [
@@ -25,18 +23,18 @@ const GENDERS = [
 export default function ProfileSetupScreen({ navigation }: Props) {
   const { completeProfile } = useAuth();
 
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
-  const isFormValid = firstName.trim().length >= 2 && gender && city.trim().length >= 2;
+  const isFormValid =
+    firstName.trim().length >= 2 && gender && city.trim().length >= 2;
 
   const handleVerifyEmail = async () => {
     if (!email.trim() || !isValidEmail(email)) {
@@ -45,17 +43,25 @@ export default function ProfileSetupScreen({ navigation }: Props) {
     }
     setSendingEmail(true);
     try {
-      await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, { email: email.trim() });
+      await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, {
+        email: email.trim(),
+      });
       setEmailSent(true);
-      Alert.alert('Verification Sent', 'Check your inbox and click the verification link.');
+      Alert.alert(
+        'Verification Sent',
+        'Check your inbox and click the verification link.'
+      );
     } catch (err: any) {
-      Alert.alert('Error', getErrorMessage(err, 'Failed to send verification email.'));
+      Alert.alert(
+        'Error',
+        getErrorMessage(err, 'Failed to send verification email.')
+      );
     } finally {
       setSendingEmail(false);
     }
   };
 
- const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!isFormValid) return;
 
     if (email && !isValidEmail(email)) {
@@ -65,9 +71,9 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      const result = await authService.completeProfile({
-        first_name: firstName,
-        last_name: lastName || firstName,
+      await authService.completeProfile({
+        first_name: firstName.trim(),
+        last_name: lastName.trim() || firstName.trim(),
         email: email.trim() || undefined,
         gender,
         city: city.trim(),
@@ -78,20 +84,27 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       if (photoUri) {
         try {
           const formData = new FormData();
-          formData.append('image', { uri: photoUri, type: 'image/jpeg', name: 'profile.jpg' } as any);
-          const photoRes = await api.post('/api/users/profile/upload-photo/', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          formData.append('image', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'profile.jpg',
+          } as any);
+          const photoRes = await api.post(
+            ENDPOINTS.USER.UPLOAD_PHOTO,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
           profilePhotoUrl = photoRes.data.profile_photo_url;
         } catch (photoErr) {
           console.log('Photo upload error (non-blocking):', photoErr);
         }
       }
 
+      // This triggers navigation to Guest/Host stack via AuthContext
       await completeProfile({
-        first_name: firstName,
+        first_name: firstName.trim(),
         last_name: lastName.trim() || firstName.trim(),
-        display_name: `${firstName} ${lastName || firstName}`.trim(),
+        display_name: `${firstName.trim()} ${lastName.trim() || firstName.trim()}`.trim(),
         city: city.trim(),
         gender,
         profile_photo_url: profilePhotoUrl,
@@ -108,9 +121,13 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       {
         text: 'Take photo',
         onPress: async () => {
-          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          const permission =
+            await ImagePicker.requestCameraPermissionsAsync();
           if (!permission.granted) {
-            Alert.alert('Permission needed', 'Go to Settings and enable camera access for Expo Go.');
+            Alert.alert(
+              'Permission needed',
+              'Go to Settings and enable camera access for Expo Go.'
+            );
             return;
           }
           const result = await ImagePicker.launchCameraAsync({
@@ -142,13 +159,18 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       <View style={styles.container}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
+          <Text style={styles.brand}>
+            Room<Text style={styles.brandAccent}>Buddy</Text>
+          </Text>
         </View>
 
         <Text style={styles.title}>Complete your profile</Text>
 
-        {/* Photo — optional */}
-        <TouchableOpacity style={styles.photoSection} onPress={handlePickPhoto}>
+        {/* Photo */}
+        <TouchableOpacity
+          style={styles.photoSection}
+          onPress={handlePickPhoto}
+        >
           <View style={styles.photoCircle}>
             {photoUri ? (
               <Image source={{ uri: photoUri }} style={styles.photoImage} />
@@ -156,10 +178,12 @@ export default function ProfileSetupScreen({ navigation }: Props) {
               <Text style={styles.photoIcon}>📷</Text>
             )}
           </View>
-          <Text style={styles.photoLabel}>{photoUri ? 'Change photo' : 'Add photo'}</Text>
+          <Text style={styles.photoLabel}>
+            {photoUri ? 'Change photo' : 'Add photo'}
+          </Text>
         </TouchableOpacity>
 
-        {/* Full name */}
+        {/* First name */}
         <View style={styles.field}>
           <Text style={styles.label}>First name</Text>
           <TextInput
@@ -172,6 +196,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           />
         </View>
 
+        {/* Last name */}
         <View style={styles.field}>
           <Text style={styles.label}>Last name</Text>
           <TextInput
@@ -189,7 +214,10 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           <TextInput
             style={styles.input}
             value={email}
-            onChangeText={(t) => { setEmail(t); setEmailSent(false); }}
+            onChangeText={(t) => {
+              setEmail(t);
+              setEmailSent(false);
+            }}
             placeholder="Enter your email address"
             placeholderTextColor={COLORS.textMut}
             keyboardType="email-address"
@@ -201,13 +229,26 @@ export default function ProfileSetupScreen({ navigation }: Props) {
               onPress={handleVerifyEmail}
               disabled={sendingEmail}
             >
-              <Text style={{ color: COLORS.primary, ...FONTS.semibold, fontSize: 14 }}>
+              <Text
+                style={{
+                  color: COLORS.primary,
+                  ...FONTS.semibold,
+                  fontSize: 14,
+                }}
+              >
                 {sendingEmail ? 'Sending...' : 'Verify email now'}
               </Text>
             </TouchableOpacity>
           )}
           {emailSent && (
-            <Text style={{ marginTop: 8, fontSize: 13, color: '#10B981', ...FONTS.medium }}>
+            <Text
+              style={{
+                marginTop: 8,
+                fontSize: 13,
+                color: '#10B981',
+                ...FONTS.medium,
+              }}
+            >
               ✓ Verification link sent — check your inbox
             </Text>
           )}
@@ -223,7 +264,14 @@ export default function ProfileSetupScreen({ navigation }: Props) {
                 style={[styles.pill, gender === g.key && styles.pillActive]}
                 onPress={() => setGender(g.key)}
               >
-                <Text style={[styles.pillText, gender === g.key && styles.pillTextActive]}>{g.label}</Text>
+                <Text
+                  style={[
+                    styles.pillText,
+                    gender === g.key && styles.pillTextActive,
+                  ]}
+                >
+                  {g.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -244,11 +292,22 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         {/* Aadhaar note */}
         <View style={styles.noteCard}>
           <Text style={styles.noteIcon}>🔒</Text>
-          <Text style={styles.noteText}>Your Aadhaar verification will be done after signup. This keeps everyone safe.</Text>
+          <Text style={styles.noteText}>
+            Your Aadhaar verification will be done after signup. This keeps
+            everyone safe.
+          </Text>
         </View>
 
         {/* Submit */}
-        <Button title="Start exploring" onPress={handleSubmit} variant="accent" size="lg" loading={loading} disabled={!isFormValid} full />
+        <Button
+          title="Start exploring"
+          onPress={handleSubmit}
+          variant="accent"
+          size="lg"
+          loading={loading}
+          disabled={!isFormValid}
+          full
+        />
       </View>
     </ScreenWrapper>
   );
@@ -256,25 +315,88 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { paddingTop: SPACING.md, paddingBottom: SPACING.xl },
-  topBar: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: SPACING.xl },
-  brand: { fontSize: 24, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  brand: {
+    fontSize: 24,
+    ...FONTS.extrabold,
+    color: COLORS.primaryDark,
+    letterSpacing: -0.5,
+  },
   brandAccent: { color: COLORS.accent },
-  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xl, textAlign: 'center' },
+  title: {
+    fontSize: 24,
+    ...FONTS.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.xl,
+    textAlign: 'center',
+  },
   photoSection: { alignItems: 'center', marginBottom: SPACING.xl },
-  photoCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
+  photoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   photoIcon: { fontSize: 28 },
   photoLabel: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
   field: { marginBottom: SPACING.lg },
-  label: { fontSize: 14, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 14, fontSize: 16, color: COLORS.text, backgroundColor: COLORS.bg, ...FONTS.medium },
+  label: {
+    fontSize: 14,
+    color: COLORS.textSec,
+    ...FONTS.semibold,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: COLORS.text,
+    backgroundColor: COLORS.bg,
+    ...FONTS.medium,
+  },
   pillRow: { flexDirection: 'row', gap: SPACING.sm },
-  pill: { paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.pill, backgroundColor: COLORS.bg },
-  pillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  pill: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.bg,
+  },
+  pillActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryAlpha,
+  },
   pillText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   pillTextActive: { color: COLORS.primary, ...FONTS.semibold },
-  noteCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: SPACING.md, backgroundColor: COLORS.warm, borderRadius: RADIUS.md, marginBottom: SPACING.xl },
+  noteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: SPACING.md,
+    backgroundColor: COLORS.warm,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.xl,
+  },
   noteIcon: { fontSize: 16 },
-  noteText: { flex: 1, fontSize: 13, color: COLORS.accent, lineHeight: 18 },
+  noteText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.accent,
+    lineHeight: 18,
+  },
   photoImage: { width: 78, height: 78, borderRadius: 39 },
-
 });
