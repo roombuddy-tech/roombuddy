@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — RoomBuddy</title>
+  <meta name="description" content="RoomBuddy Terms of Service. Read our terms governing the use of the RoomBuddy platform for short-term room sharing in India.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1B4D3E;
+      --primary-light: #E8F0ED;
+      --accent: #FF6B4A;
+      --accent-light: #FFF0ED;
+      --text: #1A1A1A;
+      --text-sec: #555;
+      --text-mut: #888;
+      --bg: #FAFAF8;
+      --white: #fff;
+      --border: #E8E8E4;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ─── */
+    .header {
+      background: var(--primary);
+      padding: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: #fff;
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+    .header-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-left: 24px;
+      transition: color 0.2s;
+    }
+    .header-links a:hover { color: #fff; }
+    .header-links a.active { color: #fff; border-bottom: 2px solid var(--accent); padding-bottom: 2px; }
+
+    /* ── Hero ─── */
+    .hero {
+      background: var(--primary);
+      padding: 48px 24px 56px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(32px, 5vw, 44px);
+      color: #fff;
+      font-weight: 400;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    .hero .updated {
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+      font-weight: 500;
+    }
+
+    /* ── Layout ─── */
+    .main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 48px;
+      margin-top: -24px;
+    }
+
+    @media (max-width: 768px) {
+      .main {
+        grid-template-columns: 1fr;
+        gap: 0;
+        margin-top: -16px;
+      }
+    }
+
+    /* ── TOC Sidebar ─── */
+    .toc {
+      position: sticky;
+      top: 72px;
+      align-self: start;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 0;
+    }
+    .toc h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-mut);
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+    .toc a {
+      display: block;
+      font-size: 13px;
+      color: var(--text-sec);
+      text-decoration: none;
+      padding: 6px 0;
+      border-left: 2px solid transparent;
+      padding-left: 12px;
+      margin-left: -12px;
+      transition: all 0.15s;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .toc a:hover {
+      color: var(--primary);
+      border-left-color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+      .toc {
+        position: relative;
+        top: 0;
+        margin-bottom: 24px;
+        border-radius: 0 0 var(--radius) var(--radius);
+      }
+    }
+
+    /* ── Content ─── */
+    .content {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 44px 56px;
+      margin-bottom: 80px;
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 28px 20px 40px;
+        border-radius: var(--radius);
+        margin-bottom: 48px;
+      }
+    }
+
+    .content h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      font-weight: 400;
+      color: var(--text);
+      margin-top: 48px;
+      margin-bottom: 16px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 80px;
+    }
+    .content h2:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .content h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 28px;
+      margin-bottom: 8px;
+    }
+
+    .content p {
+      font-size: 15px;
+      color: var(--text-sec);
+      margin-bottom: 16px;
+      line-height: 1.75;
+    }
+
+    .content ul, .content ol {
+      margin: 0 0 16px 24px;
+      font-size: 15px;
+      color: var(--text-sec);
+    }
+    .content li {
+      margin-bottom: 8px;
+      line-height: 1.65;
+    }
+
+    .content strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .content a {
+      color: var(--primary);
+      text-decoration: underline;
+      text-decoration-color: rgba(27,77,62,0.3);
+      text-underline-offset: 2px;
+      transition: text-decoration-color 0.2s;
+    }
+    .content a:hover {
+      text-decoration-color: var(--primary);
+    }
+
+    .callout {
+      background: var(--accent-light);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 20px 0;
+      font-size: 14px;
+      color: var(--text-sec);
+      line-height: 1.65;
+    }
+
+    .callout-info {
+      background: var(--primary-light);
+      border-left-color: var(--primary);
+    }
+
+    /* ── Footer ─── */
+    .footer {
+      text-align: center;
+      padding: 32px 24px 48px;
+      font-size: 13px;
+      color: var(--text-mut);
+    }
+    .footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="https://roombuddy.co.in" class="logo">Room<span>Buddy</span></a>
+      <nav class="header-links">
+        <a href="/terms" class="active">Terms</a>
+        <a href="/privacy">Privacy</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: May 12, 2026</p>
+  </section>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- TOC -->
+    <aside class="toc">
+      <h3>Contents</h3>
+      <a href="#introduction">Introduction</a>
+      <a href="#eligibility">Eligibility</a>
+      <a href="#accounts">Account & Verification</a>
+      <a href="#platform">About the Platform</a>
+      <a href="#guests">Guest Terms</a>
+      <a href="#hosts">Host Terms</a>
+      <a href="#bookings">Bookings & Payments</a>
+      <a href="#fees">Fees & Taxes</a>
+      <a href="#cancellations">Cancellations & Refunds</a>
+      <a href="#content">Content & Reviews</a>
+      <a href="#prohibited">Prohibited Conduct</a>
+      <a href="#liability">Liability & Disclaimers</a>
+      <a href="#termination">Termination</a>
+      <a href="#disputes">Dispute Resolution</a>
+      <a href="#modifications">Modifications</a>
+      <a href="#contact">Contact Us</a>
+    </aside>
+
+    <!-- Content -->
+    <article class="content">
+
+      <h2 id="introduction">1. Introduction</h2>
+      <p>Welcome to RoomBuddy. These Terms of Service ("Terms") govern your access to and use of the RoomBuddy mobile application, website, and related services (collectively, the "Platform"). The Platform is operated by RoomBuddy ("RoomBuddy," "we," "us," or "our"), a company registered in India.</p>
+      <p>By creating an account, accessing, or using the Platform, you acknowledge that you have read, understood, and agree to be bound by these Terms and our <a href="/privacy">Privacy Policy</a>. If you do not agree to these Terms, you must not use the Platform.</p>
+      <p>These Terms, together with the Privacy Policy and any policies referenced herein, constitute the entire agreement between you and RoomBuddy regarding your use of the Platform.</p>
+
+      <h2 id="eligibility">2. Eligibility</h2>
+      <p>To use the Platform, you must:</p>
+      <ul>
+        <li>Be at least <strong>18 years of age</strong>.</li>
+        <li>Possess a valid Indian mobile phone number for account verification.</li>
+        <li>Have the legal capacity to enter into a binding contract under the Indian Contract Act, 1872.</li>
+        <li>Not have been previously suspended or removed from the Platform.</li>
+      </ul>
+      <p>By using the Platform, you represent and warrant that you meet all eligibility requirements. RoomBuddy reserves the right to verify your eligibility at any time and refuse service if these requirements are not met.</p>
+
+      <h2 id="accounts">3. Account & Verification</h2>
+      <h3>3.1 Account Registration</h3>
+      <p>You must register for an account by providing your mobile phone number. We will verify your number via a one-time password (OTP). You must provide accurate, current, and complete information during registration and keep your account information updated.</p>
+
+      <h3>3.2 Identity Verification</h3>
+      <p>To ensure platform safety and trust, RoomBuddy may require identity verification through one or more of the following methods:</p>
+      <ul>
+        <li><strong>Phone verification</strong> — OTP sent to your registered mobile number.</li>
+        <li><strong>Email verification</strong> — Verification link sent to your registered email address.</li>
+        <li><strong>Aadhaar verification</strong> — Aadhaar-based KYC for enhanced trust and safety, conducted in compliance with the Aadhaar (Targeted Delivery of Financial and Other Subsidies, Benefits and Services) Act, 2016.</li>
+      </ul>
+
+      <h3>3.3 Account Security</h3>
+      <p>You are responsible for safeguarding your account credentials and for all activities that occur under your account. You must immediately notify RoomBuddy if you suspect any unauthorized use of your account. RoomBuddy shall not be liable for any losses arising from unauthorized access to your account where you have failed to maintain the security of your credentials.</p>
+
+      <h3>3.4 One Account Per Person</h3>
+      <p>Each person may maintain only one account on the Platform. Creating multiple accounts may result in suspension or permanent removal from the Platform.</p>
+
+      <h2 id="platform">4. About the Platform</h2>
+      <p>RoomBuddy is a technology platform that enables individuals ("Hosts") to list spare rooms in shared residences for short-term stays and enables individuals ("Guests") to discover and book those rooms. Together, Hosts and Guests are referred to as "Members."</p>
+
+      <div class="callout callout-info">
+        <strong>Important:</strong> RoomBuddy is a marketplace and technology platform only. We are not a hotel, hospitality provider, real estate broker, travel agency, or insurer. We do not own, manage, or control any listings or the properties in which rooms are offered. Hosts are solely responsible for their listings and the services they provide.
+      </div>
+
+      <p>RoomBuddy does not become a party to any agreement entered into between Hosts and Guests. Any contract for accommodation services is formed directly between the Host and Guest when a booking is confirmed.</p>
+
+      <h2 id="guests">5. Guest Terms</h2>
+      <h3>5.1 Searching and Booking</h3>
+      <p>You may search for available rooms using criteria such as city, dates, price range, amenities, and number of guests. Search results are ranked based on relevance, which may consider factors including price, availability, ratings, host response rate, and listing quality.</p>
+      <p>When you book a listing, you agree to pay the Total Price, which includes the room rate, applicable service fees, taxes, and any other charges disclosed during checkout.</p>
+
+      <h3>5.2 Guest Responsibilities</h3>
+      <p>As a Guest, you agree to:</p>
+      <ul>
+        <li>Respect the Host's property, house rules, and the shared living environment.</li>
+        <li>Not exceed the maximum number of guests specified in the listing.</li>
+        <li>Leave the room and any common areas in the condition you found them.</li>
+        <li>Report any issues, damages, or safety concerns promptly to the Host and to RoomBuddy.</li>
+        <li>Comply with applicable laws during your stay, including local noise ordinances and building rules.</li>
+      </ul>
+
+      <h3>5.3 Assumption of Risk</h3>
+      <p>You acknowledge that staying in a shared residence carries inherent risks. You are responsible for evaluating the suitability of a listing before booking. RoomBuddy does not guarantee the condition, safety, legality, or suitability of any listing.</p>
+
+      <h2 id="hosts">6. Host Terms</h2>
+      <h3>6.1 Listing Your Room</h3>
+      <p>As a Host, you may list spare rooms in your residence for short-term stays. Your listing must include complete and accurate information about the room, property, amenities, pricing (including any additional charges), house rules, and any restrictions that apply.</p>
+
+      <h3>6.2 Host Responsibilities</h3>
+      <p>As a Host, you agree to:</p>
+      <ul>
+        <li>Provide a clean, safe, and habitable room that matches your listing description.</li>
+        <li>Keep your listing information and calendar availability up to date.</li>
+        <li>Respond to booking requests within the timeframes specified by the Platform.</li>
+        <li>Comply with all applicable local, state, and central laws and regulations, including but not limited to tenancy laws, municipal by-laws, housing society rules, and fire safety regulations.</li>
+        <li>Obtain any permits, licenses, or registrations required for short-term room rental in your jurisdiction.</li>
+        <li>Maintain appropriate insurance coverage for your property and hosting activities.</li>
+      </ul>
+
+      <h3>6.3 Legal Compliance</h3>
+      <p>You are solely responsible for understanding and complying with all laws that apply to your hosting activities. This includes but is not limited to housing regulations, tax obligations (GST, income tax), rent control laws, and the rules of your housing society or apartment complex. RoomBuddy does not provide legal advice; we recommend consulting a qualified legal professional.</p>
+
+      <h3>6.4 Independence of Hosts</h3>
+      <p>Your relationship with RoomBuddy is that of an independent individual. You are not an employee, agent, joint venturer, or partner of RoomBuddy. You have complete discretion over whether and when to host, at what price, and under what conditions.</p>
+
+      <h2 id="bookings">7. Bookings & Payments</h2>
+      <h3>7.1 Booking Process</h3>
+      <p>When you book a listing, a Reservation is formed directly between you and the Host. The Reservation includes these Terms, the listing details, house rules, cancellation policy, and any other terms disclosed during checkout.</p>
+
+      <h3>7.2 Payment Processing</h3>
+      <p>All payments on the Platform are processed through our payment partner, Razorpay. By making a payment, you agree to Razorpay's terms of service in addition to these Terms. RoomBuddy does not store your payment card details.</p>
+
+      <h3>7.3 Payment Timing</h3>
+      <p>Guests must complete payment within the payment window specified at checkout (typically 15 minutes). Failure to complete payment within this window will result in automatic cancellation of the booking.</p>
+
+      <h3>7.4 Host Payouts</h3>
+      <p>Host payouts are processed after the Guest's check-in (or as otherwise specified by our payout policy). Payouts are transferred to the Host's registered bank account via Razorpay, less applicable service fees and taxes.</p>
+
+      <h2 id="fees">8. Fees & Taxes</h2>
+      <h3>8.1 Service Fees</h3>
+      <p>RoomBuddy charges a service fee to facilitate bookings on the Platform. The applicable service fee is clearly disclosed to both the Guest and Host before a booking is confirmed. Service fees are non-refundable except as expressly stated in our cancellation policies.</p>
+
+      <h3>8.2 Taxes</h3>
+      <p>The prices displayed on the Platform may or may not include applicable taxes, as disclosed during checkout. Depending on your jurisdiction and the nature of the transaction, the following taxes may apply:</p>
+      <ul>
+        <li><strong>Goods and Services Tax (GST)</strong> — on the service fee charged by RoomBuddy, and on the accommodation service as applicable under Indian GST law.</li>
+        <li><strong>Tax Collected at Source (TCS)</strong> — as applicable to e-commerce operators under the CGST Act, 2017.</li>
+        <li><strong>Income Tax</strong> — Hosts are responsible for reporting their hosting income and complying with Indian income tax obligations.</li>
+      </ul>
+      <div class="callout">
+        <strong>Note:</strong> RoomBuddy does not provide tax advice. Tax laws are complex and may change. We strongly recommend consulting a chartered accountant or tax professional for guidance specific to your situation.
+      </div>
+
+      <h3>8.3 Host Tax Obligations</h3>
+      <p>As a Host, you are solely responsible for determining and fulfilling your tax obligations, including registration under GST (if applicable), filing returns, and remitting taxes to the appropriate authorities.</p>
+
+      <h2 id="cancellations">9. Cancellations & Refunds</h2>
+      <h3>9.1 Cancellation by Guest</h3>
+      <p>If you cancel a confirmed Reservation, the refund amount is determined by the Host's cancellation policy displayed on the listing page at the time of booking. RoomBuddy's service fee may or may not be refundable depending on the cancellation timing and policy.</p>
+
+      <h3>9.2 Cancellation by Host</h3>
+      <p>If a Host cancels a confirmed Reservation, the Guest will receive a full refund of the Total Price. Hosts who cancel confirmed bookings without valid reason may face penalties, including reduced visibility in search results, warning notices, or account suspension.</p>
+
+      <h3>9.3 Refund Timeline</h3>
+      <p>Approved refunds are typically processed within 5–10 business days, depending on your payment method and financial institution. Refunds are issued to the original payment method used for the booking.</p>
+
+      <h3>9.4 Force Majeure</h3>
+      <p>In the event of extraordinary circumstances beyond either party's reasonable control (such as natural disasters, government orders, epidemics, or civil unrest), RoomBuddy may, at its discretion, override the standard cancellation policy and issue partial or full refunds.</p>
+
+      <h2 id="content">10. Content & Reviews</h2>
+      <h3>10.1 Your Content</h3>
+      <p>By posting content on the Platform (including listing descriptions, photos, and reviews), you grant RoomBuddy a non-exclusive, worldwide, royalty-free license to use, display, reproduce, and distribute such content for the purposes of operating and promoting the Platform. You retain ownership of your content.</p>
+
+      <h3>10.2 Content Standards</h3>
+      <p>All content must be accurate, truthful, and must not be misleading, defamatory, discriminatory, obscene, harassing, or in violation of any applicable law. RoomBuddy reserves the right to remove content that violates these standards without prior notice.</p>
+
+      <h3>10.3 Reviews</h3>
+      <p>After each completed stay, both Hosts and Guests may leave reviews. Reviews must be honest, fair, and based on your actual experience. Reviews are publicly visible on the Platform. RoomBuddy does not verify reviews for accuracy but reserves the right to remove reviews that violate our content standards.</p>
+
+      <h2 id="prohibited">11. Prohibited Conduct</h2>
+      <p>You agree not to:</p>
+      <ul>
+        <li>Provide false, misleading, or inaccurate information in your account or listings.</li>
+        <li>Use the Platform for any unlawful purpose or in violation of any applicable law.</li>
+        <li>Discriminate against any Member based on race, religion, caste, gender, sexual orientation, disability, or national origin.</li>
+        <li>Harass, threaten, stalk, or intimidate any Member.</li>
+        <li>Circumvent the Platform to arrange bookings or payments outside of RoomBuddy ("off-platform transactions").</li>
+        <li>Scrape, crawl, or use automated means to access the Platform or collect data.</li>
+        <li>Post spam, unsolicited commercial messages, or fraudulent content.</li>
+        <li>Interfere with or disrupt the Platform's infrastructure or security systems.</li>
+        <li>Create multiple accounts or transfer your account to another person.</li>
+        <li>Use the Platform to facilitate prostitution, human trafficking, or any other illegal activity.</li>
+        <li>Sublease or re-list a room you have booked as a Guest.</li>
+      </ul>
+
+      <h2 id="liability">12. Liability & Disclaimers</h2>
+      <h3>12.1 No Warranty</h3>
+      <p>The Platform is provided on an "as is" and "as available" basis. RoomBuddy makes no representations or warranties of any kind, express or implied, regarding the Platform, listings, Host Services, or any content available on the Platform. We do not warrant that the Platform will be uninterrupted, error-free, or secure.</p>
+
+      <h3>12.2 Limitation of Liability</h3>
+      <p>To the maximum extent permitted under Indian law, RoomBuddy and its officers, directors, employees, and agents shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of the Platform, including but not limited to loss of profits, data, or goodwill.</p>
+      <p>RoomBuddy's total aggregate liability for any claims arising under these Terms shall not exceed the amount of service fees paid by you to RoomBuddy in the twelve (12) months preceding the event giving rise to the claim.</p>
+
+      <h3>12.3 No Endorsement</h3>
+      <p>RoomBuddy does not endorse any Host, Guest, listing, or Host Services. Any identity verification or background checks are conducted on a best-effort basis and do not constitute a guarantee of any Member's identity, character, or trustworthiness.</p>
+
+      <h2 id="termination">13. Termination</h2>
+      <h3>13.1 Termination by You</h3>
+      <p>You may terminate your account at any time by contacting us at <a href="mailto:support@roombuddy.co.in">support@roombuddy.co.in</a> or through the account settings in the app. Termination does not affect any pending Reservations or outstanding payment obligations.</p>
+
+      <h3>13.2 Termination by RoomBuddy</h3>
+      <p>RoomBuddy may suspend or terminate your account, without prior notice, if:</p>
+      <ul>
+        <li>You breach these Terms or any applicable law.</li>
+        <li>You engage in fraudulent, harmful, or abusive conduct.</li>
+        <li>Your actions create legal liability or reputational risk for RoomBuddy or other Members.</li>
+        <li>Your account has been inactive for more than 24 months.</li>
+        <li>It is necessary to protect the safety or security of our Members or the Platform.</li>
+      </ul>
+
+      <h3>13.3 Effect of Termination</h3>
+      <p>Upon termination, your right to use the Platform ceases immediately. Any confirmed Reservations may be cancelled. If you are a Host with pending payouts, those payouts will be processed in accordance with our standard payout schedule, subject to any deductions for outstanding obligations. Sections of these Terms that by their nature should survive termination (including Liability, Dispute Resolution, and Indemnification) will survive.</p>
+
+      <h2 id="disputes">14. Dispute Resolution</h2>
+      <h3>14.1 Between Members</h3>
+      <p>Disputes between Hosts and Guests should first be addressed directly between the parties. If a resolution cannot be reached, either party may contact RoomBuddy support for assistance through our resolution process. RoomBuddy may, at its discretion, mediate disputes but is not obligated to do so.</p>
+
+      <h3>14.2 Governing Law</h3>
+      <p>These Terms shall be governed by and construed in accordance with the laws of the Republic of India, without regard to its conflict of law principles.</p>
+
+      <h3>14.3 Jurisdiction</h3>
+      <p>Any disputes arising out of or in connection with these Terms or your use of the Platform shall be subject to the exclusive jurisdiction of the courts located in Bengaluru, Karnataka, India.</p>
+
+      <h3>14.4 Arbitration</h3>
+      <p>Any dispute that cannot be resolved through our internal resolution process may, at the election of either party, be submitted to binding arbitration in accordance with the Arbitration and Conciliation Act, 1996, as amended. The arbitration shall be conducted by a sole arbitrator, in English, in Bengaluru, Karnataka. The arbitrator's decision shall be final and binding.</p>
+
+      <h3>14.5 Indemnification</h3>
+      <p>You agree to indemnify, defend, and hold harmless RoomBuddy and its officers, directors, employees, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorney fees) arising out of or related to your use of the Platform, your violation of these Terms, or your violation of any rights of a third party.</p>
+
+      <h2 id="modifications">15. Modifications to Terms</h2>
+      <p>RoomBuddy reserves the right to modify these Terms at any time. If we make material changes, we will notify you via email, in-app notification, or by posting a notice on the Platform at least 30 days before the changes take effect.</p>
+      <p>Your continued use of the Platform after the effective date of any modifications constitutes your acceptance of the revised Terms. If you do not agree to the modified Terms, you must stop using the Platform and terminate your account.</p>
+
+      <h2 id="contact">16. Contact Us</h2>
+      <p>If you have any questions about these Terms, please contact us:</p>
+      <ul>
+        <li><strong>Email:</strong> <a href="mailto:support@roombuddy.co.in">support@roombuddy.co.in</a></li>
+        <li><strong>Website:</strong> <a href="https://roombuddy.co.in">roombuddy.co.in</a></li>
+      </ul>
+
+    </article>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2026 RoomBuddy. All rights reserved. &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a></p>
+  </footer>
+
+</body>
+</html>
