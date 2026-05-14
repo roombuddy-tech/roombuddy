@@ -590,7 +590,7 @@ def _get_month_stats(user: User, month_start, today) -> dict:
 
     has_listings = Listing.objects.filter(
         host_user=user,
-        status=Listing.Status.ACTIVE,
+        status=Listing.Status.LIVE,
     ).exists()
 
     return {

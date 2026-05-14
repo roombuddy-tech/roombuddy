@@ -1,10 +1,11 @@
 """
 Payment models.
 
-Three tables:
+Four tables:
 - Payment       : every payment attempt (success or fail)
 - Refund        : every refund issued against a payment
 - WebhookEvent  : audit log of webhook events for debugging and idempotency
+- Payout        : money transferred to hosts (manual or via Razorpay)
 """
 import uuid
 
@@ -164,3 +165,70 @@ class WebhookEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} ({self.status})"
+
+class Payout(models.Model):
+    """
+    Tracks money transferred to hosts.
+
+    Initially payouts are recorded manually (bank transfer + script).
+    Later can be automated via RazorpayX Route / Payouts API.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending"          # calculated, awaiting manual transfer
+        PROCESSING = "processing"    # transfer initiated
+        COMPLETED = "completed"      # money in host's bank
+        FAILED = "failed"
+
+    class Method(models.TextChoices):
+        MANUAL_BANK = "manual_bank"  # manual NEFT/IMPS/UPI transfer
+        MANUAL_UPI = "manual_upi"
+        RAZORPAY = "razorpay"        # automated via RazorpayX (future)
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    host_user = models.ForeignKey(
+        "users.User", on_delete=models.RESTRICT, related_name="payouts",
+    )
+    payout_account = models.ForeignKey(
+        "users.PayoutAccount", on_delete=models.SET_NULL, null=True, blank=True,
+    )
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default="INR")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING,
+    )
+    method = models.CharField(
+        max_length=20, choices=Method.choices, default=Method.MANUAL_BANK,
+    )
+
+    # Reference for the transfer (UTR number, transaction ID, etc.)
+    transfer_reference = models.CharField(max_length=100, null=True, blank=True)
+
+    # RazorpayX fields (for future automation)
+    razorpay_payout_id = models.CharField(max_length=64, null=True, blank=True)
+
+    # What bookings are covered by this payout
+    bookings = models.ManyToManyField(
+        "bookings.Booking", related_name="payouts", blank=True,
+    )
+
+    # Payout period (e.g. "May 1 - May 15, 2026")
+    period_start = models.DateField(null=True, blank=True)
+    period_end = models.DateField(null=True, blank=True)
+
+    notes = models.TextField(null=True, blank=True)
+
+    initiated_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    failed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "payouts"
+        ordering = ["-initiated_at"]
+        indexes = [
+            models.Index(fields=["host_user", "status"], name="idx_payouts_host_status"),
+        ]
+
+    def __str__(self):
+        return f"Payout ₹{self.amount} to {self.host_user_id} ({self.status})"
