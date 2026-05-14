@@ -35,7 +35,7 @@ sudo systemctl reload roombuddy || sudo systemctl restart roombuddy
 
 log "Health check"
 for i in {1..15}; do
-    if curl -fsS http://localhost/api/health/ > /dev/null 2>&1; then
+    if curl -fsS --unix-socket /run/roombuddy/roombuddy.sock -H "X-Forwarded-Proto: https" http://localhost/api/health/ > /dev/null 2>&1; then
         log "✅ Deploy of $DEPLOYED_SHA complete"
         exit 0
     fi
