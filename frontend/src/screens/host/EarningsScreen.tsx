@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import api from '../../services/api';
-import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
-import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ENDPOINTS } from '../../constants/endpoints';
+import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import api from '../../services/api';
 
 interface EarningsData {
   lifetime: {
@@ -81,7 +80,10 @@ export default function EarningsScreen() {
           <Text style={styles.lifetimeLabel}>Lifetime earned</Text>
           <Text style={styles.lifetimeAmount}>{formatCurrency(d?.lifetime.total_earnings || 0)}</Text>
           <Text style={styles.lifetimeSub}>
-            {d?.lifetime.total_bookings || 0} bookings · {d?.lifetime.total_nights || 0} nights
+            {(d?.lifetime.total_bookings || 0) === 0
+              ? 'No bookings yet'
+              : `${d?.lifetime.total_bookings} booking${d?.lifetime.total_bookings === 1 ? '' : 's'} · ${d?.lifetime.total_nights} night${d?.lifetime.total_nights === 1 ? '' : 's'}`
+            }
           </Text>
         </View>
 
@@ -115,13 +117,34 @@ export default function EarningsScreen() {
               </Text>
             )}
           </View>
-        ) : (
+       ) : (
           <View style={styles.payoutCard}>
-            <Text style={styles.payoutTitle}>Payout</Text>
-            <Text style={styles.payoutBank}>No bank account linked yet</Text>
-            <Text style={styles.payoutNext}>Add your bank details in Settings to receive payouts</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.sm }}>
+              <Ionicons name="alert-circle-outline" size={22} color={COLORS.accent} />
+              <Text style={styles.payoutTitle}>Payout account required</Text>
+            </View>
+            <Text style={styles.payoutBank}>
+              Add and verify your bank account to receive payouts from bookings.
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: COLORS.primary,
+                paddingVertical: 10,
+                paddingHorizontal: 20,
+                borderRadius: RADIUS.md,
+                alignSelf: 'flex-start',
+                marginTop: SPACING.sm,
+              }}
+              onPress={() => {
+                // Navigate to PaymentMethodsScreen
+                // This depends on how ProfileMenu handles sub-screens
+                Alert.alert('Add Account', 'Go to Profile → Payment Methods to add your bank account or UPI.');
+              }}
+            >
+              <Text style={{ color: '#fff', ...FONTS.semibold, fontSize: 14 }}>Add payout account</Text>
+            </TouchableOpacity>
           </View>
-        )}
+)}
       </ScrollView>
     </SafeAreaView>
   );

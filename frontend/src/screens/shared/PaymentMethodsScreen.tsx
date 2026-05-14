@@ -263,6 +263,17 @@ export default function PaymentMethodsScreen({ visible, onClose }: PaymentMethod
                   )}
                 </View>
                 <View style={styles.accountActions}>
+                  <TouchableOpacity onPress={() => {
+                    Alert.alert(
+                      acc.account_type === 'bank' ? 'Bank Account Details' : 'UPI Details',
+                      acc.account_type === 'bank'
+                        ? `Holder: ${acc.account_holder_name}\nAccount: ${acc.account_number_masked}\nIFSC: ${acc.ifsc_code}\nBank: ${acc.bank_name}`
+                        : `UPI ID: ${acc.upi_id}`,
+                      [{ text: 'OK' }]
+                    );
+                  }}>
+                    <Text style={styles.actionText}>View details</Text>
+                  </TouchableOpacity>
                   {!acc.is_primary && (
                     <TouchableOpacity onPress={() => handleSetPrimary(acc.id)}>
                       <Text style={styles.actionText}>Set as primary</Text>
