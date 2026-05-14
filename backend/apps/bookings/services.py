@@ -452,6 +452,18 @@ def get_host_earnings(user: User) -> dict:
         .order_by("-month")
     ]
 
+    # Payout summary
+    from apps.payments.models import Payout
+    total_paid = Payout.objects.filter(
+        host_user=user, status=Payout.Status.COMPLETED,
+    ).aggregate(total=Sum("amount"))["total"] or 0
+    pending_payout = Payout.objects.filter(
+        host_user=user, status=Payout.Status.PENDING,
+    ).aggregate(total=Sum("amount"))["total"] or 0
+    last_payout = Payout.objects.filter(
+        host_user=user, status=Payout.Status.COMPLETED,
+    ).order_by("-completed_at").first()
+
     return {
         "lifetime": {
             "total_earnings": float(lifetime_agg["total_earnings"] or 0),
@@ -460,6 +472,13 @@ def get_host_earnings(user: User) -> dict:
         },
         "monthly": monthly,
         "payout": _get_primary_payout(user),
+        "payout_summary": {
+            "total_paid_out": float(total_paid),
+            "pending_amount": float(pending_payout),
+            "unpaid_amount": float((lifetime_agg["total_earnings"] or 0) - total_paid - pending_payout),
+            "last_payout_date": last_payout.completed_at.isoformat() if last_payout and last_payout.completed_at else None,
+            "last_payout_amount": float(last_payout.amount) if last_payout else None,
+        },
     }
 
 

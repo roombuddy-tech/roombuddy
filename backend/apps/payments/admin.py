@@ -1,6 +1,9 @@
 from django.contrib import admin
+from django.db.models import Sum
+from django.utils import timezone
+from django.utils.html import format_html
 
-from apps.payments.models import Payment, Refund, WebhookEvent
+from apps.payments.models import Payment, Payout, Refund, WebhookEvent
 
 
 @admin.register(Payment)
@@ -25,3 +28,109 @@ class WebhookEventAdmin(admin.ModelAdmin):
     list_filter = ("event_type", "status", "signature_valid")
     search_fields = ("event_id",)
     readonly_fields = ("received_at", "processed_at")
+
+
+@admin.register(Payout)
+class PayoutAdmin(admin.ModelAdmin):
+    list_display = (
+        "payout_id_short",
+        "host_name",
+        "amount_display",
+        "status_badge",
+        "method",
+        "transfer_reference",
+        "booking_count",
+        "initiated_at",
+    )
+    list_filter = ("status", "method", "initiated_at")
+    search_fields = (
+        "host_user__phone_number",
+        "host_user__profile__first_name",
+        "transfer_reference",
+    )
+    readonly_fields = ("initiated_at",)
+    raw_id_fields = ("host_user", "payout_account")
+    filter_horizontal = ("bookings",)
+    date_hierarchy = "initiated_at"
+
+    fieldsets = (
+        ("Host & Amount", {
+            "fields": ("host_user", "payout_account", "amount", "currency"),
+        }),
+        ("Transfer Details", {
+            "fields": ("status", "method", "transfer_reference"),
+        }),
+        ("Period", {
+            "fields": ("period_start", "period_end"),
+            "description": "Optional: the booking period this payout covers.",
+        }),
+        ("Bookings Included", {
+            "fields": ("bookings",),
+            "description": "Select the bookings covered by this payout. "
+                           "Use Ctrl+Click (Cmd+Click on Mac) to select multiple.",
+        }),
+        ("Notes & Timestamps", {
+            "fields": ("notes", "initiated_at", "completed_at", "failed_at"),
+        }),
+    )
+
+    def payout_id_short(self, obj):
+        return str(obj.id)[:8]
+    payout_id_short.short_description = "ID"
+
+    def host_name(self, obj):
+        try:
+            p = obj.host_user.profile
+            return f"{p.first_name} {p.last_name} ({obj.host_user.phone_number})"
+        except Exception:
+            return obj.host_user.phone_number
+    host_name.short_description = "Host"
+
+    def amount_display(self, obj):
+        return f"₹{obj.amount:,.2f}"
+    amount_display.short_description = "Amount"
+
+    def status_badge(self, obj):
+        colors = {
+            "completed": "#10B981",
+            "pending": "#F59E0B",
+            "processing": "#3B82F6",
+            "failed": "#EF4444",
+        }
+        color = colors.get(obj.status, "#888")
+        return format_html(
+            '<span style="background:{}15;color:{};padding:3px 10px;'
+            'border-radius:12px;font-size:11px;font-weight:600;">{}</span>',
+            color, color, obj.status.upper(),
+        )
+    status_badge.short_description = "Status"
+
+    def booking_count(self, obj):
+        return obj.bookings.count()
+    booking_count.short_description = "Bookings"
+
+    def save_model(self, request, obj, form, change):
+        """Auto-set completed_at when status changes to completed."""
+        if obj.status == Payout.Status.COMPLETED and not obj.completed_at:
+            obj.completed_at = timezone.now()
+        if obj.status == Payout.Status.FAILED and not obj.failed_at:
+            obj.failed_at = timezone.now()
+        super().save_model(request, obj, form, change)
+
+    actions = ["mark_completed", "mark_failed"]
+
+    @admin.action(description="Mark selected payouts as Completed")
+    def mark_completed(self, request, queryset):
+        updated = queryset.filter(status=Payout.Status.PENDING).update(
+            status=Payout.Status.COMPLETED,
+            completed_at=timezone.now(),
+        )
+        self.message_user(request, f"{updated} payout(s) marked as completed.")
+
+    @admin.action(description="Mark selected payouts as Failed")
+    def mark_failed(self, request, queryset):
+        updated = queryset.filter(status__in=[Payout.Status.PENDING, Payout.Status.PROCESSING]).update(
+            status=Payout.Status.FAILED,
+            failed_at=timezone.now(),
+        )
+        self.message_user(request, f"{updated} payout(s) marked as failed.")

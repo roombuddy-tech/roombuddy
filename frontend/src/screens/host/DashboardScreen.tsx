@@ -120,29 +120,47 @@ export default function DashboardScreen() {
         <Text style={styles.name}>{name} 👋</Text>
 
         {/* Stats grid */}
+        {/* Stats grid */}
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: '#E6F5F0' }]}>
             <Text style={[styles.statLabel, { color: COLORS.primary }]}>This month</Text>
-            <Text style={[styles.statValue, { color: COLORS.primary }]}>₹{(d?.this_month.earnings || 0).toLocaleString('en-IN')}</Text>
-            <Text style={styles.statSub}>{d?.this_month.bookings || 0} bookings</Text>
+            <Text style={[styles.statValue, { color: COLORS.primary }]}>
+              ₹{(d?.this_month.earnings || 0).toLocaleString('en-IN')}
+            </Text>
+            <Text style={styles.statSub}>
+              {(d?.this_month.bookings || 0) === 0 ? 'No bookings yet' : `${d?.this_month.bookings} bookings`}
+            </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FFF8E6' }]}>
             <Text style={[styles.statLabel, { color: '#B8860B' }]}>Occupancy</Text>
-            <Text style={[styles.statValue, { color: '#B8860B' }]}>{d?.this_month.occupancy_pct || 0}%</Text>
-            <Text style={styles.statSub}>{d?.this_month.occupancy_nights_booked || 0}/{d?.this_month.occupancy_nights_total || 30} nights</Text>
+            <Text style={[styles.statValue, { color: '#B8860B' }]}>
+              {d?.this_month.occupancy_pct != null ? `${d.this_month.occupancy_pct}%` : '—'}
+            </Text>
+            <Text style={styles.statSub}>
+              {d?.this_month.occupancy_nights_total != null
+                ? `${d.this_month.occupancy_nights_booked}/${d.this_month.occupancy_nights_total} nights`
+                : 'No active listings'}
+            </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#E6F5F0' }]}>
             <Text style={[styles.statLabel, { color: COLORS.primary }]}>Avg rating</Text>
-            <Text style={[styles.statValue, { color: COLORS.primary }]}>{d?.this_month.avg_rating || '—'}</Text>
-            <Text style={styles.statSub}>{d?.this_month.review_count || 0} reviews</Text>
+            <Text style={[styles.statValue, { color: COLORS.primary }]}>
+              {d?.this_month.avg_rating || '—'}
+            </Text>
+            <Text style={styles.statSub}>
+              {(d?.this_month.review_count || 0) === 0 ? 'No reviews yet' : `${d.this_month.review_count} reviews`}
+            </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FFF8E6' }]}>
             <Text style={[styles.statLabel, { color: '#B8860B' }]}>Response</Text>
-            <Text style={[styles.statValue, { color: '#B8860B' }]}>{d?.this_month.response_rate_pct || 0}%</Text>
-            <Text style={styles.statSub}>&lt; 1hr avg</Text>
+            <Text style={[styles.statValue, { color: '#B8860B' }]}>
+              {d?.this_month.response_rate_pct != null ? `${d.this_month.response_rate_pct}%` : '—'}
+            </Text>
+            <Text style={styles.statSub}>
+              {d?.this_month.response_rate_pct != null ? 'Avg response time' : 'No requests yet'}
+            </Text>
           </View>
         </View>
-
         {/* Today section */}
         <Text style={styles.sectionTitle}>Today</Text>
 

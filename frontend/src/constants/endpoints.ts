@@ -23,7 +23,6 @@ export const ENDPOINTS = {
     LISTINGS: '/api/listings/host/',
     CREATE_LISTING: '/api/listings/',
     LISTING_DETAIL: (id: string) => `/api/listings/${id}/`,
-    LISTING_BLOCKED_DATES: (id: string) => `/api/listings/${id}/blocked-dates/`,
     PROPERTIES: '/api/properties/',
     PROPERTY_PHOTOS: (propertyId: string) => `/api/properties/${propertyId}/photos/`,
   },
@@ -40,6 +39,7 @@ export const ENDPOINTS = {
   PAYMENT: {
     CREATE_ORDER: '/api/payments/create-order/',
     VERIFY: '/api/payments/verify/',
+    HOST_PAYOUTS: '/api/payments/host/payouts/',
   },
   NOTIFICATIONS: {
     LIST: '/api/notifications/',

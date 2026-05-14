@@ -10,6 +10,7 @@ from apps.users.models import User, OTPCode, UserSession, UserProfile, EmailVeri
 from apps.bookings.models import Booking
 from apps.reviews.models import Review
 from apps.users.models import PayoutAccount
+from apps.listings.models import Listing
 from third_party.storage import get_photo_url
 from third_party.email import send_verification_email
 from third_party.storage import upload_image, delete_image, StorageError
@@ -587,15 +588,20 @@ def _get_month_stats(user: User, month_start, today) -> dict:
     ).count()
     response_rate = round((responded / total_requests) * 100) if total_requests > 0 else 100
 
+    has_listings = Listing.objects.filter(
+        host_user=user,
+        status=Listing.Status.LIVE,
+    ).exists()
+
     return {
         "earnings": earnings,
         "bookings": booking_count,
-        "occupancy_pct": occupancy_pct,
-        "occupancy_nights_booked": booked_nights,
-        "occupancy_nights_total": days_in_month,
-        "avg_rating": float(avg_rating) if avg_rating else None,
+        "occupancy_pct": occupancy_pct if has_listings else None,
+        "occupancy_nights_booked": booked_nights if has_listings else None,
+        "occupancy_nights_total": days_in_month if has_listings else None,
+        "avg_rating": avg_rating,
         "review_count": review_agg["count"],
-        "response_rate_pct": response_rate,
+        "response_rate_pct": response_rate if has_listings else None,
     }
 
 

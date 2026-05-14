@@ -4,6 +4,7 @@ Payment endpoints.
 POST /api/payments/create-order/    : called by app to create a Razorpay order for a booking
 POST /api/payments/verify/          : called by app after Razorpay checkout completes (sync)
 POST /api/payments/webhook/         : called by Razorpay servers (async, public)
+GET  /api/payments/host/payouts/    : payout history for the authenticated host
 """
 import json
 import logging
@@ -15,6 +16,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
 from apps.bookings.models import Booking
+from apps.payments.models import Payout
 from apps.payments.serializers import (
     CreateOrderRequestSerializer,
     CreateOrderResponseSerializer,
@@ -128,3 +130,82 @@ class RazorpayWebhookView(APIView):
         handle_webhook(event_type, event_id, payload, raw_body, signature)
         # Always return 200 quickly so Razorpay doesn't keep retrying
         return Response({"status": "ok"}, status=http_status.HTTP_200_OK)
+
+
+class HostPayoutsView(APIView):
+    """Returns payout history for the authenticated host."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Payment"])
+    def get(self, request):
+        payouts = Payout.objects.filter(
+            host_user=request.user,
+        ).prefetch_related("bookings", "payout_account").order_by("-initiated_at")
+
+        results = []
+        for p in payouts:
+            # Get payout account details
+            account_info = {}
+            if p.payout_account:
+                if p.payout_account.account_type == "bank":
+                    account_info = {
+                        "bank_name": p.payout_account.bank_name,
+                        "account_last4": p.payout_account.account_number[-4:] if p.payout_account.account_number else None,
+                    }
+                else:
+                    account_info = {
+                        "bank_name": "UPI",
+                        "account_last4": p.payout_account.upi_id,
+                    }
+
+            # Get booking details
+            booking_details = [
+                {
+                    "booking_code": b.booking_code,
+                    "guest_name": _get_guest_name(b),
+                    "check_in": str(b.check_in_date),
+                    "check_out": str(b.check_out_date),
+                    "nights": b.nights,
+                    "host_receives": float(b.total_host_receives),
+                }
+                for b in p.bookings.all().select_related("guest_user")
+            ]
+
+            results.append({
+                "id": str(p.id),
+                "amount": float(p.amount),
+                "currency": p.currency,
+                "status": p.status,
+                "method": p.method,
+                "transfer_reference": p.transfer_reference,
+                "period_start": str(p.period_start) if p.period_start else None,
+                "period_end": str(p.period_end) if p.period_end else None,
+                "notes": p.notes,
+                "initiated_at": p.initiated_at.isoformat(),
+                "completed_at": p.completed_at.isoformat() if p.completed_at else None,
+                "bookings": booking_details,
+                "booking_count": len(booking_details),
+                **account_info,
+            })
+
+        # Summary
+        from django.db.models import Sum
+        total_paid = Payout.objects.filter(
+            host_user=request.user,
+            status=Payout.Status.COMPLETED,
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
+        return Response({
+            "total_paid_out": float(total_paid),
+            "payout_count": len(results),
+            "payouts": results,
+        })
+
+
+def _get_guest_name(booking):
+    try:
+        profile = booking.guest_user.profile
+        return f"{profile.first_name} {profile.last_name}".strip() or "Guest"
+    except Exception:
+        return "Guest"

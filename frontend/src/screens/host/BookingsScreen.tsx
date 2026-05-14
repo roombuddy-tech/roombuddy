@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import api from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
-import type { HostTabParamList, HostStackParamList } from '../../navigation/types';
+import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
+import api from '../../services/api';
 
 type NavProp = CompositeNavigationProp<
   BottomTabNavigationProp<HostTabParamList, 'Bookings'>,
@@ -63,6 +62,7 @@ function formatStatus(status: string): string {
 }
 
 export default function BookingsScreen() {
+  const navigation = useNavigation<NavProp>();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
