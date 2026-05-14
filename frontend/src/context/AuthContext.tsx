@@ -97,6 +97,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userRole: 'guest',
       user: userData,
     });
+
+    if (userData.is_profile_complete) {
+      try {
+        const res = await api.get(ENDPOINTS.USER.PROFILE);
+        const profile = res.data;
+        const freshUser = { ...userData, ...profile, is_profile_complete: true };
+        await storage.saveUserData(freshUser);
+        setState((prev) => ({ ...prev, user: freshUser }));
+      } catch {
+        // Non-blocking — we already have basic auth state
+      }
+    }
   }, []);
 
   const logout = useCallback(async () => {
