@@ -13,6 +13,9 @@ from apps.users.views import (
     VerifyEmailView,
     VerifyEmailWebView,
     VerificationStatusView,
+    SubmitIDVerificationView,
+    PendingVerificationsView,
+    ReviewIDVerificationView,
     PayoutAccountsListView,
     AddBankAccountView,
     AddUPIView,
@@ -36,6 +39,7 @@ urlpatterns = [
     path("profile/email/verify/", VerifyEmailView.as_view(), name="verify-email"),
     path("profile/email/verify-link/", VerifyEmailWebView.as_view(), name="verify-email-web"),
     path("profile/verification-status/", VerificationStatusView.as_view(), name="verification-status"),
+    path("profile/id-verification/submit/", SubmitIDVerificationView.as_view(), name="submit-id-verification"),
 
     # Public profile (host viewing guest, guest viewing host)
     path("<uuid:user_id>/public-profile/", PublicProfileView.as_view(), name="public-profile"),
@@ -49,4 +53,8 @@ urlpatterns = [
 
     # Host
     path("host/dashboard/", HostDashboardView.as_view(), name="host-dashboard"),
+
+    # Admin — ID verification review
+    path("admin/verifications/pending/", PendingVerificationsView.as_view(), name="pending-verifications"),
+    path("admin/verifications/review/", ReviewIDVerificationView.as_view(), name="review-id-verification"),
 ]
