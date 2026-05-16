@@ -1,5 +1,6 @@
 from datetime import timedelta
 import secrets
+import uuid
 
 
 from django.db import models
@@ -516,13 +517,132 @@ def verify_email_token(user: User, token: str) -> dict:
     return {"message": "Email verified successfully", "email": record.email}
 
 def get_verification_status(user: User) -> dict:
-    """Returns verification status. Email read from users table."""
+    """Returns verification status including ID verification."""
+    profile = user.profile if hasattr(user, "profile") else None
+    id_status = "not_submitted"
+    id_rejection_reason = None
+    id_submitted_at = None
+    id_reviewed_at = None
+
+    if profile:
+        id_status = profile.id_verification_status
+        id_rejection_reason = profile.id_rejection_reason
+        id_submitted_at = profile.id_submitted_at.isoformat() if profile.id_submitted_at else None
+        id_reviewed_at = profile.id_reviewed_at.isoformat() if profile.id_reviewed_at else None
+
     return {
         "phone_verified": user.phone_verified_at is not None,
         "email_verified": user.email_verified_at is not None,
         "email": user.email or "",
-        "aadhaar_verified": False,
+        "aadhaar_verified": id_status == "approved",
+        "id_verification_status": id_status,
+        "id_rejection_reason": id_rejection_reason,
+        "id_submitted_at": id_submitted_at,
+        "id_reviewed_at": id_reviewed_at,
     }
+
+
+def submit_id_verification(user: User, aadhaar_image, selfie_image) -> dict:
+    """Upload Aadhaar photo + selfie for manual verification."""
+    
+
+    profile = user.profile
+
+    if profile.id_verification_status == "approved":
+        raise AuthServiceError("Your ID is already verified.", "ALREADY_VERIFIED", 400)
+
+    aadhaar_result = upload_image(
+        aadhaar_image,
+        folder=f"id-verification/{user.id}",
+        filename=f"aadhaar_{uuid.uuid4().hex[:8]}.jpg",
+        max_width=1600,
+    )
+
+    selfie_result = upload_image(
+        selfie_image,
+        folder=f"id-verification/{user.id}",
+        filename=f"selfie_{uuid.uuid4().hex[:8]}.jpg",
+        max_width=1200,
+    )
+
+    profile.aadhaar_photo_url = aadhaar_result["url"]
+    profile.selfie_photo_url = selfie_result["url"]
+    profile.id_verification_status = UserProfile.IDVerificationStatus.PENDING
+    profile.id_rejection_reason = None
+    profile.id_submitted_at = timezone.now()
+    profile.id_reviewed_at = None
+    profile.id_reviewed_by = None
+    profile.save(update_fields=[
+        "aadhaar_photo_url", "selfie_photo_url",
+        "id_verification_status", "id_rejection_reason",
+        "id_submitted_at", "id_reviewed_at", "id_reviewed_by", "updated_at",
+    ])
+
+    return {"status": "pending", "message": "Documents submitted. We'll review within 24-48 hours."}
+
+
+def review_id_verification(user_id: str, action: str, reviewer: str, reason: str = None) -> dict:
+    """Approve or reject a user's ID verification."""
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        raise AuthServiceError("User not found.", "USER_NOT_FOUND", 404)
+
+    profile = user.profile
+
+    if profile.id_verification_status != "pending":
+        raise AuthServiceError(
+            f"Cannot review. Current status is '{profile.id_verification_status}'.",
+            "INVALID_STATUS", 400,
+        )
+
+    if action == "approve":
+        profile.id_verification_status = UserProfile.IDVerificationStatus.APPROVED
+        profile.id_rejection_reason = None
+    elif action == "reject":
+        if not reason:
+            raise AuthServiceError("Rejection reason is required.", "REASON_REQUIRED", 400)
+        profile.id_verification_status = UserProfile.IDVerificationStatus.REJECTED
+        profile.id_rejection_reason = reason
+    else:
+        raise AuthServiceError("Action must be 'approve' or 'reject'.", "INVALID_ACTION", 400)
+
+    profile.id_reviewed_at = timezone.now()
+    profile.id_reviewed_by = reviewer
+    profile.save(update_fields=[
+        "id_verification_status", "id_rejection_reason",
+        "id_reviewed_at", "id_reviewed_by", "updated_at",
+    ])
+
+    return {
+        "user_id": str(user.id),
+        "phone": user.phone_number,
+        "name": profile.display_name,
+        "status": profile.id_verification_status,
+        "reviewed_by": reviewer,
+    }
+
+
+def get_pending_verifications() -> list:
+    """Returns list of users with pending ID verification."""
+    from third_party.storage import get_photo_url
+
+    pending = UserProfile.objects.filter(
+        id_verification_status=UserProfile.IDVerificationStatus.PENDING,
+    ).select_related("user").order_by("id_submitted_at")
+
+    return [
+        {
+            "user_id": str(p.user_id),
+            "phone": p.user.phone_number,
+            "name": p.display_name,
+            "city": p.city,
+            "aadhaar_photo_url": get_photo_url(p.aadhaar_photo_url) if p.aadhaar_photo_url else None,
+            "selfie_photo_url": get_photo_url(p.selfie_photo_url) if p.selfie_photo_url else None,
+            "submitted_at": p.id_submitted_at.isoformat() if p.id_submitted_at else None,
+        }
+        for p in pending
+    ]
 
 # ─── Dashboard services ──────────────────────────────────────
 

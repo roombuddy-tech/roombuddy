@@ -44,6 +44,9 @@ from apps.users.services import (
     send_email_verification,
     verify_email_token,
     get_verification_status,
+    submit_id_verification,
+    review_id_verification,
+    get_pending_verifications,
     AuthServiceError,
     get_payout_accounts,
     add_bank_account,
@@ -362,3 +365,65 @@ class UploadProfilePhotoView(APIView):
             return _error_response(e)
 
         return Response(result, status=status.HTTP_200_OK)
+
+
+class SubmitIDVerificationView(APIView):
+    """Upload Aadhaar photo + selfie for manual verification."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(tags=["Profile"])
+    def post(self, request):
+        aadhaar_image = request.FILES.get("aadhaar_image")
+        selfie_image = request.FILES.get("selfie_image")
+
+        if not aadhaar_image or not selfie_image:
+            return Response(
+                {"error": "Both aadhaar_image and selfie_image are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = submit_id_verification(request.user, aadhaar_image, selfie_image)
+            return Response(result, status=status.HTTP_200_OK)
+        except AuthServiceError as e:
+            return _error_response(e)
+
+
+class PendingVerificationsView(APIView):
+    """Returns list of users awaiting ID verification review."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Admin"])
+    def get(self, request):
+        if not request.user.is_staff:
+            return Response({"error": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+
+        result = get_pending_verifications()
+        return Response({"pending_count": len(result), "verifications": result})
+
+
+class ReviewIDVerificationView(APIView):
+    """Approve or reject a user's ID verification."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Admin"])
+    def post(self, request):
+        if not request.user.is_staff:
+            return Response({"error": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get("user_id")
+        action = request.data.get("action")
+        reason = request.data.get("reason", "")
+
+        if not user_id or not action:
+            return Response({"error": "user_id and action are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = review_id_verification(user_id, action, str(request.user.phone_number), reason)
+            return Response(result, status=status.HTTP_200_OK)
+        except AuthServiceError as e:
+            return _error_response(e)

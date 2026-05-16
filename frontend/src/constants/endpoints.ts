@@ -12,6 +12,7 @@ export const ENDPOINTS = {
     SEND_EMAIL_VERIFICATION: '/api/users/profile/email/send-verification/',
     VERIFY_EMAIL: '/api/users/profile/email/verify/',
     VERIFICATION_STATUS: '/api/users/profile/verification-status/',
+    SUBMIT_ID_VERIFICATION: '/api/users/profile/id-verification/submit/',
     PAYOUT_ACCOUNTS: '/api/users/profile/payout-accounts/',
     ADD_BANK: '/api/users/profile/payout-accounts/add-bank/',
     ADD_UPI: '/api/users/profile/payout-accounts/add-upi/',

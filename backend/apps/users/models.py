@@ -134,6 +134,12 @@ class UserProfile(models.Model):
         NON_BINARY = "non_binary"
         PREFER_NOT_TO_SAY = "prefer_not_to_say"
 
+    class IDVerificationStatus(models.TextChoices):
+        NOT_SUBMITTED = "not_submitted"
+        PENDING = "pending"
+        APPROVED = "approved"
+        REJECTED = "rejected"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name="profile")
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -141,6 +147,20 @@ class UserProfile(models.Model):
     profile_photo_url = models.URLField(max_length=2048, null=True, blank=True)
     city = models.CharField(max_length=100)
     date_of_birth = models.DateField(null=True, blank=True)
+
+    # ID verification (Aadhaar + Selfie manual review)
+    id_verification_status = models.CharField(
+        max_length=20,
+        choices=IDVerificationStatus.choices,
+        default=IDVerificationStatus.NOT_SUBMITTED,
+    )
+    aadhaar_photo_url = models.CharField(max_length=500, null=True, blank=True)
+    selfie_photo_url = models.CharField(max_length=500, null=True, blank=True)
+    id_rejection_reason = models.CharField(max_length=300, null=True, blank=True)
+    id_submitted_at = models.DateTimeField(null=True, blank=True)
+    id_reviewed_at = models.DateTimeField(null=True, blank=True)
+    id_reviewed_by = models.CharField(max_length=100, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
