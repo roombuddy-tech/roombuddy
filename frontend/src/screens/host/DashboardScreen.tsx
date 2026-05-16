@@ -91,28 +91,24 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
       >
-        {/* Top bar */}
+        {/* Top bar: Brand + Bell + Avatar */}
         <View style={styles.topBar}>
           <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
-          <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
-            {user?.profile_photo_url ? (
-              <Image source={{ uri: user.profile_photo_url }} style={{ width: 38, height: 38, borderRadius: 19 }} />
-            ) : (
-              <Text style={styles.avatarText}>{initial}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Guest/Host toggle */}
-        <View style={styles.toggleRow}>
-          <TouchableOpacity style={styles.toggleBtn} onPress={() => switchRole('guest')}>
-            <Ionicons name="search-outline" size={16} color={COLORS.textSec} />
-            <Text style={styles.toggleText}>Find a room</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.toggleBtn, styles.toggleActiveHost]}>
-            <Text style={styles.toggleEmoji}>🏠</Text>
-            <Text style={styles.toggleActiveTextHost}>Host a room</Text>
-          </TouchableOpacity>
+          <View style={styles.topBarRight}>
+            <TouchableOpacity
+              style={styles.bellBtn}
+              onPress={() => navigation.navigate('Notifications')}
+            >
+              <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
+              {user?.profile_photo_url ? (
+                <Image source={{ uri: user.profile_photo_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+              ) : (
+                <Text style={styles.avatarText}>{initial}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Greeting */}
@@ -137,8 +133,8 @@ export default function DashboardScreen() {
               {d?.this_month.occupancy_pct != null ? `${d.this_month.occupancy_pct}%` : '—'}
             </Text>
             <Text style={styles.statSub}>
-              {d?.this_month.occupancy_nights_total != null
-                ? `${d.this_month.occupancy_nights_booked}/${d.this_month.occupancy_nights_total} nights`
+              {d?.this_month?.occupancy_nights_total != null
+                ? `${d?.this_month?.occupancy_nights_booked}/${d?.this_month?.occupancy_nights_total} nights`
                 : 'No active listings'}
             </Text>
           </View>
@@ -164,8 +160,8 @@ export default function DashboardScreen() {
         {/* Today section */}
         <Text style={styles.sectionTitle}>Today</Text>
 
-        {d?.today.check_ins && d.today.check_ins.length > 0 ? (
-          d.today.check_ins.map((ci, i) => (
+        {d?.today.check_ins && d?.today.check_ins.length > 0 ? (
+          d?.today.check_ins.map((ci, i) => (
             <TouchableOpacity
               key={ci.booking_id || i}
               style={styles.activityCard}
@@ -196,8 +192,8 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {d?.today.check_outs && d.today.check_outs.length > 0 && (
-          d.today.check_outs.map((co, i) => (
+        {d?.today.check_outs && d?.today.check_outs.length > 0 && (
+          d?.today.check_outs.map((co, i) => (
             <TouchableOpacity
               key={`co-${co.booking_id || i}`}
               style={styles.activityCard}
@@ -214,8 +210,8 @@ export default function DashboardScreen() {
           ))
         )}
 
-        {d?.today.recent_reviews && d.today.recent_reviews.length > 0 && (
-          d.today.recent_reviews.map((rv, i) => (
+        {d?.today.recent_reviews && d?.today.recent_reviews.length > 0 && (
+          d?.today.recent_reviews.map((rv, i) => (
             <View key={`rv-${i}`} style={styles.activityCard}>
               <View style={[styles.activityIcon, { backgroundColor: '#FFF8E6' }]}>
                 <Text style={{ fontSize: 20 }}>⭐</Text>
@@ -242,14 +238,10 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
   brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
   brandAccent: { color: COLORS.accent },
-  avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
-  toggleRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.lg },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: RADIUS.sm },
-  toggleActiveHost: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
-  toggleText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  toggleEmoji: { fontSize: 14 },
-  toggleActiveTextHost: { fontSize: 14, color: COLORS.accent, ...FONTS.semibold },
+  avatarBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarText: { color: '#fff', fontSize: 16, ...FONTS.bold },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  bellBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
   greeting: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   name: { fontSize: 28, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },

@@ -14,8 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, DateData } from 'react-native-calendars';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +27,14 @@ import ProfileMenu from '../shared/ProfileMenu';
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
 
 const AREAS = ['Koramangala', 'HSR Layout', 'Whitefield', 'Indiranagar', 'BTM Layout', 'JP Nagar'];
+
+const POPULAR_CITIES = [
+  { name: 'Bangalore', color: '#EDF1F7' },
+  { name: 'Mumbai', color: '#FEF6EE' },
+  { name: 'Pune', color: '#E8F0ED' },
+  { name: 'Hyderabad', color: '#F3EEFC' },
+  { name: 'Delhi NCR', color: '#FEF0F0' },
+];
 
 const AMENITY_SHORT: Record<string, { icon: string; label: string }> = {
   WiFi: { icon: 'wifi-outline', label: 'WiFi' },
@@ -50,10 +58,11 @@ function fmtDate(d: string) {
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { switchRole, user } = useAuth();
+  const { user } = useAuth();
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
   const [showProfile, setShowProfile] = useState(false);
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
   // Search form state
   const [query, setQuery] = useState('');
@@ -112,9 +121,9 @@ export default function HomeScreen() {
   const doSearch = useCallback(async () => {
     setLoading(true);
     setHasSearched(true);
+    setSearchExpanded(false);
     try {
       const params: { q?: string; area?: string; check_in?: string; check_out?: string } = {};
-      const searchTerm = query.trim() || selectedArea;
       if (query.trim()) params.q = query.trim();
       if (selectedArea) params.area = selectedArea;
       if (checkIn) params.check_in = checkIn;
@@ -135,9 +144,10 @@ export default function HomeScreen() {
 
   const goBackToSearch = () => {
     setHasSearched(false);
+    setSearchExpanded(true);
   };
 
-  // ─── Results view ───────────────────────────────────────────────────────────
+  // ─── Results card ──────────────────────────────────────────────────────
 
   const renderCard = ({ item }: { item: GuestListingCard }) => (
     <TouchableOpacity
@@ -154,26 +164,19 @@ export default function HomeScreen() {
         style={styles.cardImg}
         resizeMode="cover"
       />
-
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.cardArea}>{item.area_name}</Text>
-
         {item.description ? (
           <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
         ) : null}
-
         {item.amenity_highlights.length > 0 && (
           <View style={styles.chipRow}>
             {item.amenity_highlights.slice(0, 4).map((a) => {
               const info = AMENITY_SHORT[a];
               return (
                 <View key={a} style={styles.chip}>
-                  <Ionicons
-                    name={(info?.icon ?? 'checkmark-outline') as any}
-                    size={13}
-                    color={COLORS.primary}
-                  />
+                  <Ionicons name={(info?.icon ?? 'checkmark-outline') as any} size={13} color={COLORS.primary} />
                   <Text style={styles.chipText}>{info?.label ?? a}</Text>
                 </View>
               );
@@ -188,7 +191,6 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-
         <View style={styles.cardFooter}>
           <Text style={styles.cardPrice}>
             ₹{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
@@ -213,7 +215,6 @@ export default function HomeScreen() {
         <Ionicons name="arrow-back" size={16} color={COLORS.primary} />
         <Text style={styles.modifyTxt}>Modify search</Text>
       </TouchableOpacity>
-
       <View style={styles.searchSummary}>
         <View style={styles.summaryChip}>
           <Ionicons name="location-outline" size={14} color={COLORS.primary} />
@@ -224,7 +225,6 @@ export default function HomeScreen() {
           <Text style={styles.summaryTxt}>{fmtDate(checkIn!)} — {fmtDate(checkOut!)}</Text>
         </View>
       </View>
-
       <Text style={styles.sectionTitle}>
         {loading ? 'Searching…' : `${listings.length} room${listings.length !== 1 ? 's' : ''} found`}
       </Text>
@@ -243,11 +243,11 @@ export default function HomeScreen() {
     </View>
   );
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Top bar */}
+      {/* Top bar: Brand + Bell + Avatar */}
       <View style={styles.topBar}>
         <Text style={styles.brand}>
           Room<Text style={styles.brandAccent}>Buddy</Text>
@@ -261,7 +261,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
             {user?.profile_photo_url ? (
-              <Image source={{ uri: user.profile_photo_url }} style={{ width: 38, height: 38, borderRadius: 19 }} />
+              <Image source={{ uri: user.profile_photo_url }} style={styles.avatarImg} />
             ) : (
               <Text style={styles.avatarText}>{initial}</Text>
             )}
@@ -283,25 +283,21 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
         />
-      ) : (
-        /* ── Search form ── */
+      ) : searchExpanded ? (
+        /* ── Expanded search form ── */
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Toggle */}
-          <View style={styles.toggleRow}>
-            <TouchableOpacity style={[styles.toggleBtn, styles.toggleActive]}>
-              <Ionicons name="search-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.toggleActiveText}>Find a room</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.toggleBtn} onPress={() => switchRole('host')}>
-              <Ionicons name="home-outline" size={16} color={COLORS.textSec} />
-              <Text style={styles.toggleText}>Host a room</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Close / collapse */}
+          <TouchableOpacity
+            onPress={() => setSearchExpanded(false)}
+            style={styles.closeFormBtn}
+          >
+            <Ionicons name="close" size={20} color={COLORS.text} />
+          </TouchableOpacity>
 
           {/* Where */}
           <Text style={styles.formLabel}>Where are you looking?</Text>
@@ -314,6 +310,7 @@ export default function HomeScreen() {
               value={query}
               onChangeText={setQuery}
               returnKeyType="done"
+              autoFocus
             />
             {query.length > 0 && (
               <TouchableOpacity onPress={() => setQuery('')}>
@@ -358,9 +355,6 @@ export default function HomeScreen() {
             theme={{
               todayTextColor: COLORS.primary,
               arrowColor: COLORS.primary,
-              textDayFontFamily: FONTS.medium.fontFamily,
-              textMonthFontFamily: FONTS.semibold.fontFamily,
-              textDayHeaderFontFamily: FONTS.medium.fontFamily,
             }}
             style={styles.calendar}
           />
@@ -392,6 +386,114 @@ export default function HomeScreen() {
             </Text>
           )}
         </ScrollView>
+      ) : (
+        /* ── Home / Discovery view ── */
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Search pill (Airbnb style) */}
+          <TouchableOpacity
+            style={styles.searchPill}
+            activeOpacity={0.8}
+            onPress={() => setSearchExpanded(true)}
+          >
+            <View style={styles.searchPillIcon}>
+              <Ionicons name="search" size={18} color={COLORS.primary} />
+            </View>
+            <View style={styles.searchPillContent}>
+              <Text style={styles.searchPillTitle}>Find a room</Text>
+              <Text style={styles.searchPillSub}>Any city · Any dates · Any budget</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Popular cities */}
+          <Text style={styles.homeSection}>Popular cities</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.citiesRow}
+          >
+            {POPULAR_CITIES.map((city) => (
+              <TouchableOpacity
+                key={city.name}
+                style={styles.cityCard}
+                onPress={() => {
+                  setQuery(city.name);
+                  setSearchExpanded(true);
+                }}
+              >
+                <View style={[styles.cityCircle, { backgroundColor: city.color }]}>
+                  <Text style={styles.cityEmoji}>
+                    {city.name === 'Bangalore' ? '🏙️' :
+                     city.name === 'Mumbai' ? '🌊' :
+                     city.name === 'Pune' ? '⛰️' :
+                     city.name === 'Hyderabad' ? '🕌' : '🏛️'}
+                  </Text>
+                </View>
+                <Text style={styles.cityName}>{city.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Why RoomBuddy */}
+          <Text style={styles.homeSection}>Why RoomBuddy?</Text>
+          <View style={styles.whyGrid}>
+            <View style={styles.whyCard}>
+              <Text style={styles.whyEmoji}>💰</Text>
+              <Text style={styles.whyTitle}>Budget-friendly</Text>
+              <Text style={styles.whySub}>Rooms from ₹500/night</Text>
+            </View>
+            <View style={styles.whyCard}>
+              <Text style={styles.whyEmoji}>🍽️</Text>
+              <Text style={styles.whyTitle}>Home meals</Text>
+              <Text style={styles.whySub}>Home-cooked food available</Text>
+            </View>
+            <View style={styles.whyCard}>
+              <Text style={styles.whyEmoji}>✅</Text>
+              <Text style={styles.whyTitle}>Verified hosts</Text>
+              <Text style={styles.whySub}>ID verified for safety</Text>
+            </View>
+            <View style={styles.whyCard}>
+              <Text style={styles.whyEmoji}>📅</Text>
+              <Text style={styles.whyTitle}>Flexible stays</Text>
+              <Text style={styles.whySub}>1 night to 1 month</Text>
+            </View>
+          </View>
+
+          {/* How it works */}
+          <Text style={styles.homeSection}>How it works</Text>
+          <View style={styles.stepsRow}>
+            <View style={styles.stepCard}>
+              <View style={[styles.stepNum, { backgroundColor: COLORS.primaryAlpha }]}>
+                <Text style={[styles.stepNumText, { color: COLORS.primary }]}>1</Text>
+              </View>
+              <Text style={styles.stepTitle}>Search</Text>
+              <Text style={styles.stepSub}>Pick a city and dates</Text>
+            </View>
+            <View style={styles.stepArrow}>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textMut} />
+            </View>
+            <View style={styles.stepCard}>
+              <View style={[styles.stepNum, { backgroundColor: COLORS.accentAlpha }]}>
+                <Text style={[styles.stepNumText, { color: COLORS.accent }]}>2</Text>
+              </View>
+              <Text style={styles.stepTitle}>Book</Text>
+              <Text style={styles.stepSub}>Reserve instantly</Text>
+            </View>
+            <View style={styles.stepArrow}>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textMut} />
+            </View>
+            <View style={styles.stepCard}>
+              <View style={[styles.stepNum, { backgroundColor: '#E8F0ED' }]}>
+                <Text style={[styles.stepNumText, { color: '#1B7A4E' }]}>3</Text>
+              </View>
+              <Text style={styles.stepTitle}>Stay</Text>
+              <Text style={styles.stepSub}>Enjoy your stay</Text>
+            </View>
+          </View>
+        </ScrollView>
       )}
 
       <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />
@@ -401,6 +503,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+
+  // Top bar
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -412,44 +516,124 @@ const styles = StyleSheet.create({
   brandAccent: { color: COLORS.accent },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   bellBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
+  avatarImg: { width: 40, height: 40, borderRadius: 20 },
+  avatarText: { color: '#fff', fontSize: 16, ...FONTS.bold },
 
   list: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
 
-  toggleRow: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: 4,
-    marginBottom: SPACING.lg,
-  },
-  toggleBtn: {
-    flex: 1,
+  // Search pill (Airbnb style)
+  searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 40,
+    padding: 12,
+    gap: 12,
+    ...SHADOW.md,
+    marginBottom: SPACING.xl,
   },
-  toggleActive: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
-  toggleText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  toggleActiveText: { fontSize: 14, color: COLORS.primary, ...FONTS.semibold },
+  searchPillIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchPillContent: { flex: 1 },
+  searchPillTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  searchPillSub: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
+
+  // Home sections
+  homeSection: {
+    fontSize: 18,
+    ...FONTS.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+
+  // Popular cities
+  citiesRow: { gap: 14, paddingBottom: SPACING.xl },
+  cityCard: { alignItems: 'center', width: 72 },
+  cityCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  cityEmoji: { fontSize: 26 },
+  cityName: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec, textAlign: 'center' },
+
+  // Why RoomBuddy
+  whyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: SPACING.xl,
+  },
+  whyCard: {
+    width: '47%',
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+  },
+  whyEmoji: { fontSize: 24, marginBottom: 6 },
+  whyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  whySub: { fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
+
+  // How it works
+  stepsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  stepCard: { flex: 1, alignItems: 'center' },
+  stepNum: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  stepNumText: { fontSize: 16, ...FONTS.bold },
+  stepTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
+  stepSub: { fontSize: 10, color: COLORS.textMut, textAlign: 'center', marginTop: 2 },
+  stepArrow: { paddingHorizontal: 4, paddingBottom: 20 },
+
+  // Expanded search form
+  closeFormBtn: {
+    alignSelf: 'flex-end',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
 
   formLabel: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.sm },
   formSub: { fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm },
@@ -472,7 +656,7 @@ const styles = StyleSheet.create({
   areaChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.bg,
@@ -493,7 +677,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     paddingVertical: 16,
     marginTop: SPACING.lg,
   },
@@ -501,12 +685,8 @@ const styles = StyleSheet.create({
   searchBtnTxt: { color: '#fff', fontSize: 16, ...FONTS.semibold },
   searchHint: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: SPACING.sm },
 
-  modifyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: SPACING.md,
-  },
+  // Results
+  modifyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.md },
   modifyTxt: { fontSize: 14, color: COLORS.primary, ...FONTS.semibold },
   searchSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.md },
   summaryChip: {
@@ -515,13 +695,12 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     backgroundColor: COLORS.primaryAlpha,
     borderWidth: 1,
     borderColor: COLORS.primary,
   },
   summaryTxt: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
-
   sectionTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
 
   card: {
@@ -533,11 +712,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...SHADOW.sm,
   },
-  cardImg: {
-    width: '100%',
-    height: 180,
-    backgroundColor: COLORS.warm,
-  },
+  cardImg: { width: '100%', height: 180, backgroundColor: COLORS.surface },
   cardContent: { padding: SPACING.md },
   cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   cardArea: { fontSize: 13, color: COLORS.textSec, marginBottom: 4 },
@@ -569,7 +744,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accentAlpha,
   },
   mealChipText: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
-
   emptyWrap: { alignItems: 'center', paddingVertical: SPACING.xxl },
   emptyTitle: { fontSize: 18, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md },
   emptySub: { fontSize: 14, color: COLORS.textMut, marginTop: 4 },

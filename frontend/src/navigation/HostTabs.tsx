@@ -1,49 +1,144 @@
-import React from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { COLORS, FONTS } from '../constants/theme';
-import DashboardScreen from '../screens/host/DashboardScreen';
+import { useAuth } from '../context/AuthContext';
 import BookingsScreen from '../screens/host/BookingsScreen';
+import DashboardScreen from '../screens/host/DashboardScreen';
 import EarningsScreen from '../screens/host/EarningsScreen';
 import ListingsScreen from '../screens/host/ListingsScreen';
 import type { HostTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
 
-const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
-  Today: { active: 'home', inactive: 'home-outline' },
-  Listing: { active: 'document-text', inactive: 'document-text-outline' },
-  Bookings: { active: 'book', inactive: 'book-outline' },
-  Earnings: { active: 'cash', inactive: 'cash-outline' },
-};
+function GuestSwitchScreen() { return <View />; }
 
 export default function HostTabs() {
+  const { switchRole } = useAuth();
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
+        tabBarStyle: styles.tabBar,
+        tabBarItemStyle: styles.tabBarItem,
         tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.textMut,
-        tabBarLabelStyle: { fontSize: 11, ...FONTS.semibold, marginTop: -2 },
-        tabBarStyle: { borderTopColor: COLORS.border, paddingTop: 6, height: 84 },
-        tabBarIcon: ({ focused, color }) => {
-          const icon = ICONS[route.name];
-          const name = focused ? icon.active : icon.inactive;
-          return <Ionicons name={name} size={22} color={color} />;
-        },
-      })}
+        tabBarLabelStyle: styles.tabLabel,
+      }}
     >
-      <Tab.Screen name="Today" component={DashboardScreen} />
-      <Tab.Screen name="Listing" component={ListingsScreen} />
-      <Tab.Screen name="Bookings" component={BookingsScreen} />
-      <Tab.Screen name="Earnings" component={EarningsScreen} />
+      <Tab.Screen
+        name="Today"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: 'Today',
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons
+                name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
+                size={24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Listing"
+        component={ListingsScreen}
+        options={{
+          tabBarLabel: 'Listings',
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons
+                name={focused ? 'home-city' : 'home-city-outline'}
+                size={24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Bookings"
+        component={BookingsScreen}
+        options={{
+          tabBarLabel: 'Bookings',
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons
+                name={focused ? 'book-open-page-variant' : 'book-open-page-variant-outline'}
+                size={24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Earnings"
+        component={EarningsScreen}
+        options={{
+          tabBarLabel: 'Earnings',
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons
+                name={focused ? 'chart-line' : 'chart-line-variant'}
+                size={24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="GuestSwitch"
+        component={GuestSwitchScreen}
+        options={{
+          tabBarLabel: 'Find',
+          tabBarIcon: ({ color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons name="magnify" size={24} color={color} />
+            </View>
+          ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            switchRole('guest');
+          },
+        }}
+      />
     </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-  placeholderText: { fontSize: 24, ...FONTS.bold, color: COLORS.text },
-  placeholderSub: { fontSize: 14, color: COLORS.textMut, marginTop: 8 },
+  tabBar: {
+    backgroundColor: COLORS.bg,
+    borderTopWidth: 0.5,
+    borderTopColor: COLORS.border,
+    paddingTop: 8,
+    paddingBottom: 28,
+    height: 88,
+    elevation: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+  },
+  tabBarItem: {
+    paddingVertical: 4,
+  },
+  tabLabel: {
+    fontSize: 10,
+    ...FONTS.semibold,
+    marginTop: 2,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 28,
+  },
 });

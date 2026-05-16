@@ -308,7 +308,7 @@ def get_user_profile(user: User) -> dict:
         "date_of_birth": date_of_birth,
         "phone_verified": user.phone_verified_at is not None,
         "email_verified": user.email_verified_at is not None,
-        "aadhaar_verified": False,
+        "aadhaar_verified": profile.id_verification_status == "approved" if profile else False,
         "member_since": member_since,
         "phone_number": user.phone_number,
         "phone_country_code": user.phone_country_code,
@@ -456,7 +456,7 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
         "verification": {
             "phone_verified": target.phone_verified_at is not None,
             "email_verified": target.email_verified_at is not None,
-            "aadhaar_verified": False,
+            "aadhaar_verified": profile.id_verification_status == "approved" if profile else False,
         },
         "stats": {
             "stays_as_guest": stays_as_guest,
