@@ -9,6 +9,7 @@ export type GuestTabParamList = {
   Home: undefined;
   MyStays: undefined;
   Messages: undefined;
+  HostSwitch: undefined;
 };
 
 export type HostTabParamList = {
@@ -16,6 +17,7 @@ export type HostTabParamList = {
   Listing: undefined;
   Bookings: undefined;
   Earnings: undefined;
+  GuestSwitch: undefined;
 };
 
 export type HostStackParamList = {

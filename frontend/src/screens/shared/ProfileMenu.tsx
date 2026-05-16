@@ -176,7 +176,7 @@ const handlePickPhoto = async () => {
 
               <Text style={styles.userName}>{profile?.display_name || 'User'}</Text>
               <Text style={styles.userMeta}>
-                {profile?.city ? `${profile.city} · ` : ''}Member since {profile?.member_since || ''}
+                {profile?.member_since ? `Member since ${profile.member_since}` : ''}
               </Text>
 
               <View style={styles.badgeRow}>
@@ -197,12 +197,19 @@ const handlePickPhoto = async () => {
                     <Text style={[styles.badgeText, { color: '#F59E0B' }]}>Verify email</Text>
                   </TouchableOpacity>
                 )}
-                {!profile?.aadhaar_verified && (
-                  <View style={[styles.badge, styles.badgeOutline]}>
-                    <Ionicons name="checkmark-circle-outline" size={14} color={COLORS.textMut} />
-                    <Text style={[styles.badgeText, { color: COLORS.textMut }]}>Aadhaar pending</Text>
-                  </View>
-                )}
+                <TouchableOpacity
+                  style={[styles.badge, profile?.aadhaar_verified ? styles.badgeSuccess : styles.badgeWarning]}
+                  onPress={() => setActiveScreen('verification')}
+                >
+                  <Ionicons
+                    name={profile?.aadhaar_verified ? 'checkmark-circle' : 'time-outline'}
+                    size={14}
+                    color={profile?.aadhaar_verified ? '#10B981' : COLORS.textMut}
+                  />
+                  <Text style={[styles.badgeText, { color: profile?.aadhaar_verified ? '#10B981' : COLORS.textMut }]}>
+                    {profile?.aadhaar_verified ? 'Aadhaar verified' : 'Aadhaar pending'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -274,6 +281,7 @@ const styles = StyleSheet.create({
   avatarInitials: { fontSize: 28, ...FONTS.bold, color: COLORS.primary },
   avatarImage: { width: 76, height: 76, borderRadius: 38 },
   editBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
+  badgeSuccess: { backgroundColor: '#E6F9F0', borderColor: '#C5EDDA' },
   userName: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
   userMeta: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.md },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, justifyContent: 'center' },
