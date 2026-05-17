@@ -15,6 +15,8 @@ export interface GuestListingCard {
   meals_available: boolean;
   meal_cost_per_day: number | null;
   description?: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface ListingPhoto {
@@ -48,6 +50,9 @@ export interface GuestListingDetail {
     apartment_name: string;
     city_name: string;
     gender_preference: string;
+    latitude: number | null;
+    longitude: number | null;
+    formatted_address: string;
   };
   room: {
     room_type: string;

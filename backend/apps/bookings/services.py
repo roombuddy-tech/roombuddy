@@ -581,6 +581,55 @@ def get_booking_detail(booking: Booking) -> dict:
 
 
 
+def get_guest_bookings(user: User) -> list[dict]:
+    """Returns all bookings for a guest, newest first, with listing/host info."""
+    from apps.properties.models import PropertyPhoto
+    from third_party.storage import get_photo_url
+
+    bookings = (
+        Booking.objects.filter(guest_user=user)
+        .select_related("host_user", "listing__property")
+        .order_by("-created_at")
+    )
+
+    property_ids = [b.listing.property_id for b in bookings if b.listing]
+    photo_map: dict[str, str] = {}
+    if property_ids:
+        photo_map = {
+            str(p["property_id"]): p["url"]
+            for p in PropertyPhoto.objects.filter(
+                property_id__in=property_ids, is_cover=True
+            ).values("property_id", "url")
+        }
+
+    results = []
+    for b in bookings:
+        prop = b.listing.property if b.listing else None
+        raw_url = photo_map.get(str(prop.id)) if prop else None
+        results.append({
+            "booking_id": str(b.id),
+            "booking_code": b.booking_code,
+            "listing_id": str(b.listing_id) if b.listing_id else None,
+            "listing_title": b.listing.title if b.listing else None,
+            "area_name": prop.address_line1 if prop else None,
+            "city": prop.city_name if prop else None,
+            "cover_photo_url": get_photo_url(raw_url) if raw_url else None,
+            "host_name": get_display_name(b.host_user),
+            "host_phone": (
+                f"{b.host_user.phone_country_code}{b.host_user.phone_number}"
+                if b.host_user.phone_number else None
+            ),
+            "check_in_date": b.check_in_date.isoformat(),
+            "check_out_date": b.check_out_date.isoformat(),
+            "nights": b.nights,
+            "status": b.status,
+            "payment_status": b.payment_status,
+            "total_guest_pays": float(b.total_guest_pays),
+            "created_at": b.created_at.isoformat(),
+        })
+    return results
+
+
 def _booking_to_dict(b: Booking) -> dict:
     """Convert a Booking model instance to a response dict."""
     return {

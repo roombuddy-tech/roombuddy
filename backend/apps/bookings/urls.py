@@ -5,12 +5,14 @@ from apps.bookings.views import (
     BookingQuoteView,
     CancelBookingView,
     CreateBookingView,
+    GuestBookingsListView,
     HostBookingsListView,
     HostEarningsView,
 )
 
 urlpatterns = [
     # Guest-facing endpoints
+    path("guest/", GuestBookingsListView.as_view(), name="guest-bookings-list"),
     path("quote/", BookingQuoteView.as_view(), name="booking-quote"),
     path("create/", CreateBookingView.as_view(), name="booking-create"),
     path("<uuid:booking_id>/", BookingDetailView.as_view(), name="booking-detail"),

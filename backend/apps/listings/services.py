@@ -94,6 +94,11 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "address_line1": prop.address_line1 or "",
             "city_name": prop.city_name,
             "gender_preference": prop.gender_preference,
+            "latitude": float(prop.latitude) if prop.latitude else None,
+            "longitude": float(prop.longitude) if prop.longitude else None,
+            "google_place_id": prop.google_place_id or "",
+            "formatted_address": prop.formatted_address or "",
+            "pincode": prop.pincode or "",
         },
         "room": {
             "room_type": room.room_type,
@@ -176,9 +181,24 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         prop.address_line1 = prop_data.get("address_line1", "")
         prop.city_name = prop_data["city_name"]
         prop.gender_preference = prop_data["gender_preference"]
+        prop.latitude = prop_data.get("latitude")
+        prop.longitude = prop_data.get("longitude")
+        prop.google_place_id = prop_data.get("google_place_id", "")
+        prop.formatted_address = prop_data.get("formatted_address", "")
+        prop.pincode = prop_data.get("pincode", "")
         prop.title = d["title"]
         prop.description = d.get("description", "")
         prop.save()
+
+        if not prop.latitude:
+            from third_party.maps import geocode_address
+            geo = geocode_address(f"{prop.address_line1}, {prop.city_name}")
+            if geo:
+                prop.latitude = geo["latitude"]
+                prop.longitude = geo["longitude"]
+                prop.formatted_address = geo["formatted_address"]
+                prop.google_place_id = geo.get("google_place_id", "")
+                prop.save(update_fields=["latitude", "longitude", "formatted_address", "google_place_id"])
 
         PropertyFlatmate.objects.filter(property=prop).delete()
         for fm in d.get("flatmates", []):
@@ -324,10 +344,25 @@ def create_listing(user: User, data: dict) -> dict:
             address_line1=prop_data.get("address_line1", ""),
             city_name=prop_data["city_name"],
             gender_preference=prop_data["gender_preference"],
+            latitude=prop_data.get("latitude"),
+            longitude=prop_data.get("longitude"),
+            google_place_id=prop_data.get("google_place_id", ""),
+            formatted_address=prop_data.get("formatted_address", ""),
+            pincode=prop_data.get("pincode", ""),
             title=d["title"],
             description=d.get("description", ""),
             status=Property.Status.LIVE,
         )
+
+        if not prop.latitude:
+            from third_party.maps import geocode_address
+            geo = geocode_address(f"{prop.address_line1}, {prop.city_name}")
+            if geo:
+                prop.latitude = geo["latitude"]
+                prop.longitude = geo["longitude"]
+                prop.formatted_address = geo["formatted_address"]
+                prop.google_place_id = geo.get("google_place_id", "")
+                prop.save(update_fields=["latitude", "longitude", "formatted_address", "google_place_id"])
 
         for fm in d.get("flatmates", []):
             PropertyFlatmate.objects.create(
@@ -508,6 +543,9 @@ def search_guest_listings(
     area: str | None = None,
     check_in: str | None = None,
     check_out: str | None = None,
+    lat: float | None = None,
+    lng: float | None = None,
+    radius_km: float = 5.0,
 ) -> list[dict]:
     from datetime import date as date_type
 
@@ -519,15 +557,55 @@ def search_guest_listings(
         .order_by("-average_rating", "-created_at")
     )
 
-    search_term = query or area
-    if search_term:
-        qs = qs.filter(
-            Q(property__address_line1__icontains=search_term)
-            | Q(property__apartment_name__icontains=search_term)
-            | Q(property__city_name__icontains=search_term)
-            | Q(property__formatted_address__icontains=search_term)
-            | Q(title__icontains=search_term)
+    CITY_ALIASES = {
+        "bangalore": "bengaluru",
+        "bengaluru": "bangalore",
+        "bombay": "mumbai",
+        "mumbai": "bombay",
+        "calcutta": "kolkata",
+        "kolkata": "calcutta",
+        "madras": "chennai",
+        "chennai": "madras",
+    }
+
+    def _text_filter(term: str) -> Q:
+        terms = [term]
+        alias = CITY_ALIASES.get(term.lower())
+        if alias:
+            terms.append(alias)
+        combined = Q()
+        for t in terms:
+            combined |= (
+                Q(property__address_line1__icontains=t)
+                | Q(property__apartment_name__icontains=t)
+                | Q(property__city_name__icontains=t)
+                | Q(property__formatted_address__icontains=t)
+                | Q(title__icontains=t)
+            )
+        return combined
+
+    if lat is not None and lng is not None:
+        import math
+        effective_radius = max(radius_km, 15.0)
+        delta_lat = effective_radius / 111.0
+        delta_lng = effective_radius / (111.0 * math.cos(math.radians(lat)))
+        geo_filter = Q(
+            property__latitude__isnull=False,
+            property__longitude__isnull=False,
+            property__latitude__gte=lat - delta_lat,
+            property__latitude__lte=lat + delta_lat,
+            property__longitude__gte=lng - delta_lng,
+            property__longitude__lte=lng + delta_lng,
         )
+        search_term = query or area
+        if search_term:
+            qs = qs.filter(geo_filter | _text_filter(search_term))
+        else:
+            qs = qs.filter(geo_filter)
+    else:
+        search_term = query or area
+        if search_term:
+            qs = qs.filter(_text_filter(search_term))
 
     if check_in and check_out:
         try:
@@ -637,6 +715,9 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
             "address_line1": prop.address_line1 or "",
             "city_name": prop.city_name,
             "gender_preference": prop.gender_preference,
+            "latitude": float(prop.latitude) if prop.latitude else None,
+            "longitude": float(prop.longitude) if prop.longitude else None,
+            "formatted_address": prop.formatted_address or "",
         },
         "room": {
             "room_type": room.room_type,
@@ -708,4 +789,6 @@ def _listing_to_guest_card(listing: Listing) -> dict:
         "min_nights": listing.min_nights,
         "meals_available": listing.food_meals_available,
         "meal_cost_per_day": float(listing.food_meal_cost) if listing.food_meal_cost else None,
+        "latitude": float(listing.property.latitude) if listing.property.latitude else None,
+        "longitude": float(listing.property.longitude) if listing.property.longitude else None,
     }

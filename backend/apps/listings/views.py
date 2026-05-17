@@ -36,6 +36,11 @@ class CreateListingView(APIView):
         responses={201: CreateListingResponseSerializer},
     )
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+        s = CreateListingRequestSerializer(data=request.data)
+        if not s.is_valid():
+            logger.warning("Listing validation errors: %s", s.errors)
         result = create_listing(request.user, request.data)
         return Response(result, status=status.HTTP_201_CREATED)
 
@@ -89,7 +94,13 @@ class GuestSearchView(APIView):
         area = request.query_params.get("area")
         check_in = request.query_params.get("check_in")
         check_out = request.query_params.get("check_out")
-        results = search_guest_listings(query=q, area=area, check_in=check_in, check_out=check_out)
+        lat = request.query_params.get("lat")
+        lng = request.query_params.get("lng")
+        results = search_guest_listings(
+            query=q, area=area, check_in=check_in, check_out=check_out,
+            lat=float(lat) if lat else None,
+            lng=float(lng) if lng else None,
+        )
         return Response({"count": len(results), "results": results})
 
 

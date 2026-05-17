@@ -24,13 +24,14 @@ export const ENDPOINTS = {
     LISTINGS: '/api/listings/host/',
     CREATE_LISTING: '/api/listings/',
     LISTING_DETAIL: (id: string) => `/api/listings/${id}/`,
+    LISTING_BLOCKED_DATES: (id: string) => `/api/listings/${id}/blocked-dates/`,
     PROPERTIES: '/api/properties/',
     PROPERTY_PHOTOS: (propertyId: string) => `/api/properties/${propertyId}/photos/`,
   },
   GUEST: {
     SEARCH: '/api/listings/search/',
     LISTING_DETAIL: (id: string) => `/api/listings/guest/${id}/`,
-    BOOKINGS: '/api/bookings/',
+    BOOKINGS: '/api/bookings/guest/',
   },
   BOOKING: {
     QUOTE: '/api/bookings/quote/',

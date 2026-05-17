@@ -15,6 +15,11 @@ export async function createListing(form: {
   apartmentName: string;
   locality: string;
   city: string;
+  googlePlaceId: string;
+  formattedAddress: string;
+  latitude: number | null;
+  longitude: number | null;
+  pincode: string;
   roomType: string;
   bedType: string;
   bathroom: string;
@@ -74,6 +79,11 @@ export async function createListing(form: {
       address_line1: form.locality,
       city_name: form.city,
       gender_preference: form.guestGenderPref,
+      latitude: form.latitude,
+      longitude: form.longitude,
+      google_place_id: form.googlePlaceId,
+      formatted_address: form.formattedAddress,
+      pincode: form.pincode,
     },
     room: {
       room_type: form.roomType,
@@ -168,6 +178,11 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       address_line1: form.locality,
       city_name: form.city,
       gender_preference: form.guestGenderPref,
+      latitude: form.latitude,
+      longitude: form.longitude,
+      google_place_id: form.googlePlaceId,
+      formatted_address: form.formattedAddress,
+      pincode: form.pincode,
     },
     room: {
       room_type: form.roomType,
