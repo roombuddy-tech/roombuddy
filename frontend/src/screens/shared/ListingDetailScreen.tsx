@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -195,11 +196,11 @@ export default function ListingDetailScreen() {
   const areaName = f ? `${f.locality}${f.city ? `, ${f.city}` : ''}` : (item?.area_name ?? '');
   const hostPrice = f ? (parseInt(f.nightlyRate, 10) || 0) : (item?.host_price_per_night ?? 0);
   const guestPrice = f
-    ? Math.round(hostPrice * 1.18 * 1.08)
+    ? Math.round(hostPrice * 1.22)
     : (item?.guest_price_per_night ?? 0);
 
   const allPhotos: string[] = f
-    ? Object.values(f.photos as Record<string, string[]>).flat().filter(Boolean)
+    ? Object.values((f.photos ?? {}) as Record<string, string[]>).flat().filter(Boolean)
     : fetchedPhotos.length > 0
       ? fetchedPhotos
       : item?.cover_photo_url
@@ -256,6 +257,10 @@ export default function ListingDetailScreen() {
               showsHorizontalScrollIndicator={false}
               onScroll={onPhotoScroll}
               scrollEventThrottle={16}
+              getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
+              initialNumToRender={1}
+              windowSize={3}
+              removeClippedSubviews={false}
               renderItem={({ item: uri }) => (
                 <Image
                   source={{ uri }}
@@ -474,6 +479,12 @@ export default function ListingDetailScreen() {
                     {f.hostHobbies ? (
                       <Text style={styles.flatmateDetail}>{f.hostHobbies}</Text>
                     ) : null}
+                    {f.city ? (
+                      <View style={styles.hometownRow}>
+                        <Ionicons name="location-outline" size={12} color={COLORS.textMut} />
+                        <Text style={styles.flatmateDetail}>{f.city}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               ) : null}
@@ -495,6 +506,12 @@ export default function ListingDetailScreen() {
                       <Text style={styles.flatmateDetail} numberOfLines={1}>
                         {[fm.occupation, fm.hobbies].filter(Boolean).join(' · ')}
                       </Text>
+                    ) : null}
+                    {fm.hometown ? (
+                      <View style={styles.hometownRow}>
+                        <Ionicons name="location-outline" size={12} color={COLORS.textMut} />
+                        <Text style={styles.flatmateDetail}>{fm.hometown}</Text>
+                      </View>
                     ) : null}
                   </View>
                 </View>
@@ -530,6 +547,39 @@ export default function ListingDetailScreen() {
                   <Text style={styles.customRulesTxt}>{f.customRules}</Text>
                 </View>
               ) : null}
+              <Divider />
+            </>
+          )}
+
+          {/* Approximate location map */}
+          {f?.latitude && f?.longitude && (
+            <>
+              <SectionHeader title="Approximate location" />
+              <View style={styles.miniMapWrap}>
+                <MapView
+                  style={styles.miniMap}
+                  provider={PROVIDER_GOOGLE}
+                  initialRegion={{
+                    latitude: f.latitude,
+                    longitude: f.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                >
+                  <Circle
+                    center={{ latitude: f.latitude, longitude: f.longitude }}
+                    radius={300}
+                    fillColor="rgba(13,115,119,0.12)"
+                    strokeColor="rgba(13,115,119,0.3)"
+                    strokeWidth={1}
+                  />
+                </MapView>
+              </View>
+              <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
               <Divider />
             </>
           )}
@@ -735,6 +785,11 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.sm },
   locationTxt: { fontSize: 14, color: COLORS.textSec },
 
+  miniMapWrap: {
+    borderRadius: RADIUS.md, overflow: 'hidden', height: 180, marginBottom: SPACING.sm,
+  },
+  miniMap: { width: '100%', height: 180 },
+  locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
   priceRow: { marginBottom: SPACING.sm },
   price: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
   priceUnit: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec },
@@ -794,6 +849,7 @@ const styles = StyleSheet.create({
   flatmateInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
   flatmateName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
   flatmateDetail: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
+  hometownRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   hostBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,

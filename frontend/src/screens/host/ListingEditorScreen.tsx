@@ -220,9 +220,10 @@ const PHOTO_CATEGORIES = [
 const MIN_STAY_OPTIONS = [
   { value: '1_night', label: '1 night' },
   { value: '2_nights', label: '2 nights' },
-  { value: '1_week', label: '1 week' },
-  { value: '2_weeks', label: '2 weeks' },
-  { value: '1_month', label: '1 month' },
+  { value: '3_nights', label: '3 nights' },
+  { value: '1_week', label: '7 nights' },
+  { value: '2_weeks', label: '14 nights' },
+  { value: '1_month', label: '30 nights' },
 ];
 
 const TIMES: string[] = (() => {
@@ -782,15 +783,16 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
 
         <Field
           label="Floor number"
-          placeholder="e.g. 3rd floor"
+          placeholder="e.g. 3"
           value={form.floorNumber}
-          onChange={(v) => update({ floorNumber: v })}
+          onChange={(v) => update({ floorNumber: v.replace(/[^0-9]/g, '') })}
+          keyboardType="number-pad"
         />
         <Field
           label="Total floors in building"
           placeholder="e.g. 5"
           value={form.totalFloors}
-          onChange={(v) => update({ totalFloors: v })}
+          onChange={(v) => update({ totalFloors: v.replace(/[^0-9]/g, '') })}
           keyboardType="number-pad"
           optional
         />
@@ -1789,9 +1791,10 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
-  const gst = Math.round((rate + mealCost) * 0.18);
-  const guestTotal = rate + mealCost + gst;
-  const hostFee = Math.round(rate * 0.03);
+  const gst = Math.round(rate * 0.12);
+  const platformFee = Math.round(rate * 0.10);
+  const guestTotal = rate + mealCost + gst + platformFee;
+  const hostFee = platformFee;
   const hostEarning = rate + mealCost - hostFee;
 
   const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
@@ -1852,7 +1855,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label={`GST (18% on room${mealCost > 0 ? ' + meals' : ''})`} value={`₹${gst}`} />
+              <PriceRow label="GST (12% on room)" value={`₹${gst}`} />
+              <PriceRow label="Platform fee (10% on room)" value={`₹${platformFee}`} />
               <View style={prSt.divider} />
               <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
             </View>
@@ -1861,7 +1865,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <Text style={prSt.breakdownTitle}>You earn</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label="RoomBuddy host fee (3% on room)" value={`−₹${hostFee}`} muted />
+              <PriceRow label="RoomBuddy fee (10% on room)" value={`−₹${hostFee}`} muted />
               <View style={prSt.divider} />
               <PriceRow label="Your earning" value={`₹${hostEarning}/night`} bold />
             </View>
@@ -1869,6 +1873,12 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         )}
 
         <SectionLabel label="Minimum stay" optional />
+        <View style={prSt.tooltipRow}>
+          <Ionicons name="information-circle-outline" size={15} color={COLORS.textMut} />
+          <Text style={prSt.tooltipText}>
+            Guests must book at least this many nights. Shorter bookings won't be allowed.
+          </Text>
+        </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
           {MIN_STAY_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1921,6 +1931,8 @@ const prSt = StyleSheet.create({
   breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
+  tooltipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm, paddingHorizontal: 2 },
+  tooltipText: { flex: 1, fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
   minStayBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: RADIUS.sm, borderWidth: 1.5, borderColor: COLORS.border },
   minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   minStayTxt: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec },
@@ -2317,7 +2329,7 @@ function mapListingToForm(data: any): FormData {
   const aptTypeMap: Record<string, string> = {
     '1bhk': '1BHK', '2bhk': '2BHK', '3bhk': '3BHK', '4bhk': '4BHK+',
   };
-  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 7: '1_week', 14: '2_weeks', 30: '1_month' };
+  const minStayMap: Record<number, string> = { 1: '1_night', 2: '2_nights', 3: '3_nights', 7: '1_week', 14: '2_weeks', 30: '1_month' };
 
   const allFlatmates: any[] = data.flatmates || [];
   const hostFm = allFlatmates.find((f: any) => f.name === '__host__');
