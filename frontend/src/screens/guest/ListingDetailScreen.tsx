@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
+import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
@@ -409,6 +410,42 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
+          {/* Approximate location map */}
+          {listing.property.latitude && listing.property.longitude && (
+            <>
+              <Divider />
+              <Text style={styles.sectionTitle}>Approximate location</Text>
+              <View style={styles.miniMapWrap}>
+                <MapView
+                  style={styles.miniMap}
+                  provider={PROVIDER_GOOGLE}
+                  initialRegion={{
+                    latitude: listing.property.latitude,
+                    longitude: listing.property.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                >
+                  <Circle
+                    center={{
+                      latitude: listing.property.latitude,
+                      longitude: listing.property.longitude,
+                    }}
+                    radius={300}
+                    fillColor="rgba(13,115,119,0.12)"
+                    strokeColor="rgba(13,115,119,0.3)"
+                    strokeWidth={1}
+                  />
+                </MapView>
+              </View>
+              <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
+            </>
+          )}
+
           {/* Check-in / Check-out */}
           {(listing.check_in_from || listing.check_out_by) && (
             <>
@@ -672,6 +709,9 @@ const styles = StyleSheet.create({
   },
   featureChipText: { fontSize: 12, color: COLORS.textSec },
 
+  miniMapWrap: { borderRadius: RADIUS.md, overflow: 'hidden', height: 180, marginBottom: SPACING.sm },
+  miniMap: { width: '100%', height: 180 },
+  locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
   checkinCard: {

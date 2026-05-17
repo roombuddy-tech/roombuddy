@@ -6,10 +6,9 @@ export type AuthStackParamList = {
 };
 
 export type GuestTabParamList = {
-  Home: undefined;
+  Home: { openSearch?: boolean } | undefined;
   MyStays: undefined;
   Messages: undefined;
-  HostSwitch: undefined;
 };
 
 export type HostTabParamList = {
@@ -17,7 +16,6 @@ export type HostTabParamList = {
   Listing: undefined;
   Bookings: undefined;
   Earnings: undefined;
-  GuestSwitch: undefined;
 };
 
 export type HostStackParamList = {
@@ -36,6 +34,7 @@ export type HostStackParamList = {
     };
   };
   BookingDetail: { booking: any };
+  GuestProfile: { userId: string };
   Notifications: undefined;
   NotificationPreferences: undefined;
 };

@@ -95,15 +95,19 @@ export default function DashboardScreen() {
         <View style={styles.topBar}>
           <Text style={styles.brand}>Room<Text style={styles.brandAccent}>Buddy</Text></Text>
           <View style={styles.topBarRight}>
+            <TouchableOpacity style={styles.switchBtn} onPress={() => switchRole('guest')} activeOpacity={0.7}>
+              <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.switchBtnTxt}>Guest</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.bellBtn}
               onPress={() => navigation.navigate('Notifications')}
             >
-              <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+              <Ionicons name="notifications-outline" size={20} color={COLORS.text} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
               {user?.profile_photo_url ? (
-                <Image source={{ uri: user.profile_photo_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                <Image source={{ uri: user.profile_photo_url }} style={{ width: 36, height: 36, borderRadius: 18 }} />
               ) : (
                 <Text style={styles.avatarText}>{initial}</Text>
               )}
@@ -144,7 +148,7 @@ export default function DashboardScreen() {
               {d?.this_month.avg_rating || '—'}
             </Text>
             <Text style={styles.statSub}>
-              {(d?.this_month.review_count || 0) === 0 ? 'No reviews yet' : `${d.this_month.review_count} reviews`}
+              {(d?.this_month.review_count || 0) === 0 ? 'No reviews yet' : `${d?.this_month.review_count} reviews`}
             </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FFF8E6' }]}>
@@ -236,12 +240,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
-  brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
+  brand: { fontSize: 20, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
   brandAccent: { color: COLORS.accent },
-  avatarBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  avatarText: { color: '#fff', fontSize: 16, ...FONTS.bold },
-  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  bellBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
+  avatarBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarText: { color: '#fff', fontSize: 14, ...FONTS.bold },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  switchBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.pill,
+    paddingHorizontal: 11, paddingVertical: 7,
+  },
+  switchBtnTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.semibold },
+  bellBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
   greeting: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
   name: { fontSize: 28, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },

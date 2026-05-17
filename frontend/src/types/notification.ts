@@ -38,7 +38,7 @@ export interface NotificationPreferencesResponse {
   preferences: NotificationPreference[];
 }
 
-export type PreferenceUpdate = Pick
+export type PreferenceUpdate = Pick<
   NotificationPreference,
   'event_type' | 'channel' | 'enabled'
 >;

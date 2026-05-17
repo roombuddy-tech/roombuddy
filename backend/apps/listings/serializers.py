@@ -41,6 +41,11 @@ class PropertyInputSerializer(serializers.Serializer):
     gender_preference = serializers.ChoiceField(
         choices=["male_only", "female_only", "any"], default="any"
     )
+    latitude = serializers.FloatField(required=False, allow_null=True)
+    longitude = serializers.FloatField(required=False, allow_null=True)
+    google_place_id = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    formatted_address = serializers.CharField(required=False, allow_blank=True, default="")
+    pincode = serializers.CharField(max_length=10, required=False, allow_blank=True, default="")
 
 
 class RoomInputSerializer(serializers.Serializer):
@@ -66,8 +71,8 @@ class HouseRulesInputSerializer(serializers.Serializer):
     cancellation_policy = serializers.ChoiceField(
         choices=["flexible", "moderate", "strict"], default="moderate"
     )
-    check_in_time = serializers.CharField()
-    check_out_time = serializers.CharField()
+    check_in_time = serializers.CharField(required=False, allow_blank=True, default="")
+    check_out_time = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class BlockedDateInputSerializer(serializers.Serializer):

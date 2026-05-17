@@ -7,6 +7,8 @@ export async function searchListings(params?: {
   area?: string;
   check_in?: string;
   check_out?: string;
+  lat?: number;
+  lng?: number;
 }): Promise<{ count: number; results: GuestListingCard[] }> {
   const res = await api.get(ENDPOINTS.GUEST.SEARCH, { params });
   return res.data;

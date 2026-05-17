@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,7 +10,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,14 +18,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import type { GuestStackParamList } from '../../navigation/types';
+import type { GuestStackParamList, GuestTabParamList } from '../../navigation/types';
 import { searchListings } from '../../services/search';
 import type { GuestListingCard } from '../../types/listing';
+import SearchResultsMap from '../../components/maps/SearchResultsMap';
+import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import ProfileMenu from '../shared/ProfileMenu';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
-
-const AREAS = ['Koramangala', 'HSR Layout', 'Whitefield', 'Indiranagar', 'BTM Layout', 'JP Nagar'];
 
 const POPULAR_CITIES = [
   { name: 'Bangalore', color: '#EDF1F7' },
@@ -56,29 +55,48 @@ function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+function fmtDateLong(d: string) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function nightCount(ci: string, co: string): number {
+  return Math.round((new Date(co).getTime() - new Date(ci).getTime()) / 86400000);
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { user } = useAuth();
+  const route = useRoute<RouteProp<GuestTabParamList, 'Home'>>();
+  const { user, switchRole } = useAuth();
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
   const [showProfile, setShowProfile] = useState(false);
-  const [searchExpanded, setSearchExpanded] = useState(false);
 
-  // Search form state
+  const [showSearchForm, setShowSearchForm] = useState(false);
+
+  // Search form
   const [query, setQuery] = useState('');
-  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [searchLat, setSearchLat] = useState<number | null>(null);
+  const [searchLng, setSearchLng] = useState<number | null>(null);
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  // Results state
+  // Results
   const [hasSearched, setHasSearched] = useState(false);
   const [listings, setListings] = useState<GuestListingCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [editExpanded, setEditExpanded] = useState(false);
 
-  const toggleArea = (area: string) => {
-    setSelectedArea((prev) => (prev === area ? null : area));
-  };
+  const searchVersion = useRef(0);
+
+  useEffect(() => {
+    if (route.params?.openSearch) {
+      setShowSearchForm(true);
+      navigation.setParams({ openSearch: undefined } as any);
+    }
+  }, [route.params?.openSearch]);
 
   const onDayPress = (day: DateData) => {
     if (day.dateString < today) return;
@@ -116,38 +134,127 @@ export default function HomeScreen() {
     return marks;
   };
 
-  const canSearch = (query.trim().length > 0 || selectedArea) && checkIn && checkOut;
+  const canSearch = query.trim().length > 0 && checkIn && checkOut;
 
   const doSearch = useCallback(async () => {
     setLoading(true);
     setHasSearched(true);
-    setSearchExpanded(false);
+    setShowSearchForm(false);
+    setEditExpanded(false);
+    setShowCalendar(false);
+    const version = ++searchVersion.current;
     try {
-      const params: { q?: string; area?: string; check_in?: string; check_out?: string } = {};
+      const params: { q?: string; check_in?: string; check_out?: string; lat?: number; lng?: number } = {};
       if (query.trim()) params.q = query.trim();
-      if (selectedArea) params.area = selectedArea;
       if (checkIn) params.check_in = checkIn;
       if (checkOut) params.check_out = checkOut;
+      if (searchLat != null && searchLng != null) {
+        params.lat = searchLat;
+        params.lng = searchLng;
+      }
       const data = await searchListings(Object.keys(params).length ? params : undefined);
-      setListings(data.results);
+      if (version === searchVersion.current) setListings(data.results);
     } catch {
-      setListings([]);
+      if (version === searchVersion.current) setListings([]);
     } finally {
-      setLoading(false);
+      if (version === searchVersion.current) setLoading(false);
     }
-  }, [query, selectedArea, checkIn, checkOut]);
+  }, [query, checkIn, checkOut, searchLat, searchLng]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     doSearch().finally(() => setRefreshing(false));
   }, [doSearch]);
 
-  const goBackToSearch = () => {
-    setHasSearched(false);
-    setSearchExpanded(true);
-  };
+  // ─── Search form (reused in search page & edit panel) ──────────────────
 
-  // ─── Results card ──────────────────────────────────────────────────────
+  const renderSearchForm = (isEditMode?: boolean) => (
+    <View>
+      {/* Location */}
+      <Text style={styles.fieldLabel}>City, Area or Landmark</Text>
+      <GooglePlacesInput
+        value={query}
+        placeholder="Where are you looking?"
+        onSelect={(place) => {
+          const area = place.addressLine1 || place.city || place.description;
+          setQuery(area);
+          setSearchLat(place.lat || null);
+          setSearchLng(place.lng || null);
+          if (!checkIn) setShowCalendar(true);
+        }}
+      />
+
+      {/* Date fields */}
+      <View style={styles.dateRow}>
+        <TouchableOpacity
+          style={[styles.dateBox, showCalendar && styles.dateBoxActive]}
+          onPress={() => setShowCalendar(!showCalendar)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.fieldLabel}>Check-in</Text>
+          <Text style={checkIn ? styles.dateValue : styles.datePlaceholder}>
+            {checkIn ? fmtDateLong(checkIn) : 'Add date'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.dateBox, showCalendar && styles.dateBoxActive]}
+          onPress={() => setShowCalendar(!showCalendar)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.fieldLabel}>Check-out</Text>
+          <Text style={checkOut ? styles.dateValue : styles.datePlaceholder}>
+            {checkOut ? fmtDateLong(checkOut) : 'Add date'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Calendar */}
+      {showCalendar && (
+        <View style={{ marginTop: SPACING.md }}>
+          <Text style={styles.calHint}>
+            {!checkIn
+              ? 'Select your check-in date'
+              : !checkOut
+              ? 'Now select check-out'
+              : `${nightCount(checkIn, checkOut)} night${nightCount(checkIn, checkOut) !== 1 ? 's' : ''} selected`}
+          </Text>
+          <Calendar
+            minDate={today}
+            markingType="period"
+            markedDates={getMarkedDates()}
+            onDayPress={onDayPress}
+            theme={{
+              todayTextColor: COLORS.primary,
+              arrowColor: COLORS.primary,
+            }}
+            style={styles.calendar}
+          />
+          {checkIn && checkOut && (
+            <TouchableOpacity
+              onPress={() => { setCheckIn(null); setCheckOut(null); }}
+              style={{ alignSelf: 'flex-end', marginTop: 8 }}
+            >
+              <Text style={{ fontSize: 13, color: COLORS.primary, ...FONTS.medium }}>Clear dates</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Button */}
+      <TouchableOpacity
+        style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
+        activeOpacity={0.85}
+        onPress={doSearch}
+        disabled={!canSearch}
+      >
+        <Ionicons name="search" size={16} color="#fff" />
+        <Text style={styles.searchBtnTxt}>{isEditMode ? 'Update Search' : 'Search Rooms'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // ─── Listing card ──────────────────────────────────────────────────────
 
   const renderCard = ({ item }: { item: GuestListingCard }) => (
     <TouchableOpacity
@@ -156,44 +263,40 @@ export default function HomeScreen() {
       onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id, checkIn: checkIn ?? undefined, checkOut: checkOut ?? undefined })}
     >
       <Image
-        source={
-          item.cover_photo_url
-            ? { uri: item.cover_photo_url }
-            : require('../../../assets/icon.png')
-        }
+        source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
         style={styles.cardImg}
         resizeMode="cover"
       />
-      <View style={styles.cardContent}>
+      <View style={styles.cardBody}>
         <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.cardArea}>{item.area_name}</Text>
         {item.description ? (
           <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
         ) : null}
         {item.amenity_highlights.length > 0 && (
-          <View style={styles.chipRow}>
+          <View style={styles.tagRow}>
             {item.amenity_highlights.slice(0, 4).map((a) => {
               const info = AMENITY_SHORT[a];
               return (
-                <View key={a} style={styles.chip}>
-                  <Ionicons name={(info?.icon ?? 'checkmark-outline') as any} size={13} color={COLORS.primary} />
-                  <Text style={styles.chipText}>{info?.label ?? a}</Text>
+                <View key={a} style={styles.tag}>
+                  <Ionicons name={(info?.icon ?? 'checkmark-outline') as any} size={12} color={COLORS.primary} />
+                  <Text style={styles.tagText}>{info?.label ?? a}</Text>
                 </View>
               );
             })}
           </View>
         )}
         {item.meals_available && (
-          <View style={styles.mealRow}>
-            <View style={styles.mealChip}>
+          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+            <View style={styles.mealTag}>
               <Ionicons name="restaurant-outline" size={11} color={COLORS.accent} />
-              <Text style={styles.mealChipText}>Meals available</Text>
+              <Text style={styles.mealTagText}>Meals available</Text>
             </View>
           </View>
         )}
         <View style={styles.cardFooter}>
           <Text style={styles.cardPrice}>
-            ₹{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
+            {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
             <Text style={styles.cardPriceUnit}>/night</Text>
           </Text>
           {item.average_rating !== null && item.review_count > 0 && (
@@ -209,29 +312,7 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  const resultsHeader = (
-    <View style={{ marginBottom: SPACING.md }}>
-      <TouchableOpacity onPress={goBackToSearch} style={styles.modifyBtn}>
-        <Ionicons name="arrow-back" size={16} color={COLORS.primary} />
-        <Text style={styles.modifyTxt}>Modify search</Text>
-      </TouchableOpacity>
-      <View style={styles.searchSummary}>
-        <View style={styles.summaryChip}>
-          <Ionicons name="location-outline" size={14} color={COLORS.primary} />
-          <Text style={styles.summaryTxt}>{query.trim() || selectedArea || 'All areas'}</Text>
-        </View>
-        <View style={styles.summaryChip}>
-          <Ionicons name="calendar-outline" size={14} color={COLORS.primary} />
-          <Text style={styles.summaryTxt}>{fmtDate(checkIn!)} — {fmtDate(checkOut!)}</Text>
-        </View>
-      </View>
-      <Text style={styles.sectionTitle}>
-        {loading ? 'Searching…' : `${listings.length} room${listings.length !== 1 ? 's' : ''} found`}
-      </Text>
-    </View>
-  );
-
-  const empty = loading ? (
+  const emptyView = loading ? (
     <View style={styles.emptyWrap}>
       <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
@@ -239,189 +320,181 @@ export default function HomeScreen() {
     <View style={styles.emptyWrap}>
       <Text style={{ fontSize: 48 }}>🏠</Text>
       <Text style={styles.emptyTitle}>No rooms found</Text>
-      <Text style={styles.emptySub}>Try adjusting your search or dates</Text>
+      <Text style={styles.emptySub}>Try a different area or adjust your dates</Text>
     </View>
   );
 
-  // ─── Render ──────────────────────────────────────────────────────────
+  // ─── Results header ────────────────────────────────────────────────────
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Top bar: Brand + Bell + Avatar */}
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>
-          Room<Text style={styles.brandAccent}>Buddy</Text>
-        </Text>
-        <View style={styles.topBarRight}>
+  const resultsHeader = (
+    <View style={{ marginBottom: SPACING.md }}>
+      {/* Title row */}
+      <View style={styles.resRow}>
+        <TouchableOpacity
+          onPress={() => {
+            if (viewMode === 'map') {
+              setViewMode('list');
+            } else {
+              setHasSearched(false);
+              setShowSearchForm(false);
+              setEditExpanded(false);
+              setQuery('');
+              setSearchLat(null);
+              setSearchLng(null);
+              setCheckIn(null);
+              setCheckOut(null);
+              setShowCalendar(false);
+              setListings([]);
+            }
+          }}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.resCity}>{query}</Text>
           <TouchableOpacity
-            style={styles.bellBtn}
-            onPress={() => navigation.navigate('Notifications')}
+            style={styles.resSubRow}
+            onPress={() => { setEditExpanded(!editExpanded); setShowCalendar(false); }}
+            activeOpacity={0.6}
           >
-            <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
-            {user?.profile_photo_url ? (
-              <Image source={{ uri: user.profile_photo_url }} style={styles.avatarImg} />
-            ) : (
-              <Text style={styles.avatarText}>{initial}</Text>
-            )}
+            <Text style={styles.resDates}>
+              {checkIn && checkOut
+                ? `${fmtDate(checkIn)} – ${fmtDate(checkOut)}, ${nightCount(checkIn, checkOut)} night${nightCount(checkIn, checkOut) !== 1 ? 's' : ''}`
+                : 'Any dates'}
+            </Text>
+            <Text style={styles.resEditTxt}>Edit</Text>
+            <Ionicons name={editExpanded ? 'chevron-up' : 'chevron-down'} size={13} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          onPress={() => setViewMode((v) => (v === 'list' ? 'map' : 'list'))}
+          style={styles.mapBtn}
+        >
+          <Ionicons name={viewMode === 'list' ? 'map-outline' : 'list-outline'} size={20} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
+      {/* Edit panel */}
+      {editExpanded && (
+        <View style={styles.editPanel}>
+          {renderSearchForm(true)}
+        </View>
+      )}
+
+      {/* Count */}
+      <Text style={styles.resCount}>
+        {loading ? 'Searching…' : `${listings.length} room${listings.length !== 1 ? 's' : ''} found`}
+      </Text>
+    </View>
+  );
+
+  // ─── Render ────────────────────────────────────────────────────────────
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Top bar — hidden on results */}
+      {!hasSearched && (
+        <View style={styles.topBar}>
+          {showSearchForm ? (
+            <TouchableOpacity onPress={() => { setShowSearchForm(false); setShowCalendar(false); }}>
+              <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.brand}>
+              Room<Text style={styles.brandAccent}>Buddy</Text>
+            </Text>
+          )}
+          <View style={styles.topRight}>
+            {!showSearchForm && (
+              <TouchableOpacity style={styles.switchBtn} onPress={() => switchRole('host')} activeOpacity={0.7}>
+                <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.accent} />
+                <Text style={styles.switchBtnTxt}>Host</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Notifications')}>
+              <Ionicons name="notifications-outline" size={20} color={COLORS.text} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
+              {user?.profile_photo_url ? (
+                <Image source={{ uri: user.profile_photo_url }} style={styles.avatarImg} />
+              ) : (
+                <Text style={styles.avatarTxt}>{initial}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* ── Results ── */}
       {hasSearched ? (
-        /* ── Results list ── */
-        <FlatList
-          data={listings}
-          keyExtractor={(item) => item.listing_id}
-          renderItem={renderCard}
-          ListHeaderComponent={resultsHeader}
-          ListEmptyComponent={empty}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
-          }
-        />
-      ) : searchExpanded ? (
-        /* ── Expanded search form ── */
+        viewMode === 'map' ? (
+          <View style={{ flex: 1 }}>
+            <View style={{ paddingHorizontal: SPACING.lg }}>{resultsHeader}</View>
+            <SearchResultsMap
+              listings={listings}
+              onListingPress={(id) => navigation.navigate('GuestListingDetail', { listingId: id, checkIn: checkIn ?? undefined, checkOut: checkOut ?? undefined })}
+            />
+          </View>
+        ) : (
+          <FlatList
+            data={listings}
+            keyExtractor={(item) => item.listing_id}
+            renderItem={renderCard}
+            ListHeaderComponent={resultsHeader}
+            ListEmptyComponent={emptyView}
+            contentContainerStyle={styles.listPad}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+          />
+        )
+
+      /* ── Search form page ── */
+      ) : showSearchForm ? (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={{ paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Close / collapse */}
-          <TouchableOpacity
-            onPress={() => setSearchExpanded(false)}
-            style={styles.closeFormBtn}
-          >
-            <Ionicons name="close" size={20} color={COLORS.text} />
-          </TouchableOpacity>
-
-          {/* Where */}
-          <Text style={styles.formLabel}>Where are you looking?</Text>
-          <View style={styles.searchBar}>
-            <Ionicons name="location-outline" size={18} color={COLORS.textMut} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Area, landmark, or city..."
-              placeholderTextColor={COLORS.textMut}
-              value={query}
-              onChangeText={setQuery}
-              returnKeyType="done"
-              autoFocus
-            />
-            {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')}>
-                <Ionicons name="close-circle" size={18} color={COLORS.textMut} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <FlatList
-            data={AREAS}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(a) => a}
-            contentContainerStyle={styles.areaList}
-            renderItem={({ item: area }) => (
-              <TouchableOpacity
-                style={[styles.areaChip, selectedArea === area && styles.areaChipActive]}
-                onPress={() => toggleArea(area)}
-              >
-                <Text style={[styles.areaChipText, selectedArea === area && styles.areaChipTextActive]}>
-                  {area}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-
-          {/* When */}
-          <Text style={styles.formLabel}>When are you staying?</Text>
-          <Text style={styles.formSub}>
-            {!checkIn
-              ? 'Tap a date to select check-in'
-              : !checkOut
-              ? 'Now tap your check-out date'
-              : `${fmtDate(checkIn)} — ${fmtDate(checkOut)}`}
-          </Text>
-
-          <Calendar
-            minDate={today}
-            markingType="period"
-            markedDates={getMarkedDates()}
-            onDayPress={onDayPress}
-            theme={{
-              todayTextColor: COLORS.primary,
-              arrowColor: COLORS.primary,
-            }}
-            style={styles.calendar}
-          />
-
-          {checkIn && checkOut && (
-            <TouchableOpacity onPress={() => { setCheckIn(null); setCheckOut(null); }} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
-              <Text style={{ fontSize: 13, color: COLORS.primary, ...FONTS.medium }}>Clear dates</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Search button */}
-          <TouchableOpacity
-            style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
-            activeOpacity={0.85}
-            onPress={doSearch}
-            disabled={!canSearch}
-          >
-            <Ionicons name="search" size={18} color="#fff" />
-            <Text style={styles.searchBtnTxt}>Search rooms</Text>
-          </TouchableOpacity>
-
-          {!canSearch && (
-            <Text style={styles.searchHint}>
-              {!query.trim() && !selectedArea
-                ? 'Enter an area or pick one above'
-                : !checkIn || !checkOut
-                ? 'Select check-in and check-out dates'
-                : ''}
-            </Text>
-          )}
+          <Text style={styles.pageTitle}>Search rooms</Text>
+          {renderSearchForm()}
         </ScrollView>
+
+      /* ── Home ── */
       ) : (
-        /* ── Home / Discovery view ── */
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={styles.homeWrap}
           showsVerticalScrollIndicator={false}
         >
-          {/* Search pill (Airbnb style) */}
-          <TouchableOpacity
-            style={styles.searchPill}
-            activeOpacity={0.8}
-            onPress={() => setSearchExpanded(true)}
-          >
-            <View style={styles.searchPillIcon}>
+          {/* Search pill */}
+          <TouchableOpacity style={styles.searchPill} activeOpacity={0.8} onPress={() => setShowSearchForm(true)}>
+            <View style={styles.pillIcon}>
               <Ionicons name="search" size={18} color={COLORS.primary} />
             </View>
-            <View style={styles.searchPillContent}>
-              <Text style={styles.searchPillTitle}>Find a room</Text>
-              <Text style={styles.searchPillSub}>Any city · Any dates · Any budget</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pillTitle}>Find a room</Text>
+              <Text style={styles.pillSub}>Any city · Any dates · Any budget</Text>
             </View>
           </TouchableOpacity>
 
           {/* Popular cities */}
-          <Text style={styles.homeSection}>Popular cities</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.citiesRow}
-          >
+          <Text style={styles.sectionHead}>Popular cities</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.citiesRow}>
             {POPULAR_CITIES.map((city) => (
               <TouchableOpacity
                 key={city.name}
                 style={styles.cityCard}
                 onPress={() => {
                   setQuery(city.name);
-                  setSearchExpanded(true);
+                  setSearchLat(null);
+                  setSearchLng(null);
+                  setShowSearchForm(true);
+                  setShowCalendar(true);
                 }}
               >
                 <View style={[styles.cityCircle, { backgroundColor: city.color }]}>
@@ -438,60 +511,45 @@ export default function HomeScreen() {
           </ScrollView>
 
           {/* Why RoomBuddy */}
-          <Text style={styles.homeSection}>Why RoomBuddy?</Text>
+          <Text style={styles.sectionHead}>Why RoomBuddy?</Text>
           <View style={styles.whyGrid}>
-            <View style={styles.whyCard}>
-              <Text style={styles.whyEmoji}>💰</Text>
-              <Text style={styles.whyTitle}>Budget-friendly</Text>
-              <Text style={styles.whySub}>Rooms from ₹500/night</Text>
-            </View>
-            <View style={styles.whyCard}>
-              <Text style={styles.whyEmoji}>🍽️</Text>
-              <Text style={styles.whyTitle}>Home meals</Text>
-              <Text style={styles.whySub}>Home-cooked food available</Text>
-            </View>
-            <View style={styles.whyCard}>
-              <Text style={styles.whyEmoji}>✅</Text>
-              <Text style={styles.whyTitle}>Verified hosts</Text>
-              <Text style={styles.whySub}>ID verified for safety</Text>
-            </View>
-            <View style={styles.whyCard}>
-              <Text style={styles.whyEmoji}>📅</Text>
-              <Text style={styles.whyTitle}>Flexible stays</Text>
-              <Text style={styles.whySub}>1 night to 1 month</Text>
-            </View>
+            {[
+              { emoji: '💰', title: 'Budget-friendly', sub: 'Rooms from ₹500/night' },
+              { emoji: '🍽️', title: 'Home meals', sub: 'Home-cooked food available' },
+              { emoji: '✅', title: 'Verified hosts', sub: 'ID verified for safety' },
+              { emoji: '📅', title: 'Flexible stays', sub: '1 night to 1 month' },
+            ].map((w) => (
+              <View key={w.title} style={styles.whyCard}>
+                <Text style={{ fontSize: 24, marginBottom: 6 }}>{w.emoji}</Text>
+                <Text style={styles.whyTitle}>{w.title}</Text>
+                <Text style={styles.whySub}>{w.sub}</Text>
+              </View>
+            ))}
           </View>
 
           {/* How it works */}
-          <Text style={styles.homeSection}>How it works</Text>
-          <View style={styles.stepsRow}>
-            <View style={styles.stepCard}>
-              <View style={[styles.stepNum, { backgroundColor: COLORS.primaryAlpha }]}>
-                <Text style={[styles.stepNumText, { color: COLORS.primary }]}>1</Text>
-              </View>
-              <Text style={styles.stepTitle}>Search</Text>
-              <Text style={styles.stepSub}>Pick a city and dates</Text>
-            </View>
-            <View style={styles.stepArrow}>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textMut} />
-            </View>
-            <View style={styles.stepCard}>
-              <View style={[styles.stepNum, { backgroundColor: COLORS.accentAlpha }]}>
-                <Text style={[styles.stepNumText, { color: COLORS.accent }]}>2</Text>
-              </View>
-              <Text style={styles.stepTitle}>Book</Text>
-              <Text style={styles.stepSub}>Reserve instantly</Text>
-            </View>
-            <View style={styles.stepArrow}>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textMut} />
-            </View>
-            <View style={styles.stepCard}>
-              <View style={[styles.stepNum, { backgroundColor: '#E8F0ED' }]}>
-                <Text style={[styles.stepNumText, { color: '#1B7A4E' }]}>3</Text>
-              </View>
-              <Text style={styles.stepTitle}>Stay</Text>
-              <Text style={styles.stepSub}>Enjoy your stay</Text>
-            </View>
+          <Text style={styles.sectionHead}>How it works</Text>
+          <View style={styles.howRow}>
+            {[
+              { n: '1', title: 'Search', sub: 'Pick a city & dates', bg: COLORS.primaryAlpha, fg: COLORS.primary },
+              { n: '2', title: 'Book', sub: 'Reserve instantly', bg: COLORS.accentAlpha, fg: COLORS.accent },
+              { n: '3', title: 'Stay', sub: 'Enjoy your stay', bg: '#E8F0ED', fg: '#1B7A4E' },
+            ].map((s, i) => (
+              <React.Fragment key={s.n}>
+                {i > 0 && (
+                  <View style={{ paddingHorizontal: 4, paddingBottom: 20 }}>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.textMut} />
+                  </View>
+                )}
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <View style={[styles.howNum, { backgroundColor: s.bg }]}>
+                    <Text style={[styles.howNumTxt, { color: s.fg }]}>{s.n}</Text>
+                  </View>
+                  <Text style={styles.howTitle}>{s.title}</Text>
+                  <Text style={styles.howSub}>{s.sub}</Text>
+                </View>
+              </React.Fragment>
+            ))}
           </View>
         </ScrollView>
       )}
@@ -502,248 +560,160 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  safe: { flex: 1, backgroundColor: COLORS.bg },
 
-  // Top bar
+  // ── Top bar ──
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-  },
-  brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
-  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  bellBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatarImg: { width: 40, height: 40, borderRadius: 20 },
-  avatarText: { color: '#fff', fontSize: 16, ...FONTS.bold },
-
-  list: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
-
-  // Search pill (Airbnb style)
-  searchPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.bg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 40,
-    padding: 12,
-    gap: 12,
-    ...SHADOW.md,
-    marginBottom: SPACING.xl,
-  },
-  searchPillIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryAlpha,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchPillContent: { flex: 1 },
-  searchPillTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
-  searchPillSub: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
-
-  // Home sections
-  homeSection: {
-    fontSize: 18,
-    ...FONTS.bold,
-    color: COLORS.text,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     marginBottom: SPACING.md,
   },
+  brand: { fontSize: 20, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
+  brandAccent: { color: COLORS.accent },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  switchBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.accentAlpha, borderRadius: RADIUS.pill,
+    paddingHorizontal: 11, paddingVertical: 7,
+  },
+  switchBtnTxt: { fontSize: 12, color: COLORS.accent, ...FONTS.semibold },
+  bellBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center',
+  },
+  avatarBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+  },
+  avatarImg: { width: 36, height: 36, borderRadius: 18 },
+  avatarTxt: { color: '#fff', fontSize: 14, ...FONTS.bold },
 
-  // Popular cities
+  // ── Search form ──
+  pageTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.lg, marginTop: SPACING.sm },
+
+  fieldLabel: {
+    fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 4,
+  },
+
+  dateRow: { flexDirection: 'row', gap: SPACING.md },
+  dateBox: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
+  },
+  dateBoxActive: { borderColor: COLORS.primary },
+  dateValue: { fontSize: 15, color: COLORS.text, ...FONTS.semibold, marginTop: 4 },
+  datePlaceholder: { fontSize: 15, color: COLORS.textMut, marginTop: 4 },
+
+  calHint: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, textAlign: 'center', marginBottom: SPACING.sm },
+  calendar: {
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+  },
+
+  searchBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 16,
+    marginTop: SPACING.lg,
+  },
+  searchBtnDisabled: { opacity: 0.35 },
+  searchBtnTxt: { color: '#fff', fontSize: 16, ...FONTS.bold },
+
+  // ── Results ──
+  listPad: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
+
+  resRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingTop: SPACING.sm, paddingBottom: SPACING.md,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+  resCity: { fontSize: 20, ...FONTS.bold, color: COLORS.text },
+  resSubRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  resDates: { fontSize: 13, color: COLORS.textSec },
+  resEditTxt: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold, marginLeft: 10, marginRight: 2 },
+  mapBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center',
+    marginLeft: SPACING.sm,
+  },
+
+  editPanel: {
+    backgroundColor: COLORS.bg,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
+    padding: SPACING.lg, marginBottom: SPACING.md,
+    ...SHADOW.sm,
+  },
+
+  resCount: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium, marginBottom: SPACING.sm },
+
+  // ── Home ──
+  homeWrap: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
+
+  searchPill: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 40, padding: 12, gap: 12, ...SHADOW.md, marginBottom: SPACING.xl,
+  },
+  pillIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center',
+  },
+  pillTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  pillSub: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
+
+  sectionHead: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
   citiesRow: { gap: 14, paddingBottom: SPACING.xl },
   cityCard: { alignItems: 'center', width: 72 },
   cityCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
+    width: 64, height: 64, borderRadius: 32,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 6,
   },
   cityEmoji: { fontSize: 26 },
   cityName: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec, textAlign: 'center' },
 
-  // Why RoomBuddy
-  whyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: SPACING.xl,
-  },
+  whyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },
   whyCard: {
-    width: '47%',
-    backgroundColor: COLORS.bg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
+    width: '47%', backgroundColor: COLORS.bg,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md,
   },
-  whyEmoji: { fontSize: 24, marginBottom: 6 },
   whyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   whySub: { fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
 
-  // How it works
-  stepsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-  stepCard: { flex: 1, alignItems: 'center' },
-  stepNum: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  stepNumText: { fontSize: 16, ...FONTS.bold },
-  stepTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
-  stepSub: { fontSize: 10, color: COLORS.textMut, textAlign: 'center', marginTop: 2 },
-  stepArrow: { paddingHorizontal: 4, paddingBottom: 20 },
+  howRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl },
+  howNum: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  howNumTxt: { fontSize: 16, ...FONTS.bold },
+  howTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
+  howSub: { fontSize: 10, color: COLORS.textMut, textAlign: 'center', marginTop: 2 },
 
-  // Expanded search form
-  closeFormBtn: {
-    alignSelf: 'flex-end',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-
-  formLabel: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.sm },
-  formSub: { fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm },
-
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    marginBottom: SPACING.md,
-    gap: 8,
-  },
-  searchInput: { flex: 1, fontSize: 14, color: COLORS.text, padding: 0 },
-
-  areaList: { gap: 8, marginBottom: SPACING.lg },
-  areaChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.bg,
-  },
-  areaChipActive: { backgroundColor: COLORS.primaryAlpha, borderColor: COLORS.primary },
-  areaChipText: { fontSize: 13, ...FONTS.medium, color: COLORS.text },
-  areaChipTextActive: { color: COLORS.primary, ...FONTS.semibold },
-
-  calendar: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-
-  searchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingVertical: 16,
-    marginTop: SPACING.lg,
-  },
-  searchBtnDisabled: { opacity: 0.5 },
-  searchBtnTxt: { color: '#fff', fontSize: 16, ...FONTS.semibold },
-  searchHint: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: SPACING.sm },
-
-  // Results
-  modifyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.md },
-  modifyTxt: { fontSize: 14, color: COLORS.primary, ...FONTS.semibold },
-  searchSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.md },
-  summaryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.primaryAlpha,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  summaryTxt: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
-  sectionTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
-
+  // ── Cards ──
   card: {
-    backgroundColor: COLORS.bg,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-    overflow: 'hidden',
-    ...SHADOW.sm,
+    backgroundColor: COLORS.bg, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm,
   },
   cardImg: { width: '100%', height: 180, backgroundColor: COLORS.surface },
-  cardContent: { padding: SPACING.md },
+  cardBody: { padding: SPACING.md },
   cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   cardArea: { fontSize: 13, color: COLORS.textSec, marginBottom: 4 },
   cardDesc: { fontSize: 13, color: COLORS.textMut, lineHeight: 18, marginBottom: 8 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface,
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  tag: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface,
   },
-  chipText: { fontSize: 11, color: COLORS.textSec, ...FONTS.medium },
+  tagText: { fontSize: 11, color: COLORS.textSec, ...FONTS.medium },
+  mealTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentAlpha,
+  },
+  mealTagText: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardPrice: { fontSize: 17, ...FONTS.bold, color: COLORS.text },
   cardPriceUnit: { fontSize: 12, ...FONTS.regular, color: COLORS.textSec },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   ratingText: { fontSize: 12, color: COLORS.text, ...FONTS.medium },
-  mealRow: { flexDirection: 'row', marginBottom: 10 },
-  mealChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.accentAlpha,
-  },
-  mealChipText: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
+
   emptyWrap: { alignItems: 'center', paddingVertical: SPACING.xxl },
   emptyTitle: { fontSize: 18, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md },
   emptySub: { fontSize: 14, color: COLORS.textMut, marginTop: 4 },

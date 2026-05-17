@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList } from '../../navigation/types';
 import { createListing, getListing, updateListing } from '../../services/listings';
 import { uploadAllPropertyPhotos } from '../../services/properties';
+import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 
 const DRAFT_KEY = 'LISTING_DRAFT_NEW';
 
@@ -49,6 +50,11 @@ interface FormData {
   apartmentName: string;
   locality: string;
   city: string;
+  googlePlaceId: string;
+  formattedAddress: string;
+  latitude: number | null;
+  longitude: number | null;
+  pincode: string;
   roomType: string;
   bedType: string;
   bathroom: string;
@@ -95,6 +101,11 @@ const INIT: FormData = {
   apartmentName: '',
   locality: '',
   city: 'Bengaluru',
+  googlePlaceId: '',
+  formattedAddress: '',
+  latitude: null,
+  longitude: null,
+  pincode: '',
   roomType: '',
   bedType: '',
   bathroom: '',
@@ -789,11 +800,21 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           value={form.apartmentName}
           onChange={(v) => update({ apartmentName: v })}
         />
-        <Field
-          label="Locality / Area"
-          placeholder="e.g. Koramangala 5th Block"
-          value={form.locality}
-          onChange={(v) => update({ locality: v })}
+        <SectionLabel label="Location" />
+        <GooglePlacesInput
+          value={form.formattedAddress || form.locality}
+          placeholder="Search for your area, locality..."
+          onSelect={(place) => {
+            update({
+              locality: place.addressLine1 || place.description,
+              city: place.city || form.city,
+              googlePlaceId: place.placeId,
+              formattedAddress: place.description,
+              latitude: place.lat,
+              longitude: place.lng,
+              pincode: place.pincode,
+            });
+          }}
         />
         <Field
           label="City"
@@ -2310,6 +2331,11 @@ function mapListingToForm(data: any): FormData {
     apartmentName: p.apartment_name,
     locality: p.address_line1 || '',
     city: p.city_name,
+    googlePlaceId: p.google_place_id || '',
+    formattedAddress: p.formatted_address || '',
+    latitude: p.latitude ?? null,
+    longitude: p.longitude ?? null,
+    pincode: p.pincode || '',
     roomType: r.room_type,
     bedType: r.bed_type,
     bathroom: r.bathroom_type,

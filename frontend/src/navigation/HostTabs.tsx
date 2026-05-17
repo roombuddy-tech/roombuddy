@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { COLORS, FONTS } from '../constants/theme';
-import { useAuth } from '../context/AuthContext';
 import BookingsScreen from '../screens/host/BookingsScreen';
 import DashboardScreen from '../screens/host/DashboardScreen';
 import EarningsScreen from '../screens/host/EarningsScreen';
@@ -12,11 +11,7 @@ import type { HostTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
 
-function GuestSwitchScreen() { return <View />; }
-
 export default function HostTabs() {
-  const { switchRole } = useAuth();
-
   return (
     <Tab.Navigator
       screenOptions={{
@@ -90,24 +85,6 @@ export default function HostTabs() {
               />
             </View>
           ),
-        }}
-      />
-      <Tab.Screen
-        name="GuestSwitch"
-        component={GuestSwitchScreen}
-        options={{
-          tabBarLabel: 'Find',
-          tabBarIcon: ({ color }) => (
-            <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name="magnify" size={24} color={color} />
-            </View>
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            switchRole('guest');
-          },
         }}
       />
     </Tab.Navigator>

@@ -19,6 +19,7 @@ from apps.bookings.services import (
     cancel_booking,
     create_booking,
     get_booking_detail,
+    get_guest_bookings,
     get_host_bookings,
     get_host_earnings,
     quote_booking,
@@ -153,6 +154,16 @@ class BookingDetailView(APIView):
             )
 
         return Response(get_booking_detail(booking))
+
+
+class GuestBookingsListView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Guest"])
+    def get(self, request):
+        results = get_guest_bookings(request.user)
+        return Response({"count": len(results), "results": results})
 
 
 class HostBookingsListView(APIView):
