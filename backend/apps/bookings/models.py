@@ -85,6 +85,7 @@ class Booking(models.Model):
     host_nightly_price = models.DecimalField(max_digits=10, decimal_places=2)
     gst_amount = models.DecimalField(max_digits=10, decimal_places=2)
     platform_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    host_platform_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     guest_nightly_price = models.DecimalField(max_digits=10, decimal_places=2)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
     security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0)

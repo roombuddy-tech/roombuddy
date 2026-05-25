@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings as django_settings
 from django.db import models
 
 _property = property
@@ -35,7 +36,7 @@ class Listing(models.Model):
     # Pricing
     host_price_per_night = models.DecimalField(max_digits=10, decimal_places=2)
     gst_pct = models.DecimalField(max_digits=5, decimal_places=2, default=12.00)
-    platform_fee_pct = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    platform_fee_pct = models.DecimalField(max_digits=5, decimal_places=2, default=5.00)
     currency = models.CharField(max_length=3, default="INR")
 
     # Discounts
@@ -76,7 +77,9 @@ class Listing(models.Model):
     @_property
     def guest_price_per_night(self):
         return round(
-            self.host_price_per_night * (1 + self.gst_pct / 100 + self.platform_fee_pct / 100), 2
+            self.host_price_per_night * (
+                1 + django_settings.GST_PCT / 100 + django_settings.GUEST_PLATFORM_FEE_PCT / 100
+            ), 2
         )
 
     class Meta:

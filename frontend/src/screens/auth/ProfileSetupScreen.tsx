@@ -17,7 +17,7 @@ type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
 const GENDERS = [
   { key: 'male', label: 'Male' },
   { key: 'female', label: 'Female' },
-  { key: 'non_binary', label: 'Other' },
+  { key: 'other', label: 'Others' },
 ];
 
 export default function ProfileSetupScreen({ navigation }: Props) {

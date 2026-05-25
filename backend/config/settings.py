@@ -170,7 +170,7 @@ else:
     MEDIA_ROOT = BASE_DIR / "media"
 
 # Base URL used to build absolute URLs for local media files served in dev
-SITE_URL = os.environ.get("SITE_URL", "http://192.168.1.3:8000")
+SITE_URL = os.environ.get("SITE_URL", "http://192.168.1.4:8000")
 
 # ── Email ────────────────────────────────────────────────────
 # Console for dev, SMTP (SES) for prod
@@ -259,6 +259,13 @@ LOGGING = {
         "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
+
+# ── Platform fees ────────────────────────────────────────────
+from decimal import Decimal as _Decimal
+
+GST_PCT = _Decimal(os.environ.get("GST_PCT", "12.00"))
+GUEST_PLATFORM_FEE_PCT = _Decimal(os.environ.get("GUEST_PLATFORM_FEE_PCT", "5.00"))
+HOST_PLATFORM_FEE_PCT = _Decimal(os.environ.get("HOST_PLATFORM_FEE_PCT", "5.00"))
 
 # ── Payments / Razorpay ──────────────────────────────────────
 # "console" = local dev fake gateway (no Razorpay account needed)

@@ -23,13 +23,14 @@ import type { RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import { CONFIG } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList } from '../../navigation/types';
 import { createListing, getListing, updateListing } from '../../services/listings';
 import { uploadAllPropertyPhotos } from '../../services/properties';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 
-const DRAFT_KEY = 'LISTING_DRAFT_NEW';
+const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ interface FormData {
   formattedAddress: string;
   latitude: number | null;
   longitude: number | null;
+  state: string;
   pincode: string;
   roomType: string;
   bedType: string;
@@ -105,6 +107,7 @@ const INIT: FormData = {
   formattedAddress: '',
   latitude: null,
   longitude: null,
+  state: '',
   pincode: '',
   roomType: '',
   bedType: '',
@@ -159,17 +162,17 @@ const APT_TYPES = [
 const AMENITY_GROUPS = [
   {
     label: 'Essentials',
-    optional: false,
+    optional: true,
     items: ['WiFi', 'AC', 'Geyser / Hot water', 'Power backup', 'Washing machine', 'Iron', 'Hair dryer'],
   },
   {
     label: 'Kitchen & Food',
-    optional: false,
+    optional: true,
     items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'],
   },
   {
     label: 'Comfort',
-    optional: false,
+    optional: true,
     items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
   },
   {
@@ -218,12 +221,12 @@ const PHOTO_CATEGORIES = [
 ];
 
 const MIN_STAY_OPTIONS = [
-  { value: '1_night', label: '1 night' },
-  { value: '2_nights', label: '2 nights' },
-  { value: '3_nights', label: '3 nights' },
-  { value: '1_week', label: '7 nights' },
-  { value: '2_weeks', label: '14 nights' },
-  { value: '1_month', label: '30 nights' },
+  { value: '1_night', label: '1 Night' },
+  { value: '2_nights', label: '2 Nights' },
+  { value: '3_nights', label: '3 Nights' },
+  { value: '1_week', label: '1 Week' },
+  { value: '2_weeks', label: '2 Weeks' },
+  { value: '1_month', label: '1 Month' },
 ];
 
 const TIMES: string[] = (() => {
@@ -810,6 +813,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
             update({
               locality: place.addressLine1 || place.description,
               city: place.city || form.city,
+              state: place.state,
               googlePlaceId: place.placeId,
               formattedAddress: place.description,
               latitude: place.lat,
@@ -824,6 +828,25 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           value={form.city}
           onChange={(v) => update({ city: v })}
         />
+        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="State"
+              placeholder="Auto-filled from location"
+              value={form.state}
+              onChange={(v) => update({ state: v })}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="Pincode"
+              placeholder="Auto-filled from location"
+              value={form.pincode}
+              onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad"
+            />
+          </View>
+        </View>
 
         <View style={stSt.infoBox}>
           <Ionicons name="information-circle" size={16} color={COLORS.primary} style={{ marginRight: 8, marginTop: 1 }} />
@@ -1002,8 +1025,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
   const LANDMARKS = ['Metro station', 'Bus stop', 'Tech park', 'Mall', 'Hospital', 'Restaurant hub'];
 
   const toggleLandmark = (l: string) => {
-    const cur = form.nearbyLandmarks;
-    update({ nearbyLandmarks: cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l] });
+    update({ nearbyLandmarks: form.nearbyLandmarks.includes(l) ? [] : [l] });
   };
 
   const isValid = form.title.trim().length > 0 && form.description.trim().length > 0;
@@ -1135,7 +1157,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       .map((w) => w[0]?.toUpperCase() ?? '')
       .join('');
 
-  const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+  const GENDER_OPTIONS = ['Male', 'Female', 'Others', 'Prefer not to say'];
 
   return (
     <ScrollView
@@ -1233,13 +1255,15 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={fmSt.modalOverlay}>
-            <View style={fmSt.modalSheet}>
+          <TouchableOpacity
+            style={fmSt.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setHostModalOpen(false)}
+          >
+            <View style={fmSt.modalSheet} onStartShouldSetResponder={() => true}>
+              <View style={fmSt.dragHandleWrap}><View style={fmSt.dragHandle} /></View>
               <View style={fmSt.modalHeader}>
                 <Text style={fmSt.modalTitle}>Your profile</Text>
-                <TouchableOpacity onPress={() => setHostModalOpen(false)}>
-                  <Ionicons name="close" size={22} color={COLORS.textSec} />
-                </TouchableOpacity>
               </View>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Field
@@ -1292,7 +1316,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                 </TouchableOpacity>
               </ScrollView>
             </View>
-          </View>
+          </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -1302,14 +1326,18 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={fmSt.modalOverlay}>
-            <View style={fmSt.modalSheet}>
-              <View style={fmSt.modalHeader}>
-                <Text style={fmSt.modalTitle}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
-                <TouchableOpacity onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setModalVisible(false); }}>
-                  <Ionicons name="close" size={22} color={COLORS.textSec} />
-                </TouchableOpacity>
-              </View>
+          <TouchableOpacity
+            style={fmSt.modalOverlay}
+            activeOpacity={1}
+            onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setModalVisible(false); }}
+          >
+            <View style={fmSt.modalSheet} onStartShouldSetResponder={() => true}>
+              <View style={fmSt.dragHandleWrap}><View style={fmSt.dragHandle} /></View>
+              {editingId && (
+                <View style={fmSt.modalHeader}>
+                  <Text style={fmSt.modalTitle}>Edit flatmate</Text>
+                </View>
+              )}
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Field
                   label="Name"
@@ -1366,7 +1394,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                 </TouchableOpacity>
               </ScrollView>
             </View>
-          </View>
+          </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
@@ -1416,17 +1444,21 @@ const fmSt = StyleSheet.create({
   },
   addTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.primary },
   modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
+  dragHandleWrap: { alignItems: 'center' as const, paddingTop: 6, paddingBottom: 2 },
+  dragHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border },
   modalSheet: {
     backgroundColor: COLORS.bg,
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
+    paddingTop: 0,
+    paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xxl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: SPACING.xs,
     marginBottom: SPACING.xs,
   },
   modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
@@ -1791,10 +1823,10 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
-  const gst = Math.round(rate * 0.12);
-  const platformFee = Math.round(rate * 0.10);
-  const guestTotal = rate + mealCost + gst + platformFee;
-  const hostFee = platformFee;
+  const gst = Math.round(rate * CONFIG.GST_PCT);
+  const guestPlatformFee = Math.round(rate * CONFIG.GUEST_PLATFORM_FEE_PCT);
+  const guestTotal = rate + mealCost + gst + guestPlatformFee;
+  const hostFee = Math.round(rate * CONFIG.HOST_PLATFORM_FEE_PCT);
   const hostEarning = rate + mealCost - hostFee;
 
   const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
@@ -1855,8 +1887,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label="GST (12% on room)" value={`₹${gst}`} />
-              <PriceRow label="Platform fee (10% on room)" value={`₹${platformFee}`} />
+              <PriceRow label={`GST (${CONFIG.GST_PCT * 100}% on room)`} value={`₹${gst}`} />
+              <PriceRow label={`Platform fee (${CONFIG.GUEST_PLATFORM_FEE_PCT * 100}% on room)`} value={`₹${guestPlatformFee}`} />
               <View style={prSt.divider} />
               <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
             </View>
@@ -1865,21 +1897,21 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <Text style={prSt.breakdownTitle}>You earn</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label="RoomBuddy fee (10% on room)" value={`−₹${hostFee}`} muted />
+              <PriceRow label={`RoomBuddy fee (${CONFIG.HOST_PLATFORM_FEE_PCT * 100}% on room)`} value={`−₹${hostFee}`} muted />
               <View style={prSt.divider} />
               <PriceRow label="Your earning" value={`₹${hostEarning}/night`} bold />
             </View>
           </>
         )}
 
-        <SectionLabel label="Minimum stay" optional />
+        <SectionLabel label="Minimum stay" />
         <View style={prSt.tooltipRow}>
           <Ionicons name="information-circle-outline" size={15} color={COLORS.textMut} />
           <Text style={prSt.tooltipText}>
             Guests must book at least this many nights. Shorter bookings won't be allowed.
           </Text>
         </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
+        <View style={prSt.minStayGrid}>
           {MIN_STAY_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.value}
@@ -1933,9 +1965,10 @@ const prSt = StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
   tooltipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm, paddingHorizontal: 2 },
   tooltipText: { flex: 1, fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
-  minStayBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: RADIUS.sm, borderWidth: 1.5, borderColor: COLORS.border },
+  minStayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border },
   minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
-  minStayTxt: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec },
+  minStayTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
   minStayTxtSel: { color: COLORS.primary, ...FONTS.semibold },
 });
 
@@ -2016,6 +2049,7 @@ function StepReview({
   navigation,
   isEditMode = false,
   listingId,
+  draftKey,
 }: {
   form: FormData;
   onBack: () => void;
@@ -2026,6 +2060,7 @@ function StepReview({
   navigation: NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>;
   isEditMode?: boolean;
   listingId?: string;
+  draftKey: string | null;
 }) {
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -2071,7 +2106,7 @@ function StepReview({
       } else {
         const result = await createListing(form);
         propertyId = result.property_id ?? null;
-        await AsyncStorage.removeItem(DRAFT_KEY);
+        if (draftKey) await AsyncStorage.removeItem(draftKey);
       }
 
       // Upload only newly added local photos (skip existing S3 URLs)
@@ -2347,7 +2382,8 @@ function mapListingToForm(data: any): FormData {
     formattedAddress: p.formatted_address || '',
     latitude: p.latitude ?? null,
     longitude: p.longitude ?? null,
-    pincode: p.pincode || '',
+    state: p.state || '',
+    pincode: p.pincode != null ? String(p.pincode) : '',
     roomType: r.room_type,
     bedType: r.bed_type,
     bathroom: r.bathroom_type,
@@ -2411,8 +2447,10 @@ export default function ListingEditorScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>>();
   const route = useRoute<RouteProp<HostStackParamList, 'ListingEditor'>>();
+  const { user } = useAuth();
   const listingId = route.params?.listingId;
   const resumeDraft = route.params?.resumeDraft;
+  const draftKey = user?.user_id ? getDraftKey(user.user_id) : null;
 
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INIT);
@@ -2438,24 +2476,24 @@ export default function ListingEditorScreen() {
 
   // New listing mode: auto-resume draft or start fresh
   useEffect(() => {
-    if (listingId || hasCheckedDraft.current) return;
+    if (listingId || hasCheckedDraft.current || !draftKey) return;
     hasCheckedDraft.current = true;
 
     if (resumeDraft) {
-      AsyncStorage.getItem(DRAFT_KEY).then((data) => {
+      AsyncStorage.getItem(draftKey).then((data) => {
         if (!data) return;
         try {
           const saved = JSON.parse(data);
           setForm(saved.form ?? INIT);
           setStep(saved.step ?? 0);
         } catch {
-          AsyncStorage.removeItem(DRAFT_KEY);
+          AsyncStorage.removeItem(draftKey);
         }
       });
     } else {
-      AsyncStorage.removeItem(DRAFT_KEY);
+      AsyncStorage.removeItem(draftKey);
     }
-  }, [listingId, resumeDraft]);
+  }, [listingId, resumeDraft, draftKey]);
 
   const update = useCallback((u: Partial<FormData>) => setForm((prev) => ({ ...prev, ...u })), []);
 
@@ -2473,13 +2511,13 @@ export default function ListingEditorScreen() {
   );
 
   const saveExit = useCallback(async () => {
-    if (!listingId && step > 0) {
+    if (!listingId && step > 0 && draftKey) {
       try {
-        await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ step, form }));
+        await AsyncStorage.setItem(draftKey, JSON.stringify({ step, form }));
       } catch {}
     }
     navigation.goBack();
-  }, [step, form, listingId, navigation]);
+  }, [step, form, listingId, navigation, draftKey]);
 
   const goToStep = useCallback((s: number) => setStep(s), []);
 
@@ -2507,6 +2545,7 @@ export default function ListingEditorScreen() {
           navigation={navigation}
           isEditMode={!!listingId}
           listingId={listingId}
+          draftKey={draftKey}
         />
       );
       default: return null;

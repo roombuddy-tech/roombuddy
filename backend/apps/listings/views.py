@@ -10,7 +10,8 @@ from apps.listings.serializers import (
 )
 from apps.listings.services import (
     create_listing, get_host_listings, get_listing_form_data, update_listing,
-    delete_listing, update_blocked_dates, search_guest_listings, get_guest_listing_detail,
+    delete_listing, update_blocked_dates, toggle_snooze,
+    search_guest_listings, get_guest_listing_detail,
 )
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
@@ -79,6 +80,18 @@ class ListingBlockedDatesView(APIView):
     def patch(self, request, listing_id):
         blocked_dates = request.data.get("blocked_dates", [])
         result = update_blocked_dates(request.user, str(listing_id), blocked_dates)
+        if result is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
+
+
+class ListingSnoozeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Host"])
+    def patch(self, request, listing_id):
+        result = toggle_snooze(request.user, str(listing_id))
         if result is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(result)

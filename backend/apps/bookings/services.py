@@ -129,13 +129,15 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
         })
 
     host_nightly = listing.host_price_per_night
-    gst_per_night = _quantize(host_nightly * listing.gst_pct / PERCENT_DENOMINATOR)
-    fee_per_night = _quantize(host_nightly * listing.platform_fee_pct / PERCENT_DENOMINATOR)
-    guest_nightly = host_nightly + gst_per_night + fee_per_night
+    gst_per_night = _quantize(host_nightly * settings.GST_PCT / PERCENT_DENOMINATOR)
+    guest_fee_per_night = _quantize(host_nightly * settings.GUEST_PLATFORM_FEE_PCT / PERCENT_DENOMINATOR)
+    host_fee_per_night = _quantize(host_nightly * settings.HOST_PLATFORM_FEE_PCT / PERCENT_DENOMINATOR)
+    guest_nightly = host_nightly + gst_per_night + guest_fee_per_night
 
     subtotal = _quantize(host_nightly * nights)
     gst_amount = _quantize(gst_per_night * nights)
-    platform_fee = _quantize(fee_per_night * nights)
+    platform_fee = _quantize(guest_fee_per_night * nights)
+    host_platform_fee = _quantize(host_fee_per_night * nights)
     security_deposit = listing.security_deposit
 
     # Meal option
@@ -154,8 +156,8 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
                 break
 
     total_guest_pays = _quantize(subtotal + gst_amount + platform_fee + security_deposit + meal_total)
-    total_host_receives = subtotal + meal_total
-    platform_revenue = _quantize(platform_fee + gst_amount)
+    total_host_receives = _quantize(subtotal + meal_total - host_platform_fee)
+    platform_revenue = _quantize(platform_fee + host_platform_fee + gst_amount)
 
     return {
         "listing_id": str(listing.id),
@@ -165,6 +167,7 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
         "subtotal": float(subtotal),
         "gst_amount": float(gst_amount),
         "platform_fee": float(platform_fee),
+        "host_platform_fee": float(host_platform_fee),
         "security_deposit": float(security_deposit),
         "total_guest_pays": float(total_guest_pays),
         "total_host_receives": float(total_host_receives),
@@ -245,6 +248,7 @@ def create_booking(
                 subtotal=Decimal(str(quote["subtotal"])),
                 gst_amount=Decimal(str(quote["gst_amount"])),
                 platform_fee=Decimal(str(quote["platform_fee"])),
+                host_platform_fee=Decimal(str(quote["host_platform_fee"])),
                 security_deposit=Decimal(str(quote["security_deposit"])),
                 total_guest_pays=Decimal(str(quote["total_guest_pays"])),
                 total_host_receives=Decimal(str(quote["total_host_receives"])),

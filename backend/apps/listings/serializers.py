@@ -45,7 +45,8 @@ class PropertyInputSerializer(serializers.Serializer):
     longitude = serializers.FloatField(required=False, allow_null=True)
     google_place_id = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
     formatted_address = serializers.CharField(required=False, allow_blank=True, default="")
-    pincode = serializers.CharField(max_length=10, required=False, allow_blank=True, default="")
+    state = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    pincode = serializers.IntegerField(required=False, allow_null=True, default=None)
 
 
 class RoomInputSerializer(serializers.Serializer):

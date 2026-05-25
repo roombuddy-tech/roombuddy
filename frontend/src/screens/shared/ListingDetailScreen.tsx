@@ -12,6 +12,7 @@ import {
   NativeScrollEvent,
   ActivityIndicator,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,8 +22,9 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import { CONFIG } from '../../constants/config';
 import type { HostStackParamList } from '../../navigation/types';
-import { getListing, updateBlockedDates, deleteListing } from '../../services/listings';
+import { getListing, updateBlockedDates, deleteListing, toggleSnooze } from '../../services/listings';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'ListingDetail'>;
 type Route = RouteProp<HostStackParamList, 'ListingDetail'>;
@@ -57,21 +59,11 @@ const AMENITY_ICONS: Record<string, any> = {
 };
 
 function Divider() {
-  return <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.lg }} />;
+  return <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.md }} />;
 }
 
 function SectionHeader({ title }: { title: string }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
-}
-
-function RuleChip({ label, active }: { label: string; active: boolean }) {
-  if (!active) return null;
-  return (
-    <View style={styles.ruleChip}>
-      <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} />
-      <Text style={styles.ruleChipTxt}>{label}</Text>
-    </View>
-  );
 }
 
 export default function ListingDetailScreen() {
@@ -89,6 +81,8 @@ export default function ListingDetailScreen() {
   const [savingDates, setSavingDates] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [listingStatus, setListingStatus] = useState<string>(item?.status ?? 'live');
+  const [togglingSnooze, setTogglingSnooze] = useState(false);
 
   const hasUnsavedDates = JSON.stringify(blockedDates) !== JSON.stringify(savedDates);
 
@@ -102,6 +96,7 @@ export default function ListingDetailScreen() {
             const dates = data.blocked_dates || [];
             setBlockedDates(dates);
             setSavedDates(dates);
+            if (data.status) setListingStatus(data.status);
           })
           .catch(() => {});
       }
@@ -137,6 +132,19 @@ export default function ListingDetailScreen() {
       Alert.alert('Error', 'Failed to update availability. Please try again.');
     } finally {
       setSavingDates(false);
+    }
+  };
+
+  const handleToggleSnooze = async () => {
+    if (!item?.listing_id) return;
+    setTogglingSnooze(true);
+    try {
+      const result = await toggleSnooze(item.listing_id);
+      setListingStatus(result.status);
+    } catch {
+      Alert.alert('Error', 'Failed to update listing status. Please try again.');
+    } finally {
+      setTogglingSnooze(false);
     }
   };
 
@@ -196,7 +204,7 @@ export default function ListingDetailScreen() {
   const areaName = f ? `${f.locality}${f.city ? `, ${f.city}` : ''}` : (item?.area_name ?? '');
   const hostPrice = f ? (parseInt(f.nightlyRate, 10) || 0) : (item?.host_price_per_night ?? 0);
   const guestPrice = f
-    ? Math.round(hostPrice * 1.22)
+    ? Math.round(hostPrice * (1 + CONFIG.GST_PCT + CONFIG.GUEST_PLATFORM_FEE_PCT))
     : (item?.guest_price_per_night ?? 0);
 
   const allPhotos: string[] = f
@@ -231,6 +239,17 @@ export default function ListingDetailScreen() {
   const initials = (name: string) =>
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 
+  const previewSubtitle = isPreview && f ? [
+    areaName,
+    f.bedType ? `${f.bedType.charAt(0).toUpperCase()}${f.bedType.slice(1)} bed` : null,
+    (f.amenities as string[])?.includes('AC') ? 'AC' : null,
+    f.bathroom === 'attached' ? 'Attached bath' : f.bathroom === 'shared' ? 'Shared bath' : null,
+  ].filter(Boolean).join(' · ') : '';
+
+  const minStayNightsMap: Record<string, number> = {
+    '1_night': 1, '2_nights': 2, '3_nights': 3, '1_week': 7, '2_weeks': 14, '1_month': 30,
+  };
+  const previewMinNights = f?.minStay ? (minStayNightsMap[f.minStay] ?? 1) : 1;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -276,400 +295,369 @@ export default function ListingDetailScreen() {
           )}
 
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+            <Ionicons name="chevron-back" size={22} color={COLORS.text} />
           </TouchableOpacity>
 
-          {isPreview && (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeTxt}>✨ New listing</Text>
+          {allPhotos.length > 0 && isPreview ? (
+            <View style={styles.photoCounter}>
+              <Ionicons name="camera-outline" size={13} color="#fff" />
+              <Text style={styles.photoCounterTxt}>
+                {allPhotos.length} photo{allPhotos.length !== 1 ? 's' : ''}
+              </Text>
             </View>
-          )}
-
-          {allPhotos.length > 1 && (
+          ) : allPhotos.length > 1 && !isPreview ? (
             <View style={styles.photoCounter}>
               <Text style={styles.photoCounterTxt}>
                 {activePhotoIdx + 1} / {allPhotos.length}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.body}>
-          {/* Tags */}
-          {tags.length > 0 && (
-            <View style={styles.tagsRow}>
-              {tags.map((t) => (
-                <View key={t} style={styles.tag}>
-                  <Text style={styles.tagTxt}>{t}</Text>
+          {isPreview && f ? (
+            <>
+              {/* Title */}
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{previewSubtitle}</Text>
+
+              {/* Badges */}
+              <View style={styles.badgeRow}>
+                <View style={styles.badge}>
+                  <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
+                  <Text style={styles.badgeText}>Verified</Text>
                 </View>
-              ))}
-            </View>
-          )}
-
-          {/* Title + location */}
-          <Text style={styles.title}>{title}</Text>
-          {areaName ? (
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={14} color={COLORS.textSec} />
-              <Text style={styles.locationTxt}>{areaName}</Text>
-            </View>
-          ) : null}
-
-          {/* Price */}
-          <View style={styles.priceRow}>
-            {hostPrice > 0 && (
-              <Text style={styles.price}>
-                ₹{hostPrice.toLocaleString('en-IN')}
-                <Text style={styles.priceUnit}>/night</Text>
-              </Text>
-            )}
-            {guestPrice > 0 && hostPrice !== guestPrice && (
-              <Text style={styles.guestPrice}>
-                Guest pays: ₹{guestPrice.toLocaleString('en-IN')}/night (incl. taxes & fees)
-              </Text>
-            )}
-          </View>
-
-          <Divider />
-
-          {/* About */}
-          {f?.description ? (
-            <>
-              <SectionHeader title="About this room" />
-              <Text style={styles.description}>{f.description}</Text>
-              <Divider />
-            </>
-          ) : null}
-
-          {/* The space */}
-          {f && (f.apartmentType || f.roomType) && (
-            <>
-              <SectionHeader title="The space" />
-              <View style={styles.spaceGrid}>
-                {f.apartmentType ? (
-                  <View style={styles.spaceCard}>
-                    <Ionicons name="home-outline" size={22} color={COLORS.primary} />
-                    <Text style={styles.spaceCardLabel}>{aptLabel[f.apartmentType] || f.apartmentType}</Text>
-                    {f.floorNumber ? (
-                      <Text style={styles.spaceCardSub}>Floor {f.floorNumber}</Text>
-                    ) : null}
-                  </View>
-                ) : null}
-                {f.roomType ? (
-                  <View style={styles.spaceCard}>
-                    <MaterialCommunityIcons
-                      name={f.roomType === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
-                      size={22}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.spaceCardLabel}>
-                      {f.roomType === 'private' ? 'Private room' : 'Shared room'}
-                    </Text>
-                    {f.bedType ? (
-                      <Text style={styles.spaceCardSub}>{bedLabel(f.bedType)}</Text>
-                    ) : null}
-                  </View>
-                ) : null}
-                {f.bathroom ? (
-                  <View style={styles.spaceCard}>
-                    <Ionicons name="water-outline" size={22} color={COLORS.primary} />
-                    <Text style={styles.spaceCardLabel}>{bathroomLabel(f.bathroom)}</Text>
-                  </View>
-                ) : null}
-                {f.roomSize ? (
-                  <View style={styles.spaceCard}>
-                    <Ionicons name="expand-outline" size={22} color={COLORS.primary} />
-                    <Text style={styles.spaceCardLabel}>{f.roomSize}</Text>
-                    <Text style={styles.spaceCardSub}>Room size</Text>
-                  </View>
-                ) : null}
               </View>
-              {f.roomFeatures && f.roomFeatures.length > 0 && (
+
+              {/* Description */}
+              {f.description ? (
                 <>
-                  <Text style={styles.subLabel}>Room includes</Text>
-                  <View style={styles.featureRow}>
-                    {f.roomFeatures.map((feat: string) => (
-                      <View key={feat} style={styles.featureChip}>
-                        <Text style={styles.featureChipTxt}>{feat}</Text>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>About this room</Text>
+                  <Text style={styles.description}>
+                    {f.description.replace(/\n{2,}/g, '\n').trim()}
+                  </Text>
+                </>
+              ) : null}
+
+              {/* Flatmates */}
+              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
+                <>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>{'👥 Meet your flatmates'}</Text>
+                  {(f.hostOccupation || f.hostHobbies) && (
+                    <View style={styles.flatmateCard}>
+                      <View style={styles.flatmateAvatar}>
+                        <Text style={styles.flatmateInitials}>H</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.flatmateName}>Host</Text>
+                          <View style={styles.hostBadge}>
+                            <Text style={styles.hostBadgeTxt}>Host</Text>
+                          </View>
+                        </View>
+                        {f.hostOccupation ? <Text style={styles.flatmateDetail}>{f.hostOccupation}</Text> : null}
+                        {f.hostHobbies ? <Text style={styles.flatmateDetail}>{f.hostHobbies}</Text> : null}
+                      </View>
+                    </View>
+                  )}
+                  {(f.flatmates as any[]).map((fm: any, idx: number) => (
+                    <View key={fm.id ?? idx} style={[styles.flatmateCard, idx === f.flatmates.length - 1 && { borderBottomWidth: 0 }]}>
+                      <View style={styles.flatmateAvatar}>
+                        <Text style={styles.flatmateInitials}>{initials(fm.name)}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.flatmateName}>
+                          {fm.name}{fm.age ? `, ${fm.age}` : ''}
+                        </Text>
+                        {fm.occupation ? <Text style={styles.flatmateDetail}>{fm.occupation}</Text> : null}
+                        {fm.hobbies ? <Text style={styles.flatmateDetail}>{fm.hobbies}</Text> : null}
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* Food options */}
+              {(f.kitchenAccess || f.homeCooked) && (
+                <>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>{'🍳 Food options'}</Text>
+                  <View style={styles.foodChipRow}>
+                    {f.kitchenAccess && (
+                      <View style={styles.foodChip}>
+                        <Text style={styles.foodChipText}>Kitchen access</Text>
+                      </View>
+                    )}
+                    {f.homeCooked && f.mealCost && (
+                      <View style={styles.foodChip}>
+                        <Text style={styles.foodChipText}>Tiffin ₹{f.mealCost}/meal</Text>
+                      </View>
+                    )}
+                    {(f.amenities as string[])?.includes('Utensils provided') && (
+                      <View style={styles.foodChip}>
+                        <Text style={styles.foodChipText}>Utensils provided</Text>
+                      </View>
+                    )}
+                  </View>
+                  {f.mealDescription ? <Text style={styles.foodDesc}>{f.mealDescription}</Text> : null}
+                </>
+              )}
+
+              {/* Amenities */}
+              {f.amenities && f.amenities.length > 0 && (
+                <>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>{'✨ Amenities'}</Text>
+                  <View style={styles.amenitiesGrid}>
+                    {(f.amenities as string[]).map((a: string) => (
+                      <View key={a} style={styles.amenityRow}>
+                        <Ionicons
+                          name={(AMENITY_ICONS[a] ?? 'checkmark-outline') as any}
+                          size={18}
+                          color={COLORS.primary}
+                        />
+                        <Text style={styles.amenityTxt}>{a}</Text>
                       </View>
                     ))}
                   </View>
                 </>
               )}
-              <Divider />
-            </>
-          )}
 
-          {/* Amenities */}
-          {f?.amenities && f.amenities.length > 0 && (
-            <>
-              <SectionHeader title="What's included" />
-              <View style={styles.amenitiesGrid}>
-                {(f.amenities as string[]).map((a: string) => (
-                  <View key={a} style={styles.amenityRow}>
-                    <Ionicons
-                      name={AMENITY_ICONS[a] ?? 'checkmark-outline'}
-                      size={18}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.amenityTxt}>{a}</Text>
-                  </View>
-                ))}
-              </View>
-              <Divider />
-            </>
-          )}
-
-          {/* Food */}
-          {f && (f.kitchenAccess || f.homeCooked) && (
-            <>
-              <SectionHeader title="Food & kitchen" />
-              {f.kitchenAccess && (
-                <View style={styles.foodRow}>
-                  <Ionicons name="restaurant-outline" size={18} color={COLORS.primary} />
-                  <Text style={styles.foodTxt}>Guests can use the kitchen</Text>
-                </View>
-              )}
-              {f.homeCooked && (
-                <View style={styles.foodRow}>
-                  <Ionicons name="flame-outline" size={18} color={COLORS.primary} />
-                  <View>
-                    <Text style={styles.foodTxt}>Home-cooked meals available</Text>
-                    {f.mealTypes && f.mealTypes.length > 0 && (
-                      <Text style={styles.foodSub}>{(f.mealTypes as string[]).join(', ')}</Text>
-                    )}
-                    {f.mealCost ? (
-                      <Text style={styles.foodSub}>₹{f.mealCost}/day extra</Text>
-                    ) : null}
-                    {f.mealDescription ? (
-                      <Text style={styles.foodSub}>{f.mealDescription}</Text>
-                    ) : null}
-                  </View>
-                </View>
-              )}
-              <Divider />
-            </>
-          )}
-
-          {/* Flatmates */}
-          {f && (f.flatmates?.length > 0 || f.hostOccupation) && (
-            <>
-              <SectionHeader title="Your flatmates" />
-              {/* Host card always first if they added their info */}
-              {f.hostOccupation || f.hostHobbies ? (
-                <View style={styles.flatmateCard}>
-                  <View style={styles.flatmateAvatar}>
-                    <Text style={styles.flatmateInitials}>H</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.flatmateName}>Host</Text>
-                      <View style={styles.hostBadge}>
-                        <Text style={styles.hostBadgeTxt}>Host</Text>
+              {/* The space */}
+              {(f.apartmentType || f.roomType) && (
+                <>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>The space</Text>
+                  <View style={styles.spaceGrid}>
+                    {f.apartmentType ? (
+                      <View style={styles.spaceCard}>
+                        <Ionicons name="home-outline" size={22} color={COLORS.primary} />
+                        <Text style={styles.spaceCardLabel}>{aptLabel[f.apartmentType] || f.apartmentType}</Text>
+                        {f.floorNumber ? <Text style={styles.spaceCardSub}>Floor {f.floorNumber}</Text> : null}
                       </View>
+                    ) : null}
+                    {f.roomType ? (
+                      <View style={styles.spaceCard}>
+                        <MaterialCommunityIcons
+                          name={f.roomType === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
+                          size={22}
+                          color={COLORS.primary}
+                        />
+                        <Text style={styles.spaceCardLabel}>
+                          {f.roomType === 'private' ? 'Private room' : 'Shared room'}
+                        </Text>
+                        {f.bedType ? <Text style={styles.spaceCardSub}>{bedLabel(f.bedType)}</Text> : null}
+                      </View>
+                    ) : null}
+                    {f.bathroom ? (
+                      <View style={styles.spaceCard}>
+                        <Ionicons name="water-outline" size={22} color={COLORS.primary} />
+                        <Text style={styles.spaceCardLabel}>{bathroomLabel(f.bathroom)}</Text>
+                      </View>
+                    ) : null}
+                    {f.roomSize ? (
+                      <View style={styles.spaceCard}>
+                        <Ionicons name="expand-outline" size={22} color={COLORS.primary} />
+                        <Text style={styles.spaceCardLabel}>{f.roomSize} sq ft</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {f.roomFeatures && f.roomFeatures.length > 0 && (
+                    <View style={styles.featureRow}>
+                      {f.roomFeatures.map((feat: string) => (
+                        <View key={feat} style={styles.featureChip}>
+                          <Text style={styles.featureChipTxt}>{feat}</Text>
+                        </View>
+                      ))}
                     </View>
-                    {f.hostGender ? (
-                      <Text style={styles.flatmateDetail}>
-                        {f.hostGender.charAt(0).toUpperCase() + f.hostGender.slice(1)}
-                      </Text>
-                    ) : null}
-                    {f.hostOccupation ? (
-                      <Text style={styles.flatmateDetail}>{f.hostOccupation}</Text>
-                    ) : null}
-                    {f.hostHobbies ? (
-                      <Text style={styles.flatmateDetail}>{f.hostHobbies}</Text>
-                    ) : null}
-                    {f.city ? (
-                      <View style={styles.hometownRow}>
-                        <Ionicons name="location-outline" size={12} color={COLORS.textMut} />
-                        <Text style={styles.flatmateDetail}>{f.city}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              ) : null}
-              {(f.flatmates as any[]).map((fm: any) => (
-                <View key={fm.id} style={styles.flatmateCard}>
-                  <View style={styles.flatmateAvatar}>
-                    <Text style={styles.flatmateInitials}>{initials(fm.name)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.flatmateName}>
-                      {fm.name}{fm.age ? `, ${fm.age}` : ''}
-                    </Text>
-                    {fm.gender ? (
-                      <Text style={styles.flatmateDetail}>
-                        {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}
-                      </Text>
-                    ) : null}
-                    {fm.occupation || fm.hobbies ? (
-                      <Text style={styles.flatmateDetail} numberOfLines={1}>
-                        {[fm.occupation, fm.hobbies].filter(Boolean).join(' · ')}
-                      </Text>
-                    ) : null}
-                    {fm.hometown ? (
-                      <View style={styles.hometownRow}>
-                        <Ionicons name="location-outline" size={12} color={COLORS.textMut} />
-                        <Text style={styles.flatmateDetail}>{fm.hometown}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              ))}
-              <Text style={styles.genderPref}>
-                Guest preference:{' '}
-                {f.guestGenderPref === 'male_only'
-                  ? 'Male only'
-                  : f.guestGenderPref === 'female_only'
-                  ? 'Female only'
-                  : 'Any gender'}
-              </Text>
-              <Divider />
-            </>
-          )}
-
-          {/* House rules */}
-          {f && (
-            <>
-              <SectionHeader title="House rules" />
-              <View style={styles.rulesGrid}>
-                <RuleChip label="No smoking" active={f.noSmoking} />
-                <RuleChip label="No loud music after 10 PM" active={f.noLoudMusic} />
-                <RuleChip label="No pets" active={f.noPets} />
-                <RuleChip label="No parties" active={f.noParties} />
-                <RuleChip label="Shoes off indoors" active={f.shoesOff} />
-                <RuleChip label="Keep kitchen clean" active={f.kitchenClean} />
-                <RuleChip label="No alcohol in common areas" active={f.noAlcohol} />
-                <RuleChip label="Lock door when leaving" active={f.lockDoor} />
-              </View>
-              {f.customRules ? (
-                <View style={styles.customRulesBox}>
-                  <Text style={styles.customRulesTxt}>{f.customRules}</Text>
-                </View>
-              ) : null}
-              <Divider />
-            </>
-          )}
-
-          {/* Approximate location map */}
-          {f?.latitude && f?.longitude && (
-            <>
-              <SectionHeader title="Approximate location" />
-              <View style={styles.miniMapWrap}>
-                <MapView
-                  style={styles.miniMap}
-                  provider={PROVIDER_GOOGLE}
-                  initialRegion={{
-                    latitude: f.latitude,
-                    longitude: f.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  rotateEnabled={false}
-                  pitchEnabled={false}
-                >
-                  <Circle
-                    center={{ latitude: f.latitude, longitude: f.longitude }}
-                    radius={300}
-                    fillColor="rgba(13,115,119,0.12)"
-                    strokeColor="rgba(13,115,119,0.3)"
-                    strokeWidth={1}
-                  />
-                </MapView>
-              </View>
-              <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
-              <Divider />
-            </>
-          )}
-
-          {/* Availability — interactive calendar (host view only) */}
-          {!isPreview && item && (
-            <>
-              <SectionHeader title="Availability" />
-              <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm }}>
-                Tap a date to start, then tap another to block a range
-              </Text>
-              <Calendar
-                minDate={today}
-                markingType="period"
-                markedDates={getMarkedDates()}
-                onDayPress={onDayPress}
-                theme={{
-                  todayTextColor: COLORS.primary,
-                  arrowColor: COLORS.primary,
-                  textDayFontFamily: FONTS.medium.fontWeight,
-                  textMonthFontFamily: FONTS.semibold.fontWeight,
-                  textDayHeaderFontFamily: FONTS.medium.fontWeight,
-                }}
-                style={{ borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}
-              />
-
-              {selectingStart && (
-                <Text style={{ fontSize: 13, color: COLORS.accent, marginTop: SPACING.sm, ...FONTS.medium }}>
-                  Tap another date to complete the range
-                </Text>
-              )}
-
-              {blockedDates.length > 0 && (
-                <View style={{ marginTop: SPACING.md, gap: 6 }}>
-                  {blockedDates.map((range, index) => {
-                    const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                    return (
-                      <View key={index} style={styles.blockedRow}>
-                        <Ionicons name="calendar-outline" size={16} color="#DC2626" />
-                        <Text style={styles.blockedTxt}>{fmt(range.start_date)} — {fmt(range.end_date)}</Text>
-                        <TouchableOpacity onPress={() => removeRange(index)} style={{ padding: 4 }}>
-                          <Ionicons name="close-circle-outline" size={20} color={COLORS.textMut} />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-
-              {hasUnsavedDates && (
-                <TouchableOpacity
-                  style={[styles.saveAvailBtn, savingDates && { opacity: 0.7 }]}
-                  onPress={handleSaveBlockedDates}
-                  activeOpacity={0.85}
-                  disabled={savingDates}
-                >
-                  {savingDates ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.saveAvailTxt}>Save availability</Text>
                   )}
-                </TouchableOpacity>
+                </>
+              )}
+
+              {/* Approximate location map */}
+              {f.latitude && f.longitude && (
+                <>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>Approximate location</Text>
+                  <View style={styles.miniMapWrap}>
+                    <MapView
+                      style={styles.miniMap}
+                      provider={PROVIDER_GOOGLE}
+                      initialRegion={{
+                        latitude: f.latitude,
+                        longitude: f.longitude,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      }}
+                      scrollEnabled={false}
+                      zoomEnabled={false}
+                      rotateEnabled={false}
+                      pitchEnabled={false}
+                    >
+                      <Circle
+                        center={{ latitude: f.latitude, longitude: f.longitude }}
+                        radius={300}
+                        fillColor="rgba(13,115,119,0.12)"
+                        strokeColor="rgba(13,115,119,0.3)"
+                        strokeWidth={1}
+                      />
+                    </MapView>
+                  </View>
+                  <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
+                </>
+              )}
+
+              {/* Check-in / Check-out */}
+              {(f.checkInTime || f.checkOutTime) && (
+                <>
+                  <Divider />
+                  <Text style={styles.sectionHeader}>Check-in / Check-out</Text>
+                  <View style={styles.checkinRow}>
+                    {f.checkInTime ? (
+                      <View style={styles.checkinCard}>
+                        <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.checkinLabel}>Check-in from</Text>
+                        <Text style={styles.checkinTime}>{f.checkInTime}</Text>
+                      </View>
+                    ) : null}
+                    {f.checkOutTime ? (
+                      <View style={styles.checkinCard}>
+                        <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.checkinLabel}>Check-out by</Text>
+                        <Text style={styles.checkinTime}>{f.checkOutTime}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </>
+              )}
+
+              {/* Stay info */}
+              <Divider />
+              <View style={styles.stayInfoRow}>
+                <View style={styles.stayInfoItem}>
+                  <Text style={styles.stayInfoLabel}>Min stay</Text>
+                  <Text style={styles.stayInfoValue}>{previewMinNights} night{previewMinNights !== 1 ? 's' : ''}</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* Host management view */}
+              <Text style={styles.title}>{title}</Text>
+              {areaName ? (
+                <View style={styles.locationRow}>
+                  <Ionicons name="location-outline" size={14} color={COLORS.textSec} />
+                  <Text style={styles.locationTxt}>{areaName}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.priceRow}>
+                {hostPrice > 0 && (
+                  <Text style={styles.price}>
+                    ₹{hostPrice.toLocaleString('en-IN')}
+                    <Text style={styles.priceUnit}>/night</Text>
+                  </Text>
+                )}
+                {guestPrice > 0 && hostPrice !== guestPrice && (
+                  <Text style={styles.guestPrice}>
+                    Guest pays: ₹{guestPrice.toLocaleString('en-IN')}/night (incl. taxes & fees)
+                  </Text>
+                )}
+              </View>
+
+              <Divider />
+
+              {/* Availability — interactive calendar */}
+              {item && (
+                <>
+                  <SectionHeader title="Availability" />
+                  <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm }}>
+                    Tap a date to start, then tap another to block a range
+                  </Text>
+                  <Calendar
+                    minDate={today}
+                    markingType="period"
+                    markedDates={getMarkedDates()}
+                    onDayPress={onDayPress}
+                    theme={{
+                      todayTextColor: COLORS.primary,
+                      arrowColor: COLORS.primary,
+                      textDayFontFamily: FONTS.medium.fontWeight,
+                      textMonthFontFamily: FONTS.semibold.fontWeight,
+                      textDayHeaderFontFamily: FONTS.medium.fontWeight,
+                    }}
+                    style={{ borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}
+                  />
+
+                  {selectingStart && (
+                    <Text style={{ fontSize: 13, color: COLORS.accent, marginTop: SPACING.sm, ...FONTS.medium }}>
+                      Tap another date to complete the range
+                    </Text>
+                  )}
+
+                  {blockedDates.length > 0 && (
+                    <View style={{ marginTop: SPACING.md, gap: 6 }}>
+                      {blockedDates.map((range, index) => {
+                        const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                        return (
+                          <View key={index} style={styles.blockedRow}>
+                            <Ionicons name="calendar-outline" size={16} color="#DC2626" />
+                            <Text style={styles.blockedTxt}>{fmt(range.start_date)} — {fmt(range.end_date)}</Text>
+                            <TouchableOpacity onPress={() => removeRange(index)} style={{ padding: 4 }}>
+                              <Ionicons name="close-circle-outline" size={20} color={COLORS.textMut} />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {hasUnsavedDates && (
+                    <TouchableOpacity
+                      style={[styles.saveAvailBtn, savingDates && { opacity: 0.7 }]}
+                      onPress={handleSaveBlockedDates}
+                      activeOpacity={0.85}
+                      disabled={savingDates}
+                    >
+                      {savingDates ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.saveAvailTxt}>Save availability</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={styles.snoozeCard}>
+                    <View style={styles.snoozeContent}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons
+                          name={listingStatus === 'snoozed' ? 'moon' : 'moon-outline'}
+                          size={20}
+                          color={listingStatus === 'snoozed' ? '#F59E0B' : COLORS.textSec}
+                        />
+                        <Text style={styles.snoozeTitle}>Snooze listing</Text>
+                      </View>
+                      <Text style={styles.snoozeSub}>
+                        {listingStatus === 'snoozed'
+                          ? 'Your listing is hidden from guests. Turn off to make it visible again.'
+                          : 'Temporarily hide this listing from guests without deleting it.'}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={listingStatus === 'snoozed'}
+                      onValueChange={handleToggleSnooze}
+                      disabled={togglingSnooze}
+                      trackColor={{ false: '#E2E8F0', true: '#FDE68A' }}
+                      thumbColor={listingStatus === 'snoozed' ? '#F59E0B' : '#fff'}
+                    />
+                  </View>
+                </>
               )}
             </>
           )}
-
-          {/* Check-in / Check-out */}
-          {f && (f.checkInTime || f.checkOutTime) && (
-            <>
-              <SectionHeader title="Check-in / Check-out" />
-              <View style={styles.checkinRow}>
-                {f.checkInTime ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-in from</Text>
-                    <Text style={styles.checkinTime}>{f.checkInTime}</Text>
-                  </View>
-                ) : null}
-                {f.checkOutTime ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-out by</Text>
-                    <Text style={styles.checkinTime}>{f.checkOutTime}</Text>
-                  </View>
-                ) : null}
-              </View>
-              <Divider />
-            </>
-          )}
-
         </View>
       </ScrollView>
 
@@ -706,9 +694,14 @@ export default function ListingDetailScreen() {
 
       {isPreview && (
         <View style={styles.stickyBar}>
-          <Text style={styles.previewNote}>Preview mode — not yet live</Text>
-          <TouchableOpacity style={styles.closePreviewBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-            <Text style={styles.closePreviewTxt}>Back to edit</Text>
+          <View>
+            <Text style={styles.stickyPrice}>
+              ₹{guestPrice.toLocaleString('en-IN')}
+              <Text style={styles.stickyPriceUnit}>/night</Text>
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.stickyBookBtn} activeOpacity={0.85} onPress={() => navigation.goBack()}>
+            <Text style={styles.stickyBookBtnText}>Back to edit</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -738,6 +731,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -757,31 +753,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...SHADOW.sm,
   },
-  newBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255,107,74,0.15)',
-  },
-  newBadgeTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.accent },
-
   body: { padding: SPACING.lg },
 
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: SPACING.sm },
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tagTxt: { fontSize: 11, ...FONTS.medium, color: COLORS.textSec },
-
   title: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm },
+
+  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: SPACING.sm },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border,
+  },
+  badgeText: { fontSize: 12, ...FONTS.medium, color: COLORS.text },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.sm },
   locationTxt: { fontSize: 14, color: COLORS.textSec },
 
@@ -797,7 +780,7 @@ const styles = StyleSheet.create({
 
   sectionHeader: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
 
-  description: { fontSize: 14, color: COLORS.textSec, lineHeight: 22 },
+  description: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
 
   spaceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.sm },
   spaceCard: {
@@ -810,7 +793,6 @@ const styles = StyleSheet.create({
   },
   spaceCardLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
   spaceCardSub: { fontSize: 12, color: COLORS.textSec },
-  subLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
   featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: SPACING.sm },
   featureChip: {
     paddingHorizontal: 10,
@@ -826,9 +808,13 @@ const styles = StyleSheet.create({
   amenityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   amenityTxt: { fontSize: 14, color: COLORS.text },
 
-  foodRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: SPACING.sm },
-  foodTxt: { fontSize: 14, color: COLORS.text, ...FONTS.medium },
-  foodSub: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
+  foodChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  foodChip: {
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: RADIUS.md, backgroundColor: COLORS.primaryAlpha,
+  },
+  foodChipText: { fontSize: 13, color: COLORS.primary, ...FONTS.medium },
+  foodDesc: { fontSize: 13, color: COLORS.textSec, marginTop: SPACING.sm, lineHeight: 20 },
 
   flatmateCard: {
     flexDirection: 'row',
@@ -839,9 +825,9 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   flatmateAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.primaryAlpha,
     justifyContent: 'center',
     alignItems: 'center',
@@ -849,7 +835,6 @@ const styles = StyleSheet.create({
   flatmateInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
   flatmateName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
   flatmateDetail: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
-  hometownRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   hostBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -859,18 +844,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   hostBadgeTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
-  genderPref: { fontSize: 13, color: COLORS.textSec, marginTop: SPACING.sm },
-
-  rulesGrid: { gap: 8, marginBottom: SPACING.sm },
-  ruleChip: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  ruleChipTxt: { fontSize: 14, color: COLORS.text },
-  customRulesBox: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.sm,
-    padding: SPACING.sm,
-    marginTop: SPACING.sm,
-  },
-  customRulesTxt: { fontSize: 13, color: COLORS.textSec, lineHeight: 20 },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
   checkinCard: {
@@ -902,6 +875,20 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   saveAvailTxt: { color: '#fff', fontSize: 15, ...FONTS.semibold },
+  snoozeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.lg,
+  },
+  snoozeContent: { flex: 1, marginRight: 12 },
+  snoozeTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  snoozeSub: { fontSize: 12, color: COLORS.textSec, marginTop: 4, lineHeight: 18 },
   deleteBarBtn: {
     borderWidth: 1,
     borderColor: '#FECACA',
@@ -934,6 +921,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
+    paddingBottom: 32,
     backgroundColor: COLORS.bg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
@@ -946,12 +934,17 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   bookBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.semibold },
-  previewNote: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
-  closePreviewBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+
+  stickyPrice: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
+  stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
+  stickyBookBtn: {
+    backgroundColor: COLORS.accent, paddingVertical: 13, paddingHorizontal: 28,
     borderRadius: RADIUS.md,
   },
-  closePreviewTxt: { color: '#fff', fontSize: 14, ...FONTS.semibold },
+  stickyBookBtnText: { color: '#fff', fontSize: 15, ...FONTS.semibold },
+
+  stayInfoRow: { flexDirection: 'row', gap: SPACING.md },
+  stayInfoItem: { flex: 1, alignItems: 'center' },
+  stayInfoLabel: { fontSize: 12, color: COLORS.textSec, marginBottom: 4 },
+  stayInfoValue: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
 });

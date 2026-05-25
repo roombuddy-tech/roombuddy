@@ -19,6 +19,7 @@ export async function createListing(form: {
   formattedAddress: string;
   latitude: number | null;
   longitude: number | null;
+  state: string;
   pincode: string;
   roomType: string;
   bedType: string;
@@ -83,7 +84,8 @@ export async function createListing(form: {
       longitude: form.longitude,
       google_place_id: form.googlePlaceId,
       formatted_address: form.formattedAddress,
-      pincode: form.pincode,
+      state: form.state,
+      pincode: form.pincode ? parseInt(form.pincode, 10) || null : null,
     },
     room: {
       room_type: form.roomType,
@@ -156,6 +158,11 @@ export async function deleteListing(listingId: string): Promise<void> {
   await api.delete(ENDPOINTS.HOST.LISTING_DETAIL(listingId));
 }
 
+export async function toggleSnooze(listingId: string): Promise<{ listing_id: string; status: string }> {
+  const res = await api.patch(ENDPOINTS.HOST.LISTING_SNOOZE(listingId));
+  return res.data;
+}
+
 export async function updateListing(listingId: string, form: Parameters<typeof createListing>[0]): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
@@ -182,7 +189,8 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       longitude: form.longitude,
       google_place_id: form.googlePlaceId,
       formatted_address: form.formattedAddress,
-      pincode: form.pincode,
+      state: form.state,
+      pincode: form.pincode ? parseInt(form.pincode, 10) || null : null,
     },
     room: {
       room_type: form.roomType,

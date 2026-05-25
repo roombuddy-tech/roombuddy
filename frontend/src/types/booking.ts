@@ -6,6 +6,7 @@ export interface BookingQuote {
     subtotal: number;
     gst_amount: number;
     platform_fee: number;
+    host_platform_fee: number;
     security_deposit: number;
     total_guest_pays: number;
     total_host_receives: number;
