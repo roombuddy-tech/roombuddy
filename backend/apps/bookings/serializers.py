@@ -25,6 +25,7 @@ class QuoteResponseSerializer(serializers.Serializer):
     subtotal = serializers.FloatField()
     gst_amount = serializers.FloatField()
     platform_fee = serializers.FloatField()
+    host_platform_fee = serializers.FloatField()
     security_deposit = serializers.FloatField()
     total_guest_pays = serializers.FloatField()
     total_host_receives = serializers.FloatField()

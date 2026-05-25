@@ -10,6 +10,7 @@ export interface PlaceResult {
   lat: number;
   lng: number;
   city: string;
+  state: string;
   pincode: string;
   addressLine1: string;
 }
@@ -47,6 +48,7 @@ export default function GooglePlacesInput({ value, placeholder, onSelect }: Prop
             extractComponent(detail, 'locality') ||
             extractComponent(detail, 'administrative_area_level_2') ||
             extractComponent(detail, 'administrative_area_level_1');
+          const state = extractComponent(detail, 'administrative_area_level_1');
           const pincode = extractComponent(detail, 'postal_code');
           const sublocality = extractComponent(detail, 'sublocality_level_1') || extractComponent(detail, 'sublocality');
           const neighborhood = extractComponent(detail, 'neighborhood');
@@ -58,6 +60,7 @@ export default function GooglePlacesInput({ value, placeholder, onSelect }: Prop
             lat: loc?.lat ?? 0,
             lng: loc?.lng ?? 0,
             city,
+            state,
             pincode,
             addressLine1: addressLine,
           });

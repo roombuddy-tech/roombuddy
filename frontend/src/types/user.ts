@@ -13,7 +13,7 @@ export interface UserProfile {
   last_name: string;
   display_name: string;
   email?: string;
-  gender: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say';
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   profile_photo_url?: string;
   city: string;
 }

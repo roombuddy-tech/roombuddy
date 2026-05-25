@@ -96,7 +96,7 @@ class Command(BaseCommand):
                 "description": "Spacious bedroom for testing booking flow.",
                 "host_price_per_night": Decimal("1500.00"),
                 "gst_pct": Decimal("12.00"),
-                "platform_fee_pct": Decimal("10.00"),
+                "platform_fee_pct": Decimal("5.00"),
                 "currency": "INR",
                 "min_nights": 1,
                 "max_nights": 30,

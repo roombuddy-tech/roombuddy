@@ -9,10 +9,11 @@ import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
 import api from '../../services/api';
 
-const DRAFT_KEY = 'LISTING_DRAFT_NEW';
+const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
 const TOTAL_STEPS = 9;
 
 type NavProp = CompositeNavigationProp<
@@ -75,10 +76,13 @@ function DraftProgressBar({ completed, total }: { completed: number; total: numb
 
 export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
+  const { user } = useAuth();
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState<DraftData | null>(null);
+
+  const draftKey = user?.user_id ? getDraftKey(user.user_id) : null;
 
   const fetchListings = useCallback(async () => {
     try {
@@ -93,8 +97,9 @@ export default function ListingsScreen() {
   }, []);
 
   const loadDraft = useCallback(async () => {
+    if (!draftKey) { setDraft(null); return; }
     try {
-      const data = await AsyncStorage.getItem(DRAFT_KEY);
+      const data = await AsyncStorage.getItem(draftKey);
       if (data) {
         setDraft(JSON.parse(data));
       } else {
@@ -103,7 +108,7 @@ export default function ListingsScreen() {
     } catch {
       setDraft(null);
     }
-  }, []);
+  }, [draftKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,7 +146,7 @@ export default function ListingsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem(DRAFT_KEY);
+            if (draftKey) await AsyncStorage.removeItem(draftKey);
             setDraft(null);
           },
         },

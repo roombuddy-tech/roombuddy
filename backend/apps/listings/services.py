@@ -86,6 +86,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
         photos_by_category[cat].append(get_photo_url(photo.url))
 
     return {
+        "status": listing.status,
         "property": {
             "apartment_type": prop.apartment_type,
             "floor_number": prop.floor_number,
@@ -98,7 +99,8 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "longitude": float(prop.longitude) if prop.longitude else None,
             "google_place_id": prop.google_place_id or "",
             "formatted_address": prop.formatted_address or "",
-            "pincode": prop.pincode or "",
+            "state": prop.state or "",
+            "pincode": prop.pincode,
         },
         "room": {
             "room_type": room.room_type,
@@ -185,7 +187,8 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         prop.longitude = prop_data.get("longitude")
         prop.google_place_id = prop_data.get("google_place_id", "")
         prop.formatted_address = prop_data.get("formatted_address", "")
-        prop.pincode = prop_data.get("pincode", "")
+        prop.state = prop_data.get("state", "")
+        prop.pincode = prop_data.get("pincode")
         prop.title = d["title"]
         prop.description = d.get("description", "")
         prop.save()
@@ -314,6 +317,24 @@ def update_blocked_dates(user: User, listing_id: str, blocked_dates: list[dict])
     }
 
 
+def toggle_snooze(user: User, listing_id: str) -> dict | None:
+    """Toggle a listing between live and snoozed status."""
+    try:
+        listing = Listing.objects.get(id=listing_id, host_user=user)
+    except Listing.DoesNotExist:
+        return None
+
+    if listing.status == Listing.Status.SNOOZED:
+        listing.status = Listing.Status.LIVE
+        listing.snoozed_until = None
+    else:
+        listing.status = Listing.Status.SNOOZED
+        listing.snoozed_until = None
+    listing.save(update_fields=["status", "snoozed_until"])
+
+    return {"listing_id": str(listing.id), "status": listing.status}
+
+
 def get_host_listings(user: User) -> list[dict]:
     """Returns all listings owned by a host."""
     from apps.properties.models import PropertyPhoto
@@ -348,7 +369,8 @@ def create_listing(user: User, data: dict) -> dict:
             longitude=prop_data.get("longitude"),
             google_place_id=prop_data.get("google_place_id", ""),
             formatted_address=prop_data.get("formatted_address", ""),
-            pincode=prop_data.get("pincode", ""),
+            state=prop_data.get("state", ""),
+            pincode=prop_data.get("pincode"),
             title=d["title"],
             description=d.get("description", ""),
             status=Property.Status.LIVE,

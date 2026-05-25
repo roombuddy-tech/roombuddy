@@ -47,7 +47,8 @@ class Property(models.Model):
     city_id = models.UUIDField(null=True, blank=True)
     neighborhood_id = models.UUIDField(null=True, blank=True)
     city_name = models.CharField(max_length=100)
-    pincode = models.CharField(max_length=10)
+    state = models.CharField(max_length=100, blank=True, default="")
+    pincode = models.PositiveIntegerField(null=True, blank=True)
 
     # Content
     title = models.CharField(max_length=255)
