@@ -2,7 +2,6 @@ from datetime import timedelta
 import secrets
 import uuid
 
-
 from django.db import models
 from django.db.models import Sum, Avg, Count
 from django.utils import timezone
@@ -16,7 +15,6 @@ from third_party.storage import get_photo_url
 from third_party.email import send_verification_email
 from third_party.storage import upload_image, delete_image, StorageError
 
-
 from common.jwt_utils import (
     generate_access_token,
     generate_refresh_token,
@@ -25,7 +23,12 @@ from common.jwt_utils import (
     REFRESH_TOKEN_LIFETIME_DAYS,
 )
 from common.utils import get_display_name, get_initials
-from third_party.otp import generate_otp, send_otp as send_otp_sms
+from third_party.otp import (
+    OTP_PROVIDER,
+    generate_otp,
+    send_otp as send_otp_sms,
+    verify_otp as verify_otp_provider,
+)
 
 OTP_RATE_LIMIT_PER_HOUR = 5
 OTP_EXPIRY_MINUTES = 5
@@ -91,22 +94,34 @@ def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") 
             status_code=403,
         )
 
-    # Generate and store OTP
-    otp_code = generate_otp(length=6)
-    OTPCode.objects.create(
-        user=user,
-        phone=full_phone,
-        otp_hash=OTPCode.hash_otp(otp_code),
-        expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES),
-    )
-
-    # Send SMS
-    if not send_otp_sms(full_phone, otp_code):
-        raise AuthServiceError(
-            "Failed to send OTP. Please try again.",
-            "OTP_SEND_FAILED",
-            status_code=500,
+    if OTP_PROVIDER == "console":
+        # Console mode: generate locally, store hash, send to console
+        otp_code = generate_otp(length=6)
+        OTPCode.objects.create(
+            user=user,
+            phone=full_phone,
+            otp_hash=OTPCode.hash_otp(otp_code),
+            expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES),
         )
+        if not send_otp_sms(full_phone, otp_code):
+            raise AuthServiceError(
+                "Failed to send OTP. Please try again.",
+                "OTP_SEND_FAILED",
+                status_code=500,
+            )
+    else:
+        # MSG91 mode: MSG91 generates the OTP, we just track the request
+        OTPCode.objects.create(
+            user=user,
+            phone=full_phone,
+            expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES),
+        )
+        if not send_otp_sms(full_phone):
+            raise AuthServiceError(
+                "Failed to send OTP. Please try again.",
+                "OTP_SEND_FAILED",
+                status_code=500,
+            )
 
     return {
         "message": "OTP sent successfully",
@@ -118,11 +133,10 @@ def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") 
 def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, request_meta: dict) -> dict:
     """
     Verifies OTP, creates session, returns tokens.
-    Returns response dict or raises AuthServiceError.
+    - console: verifies locally against stored hash
+    - msg91:   verifies via MSG91 API
     """
     full_phone = f"{country_code}{phone_number}"
-    print(f"[OTP DEBUG] Looking for phone={full_phone}, unconsumed OTPs: {OTPCode.objects.filter(phone=full_phone, is_consumed=False).count()}, ALL OTPs for phone: {OTPCode.objects.filter(phone=full_phone).count()}")
-
 
     # Find user
     try:
@@ -133,29 +147,39 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
     except User.DoesNotExist:
         raise AuthServiceError("No account found for this phone number.", "USER_NOT_FOUND", 404)
 
-    # Find latest OTP
-    otp_record = (
-        OTPCode.objects.filter(phone=full_phone, is_consumed=False)
-        .order_by("-created_at")
-        .first()
-    )
-
-    if not otp_record:
-        raise AuthServiceError("No OTP found. Please request a new one.", "OTP_NOT_FOUND")
-
-    if otp_record.is_expired:
-        raise AuthServiceError("OTP has expired. Please request a new one.", "OTP_EXPIRED")
-
-    if otp_record.is_max_attempts:
-        raise AuthServiceError("Too many incorrect attempts. Please request a new OTP.", "MAX_ATTEMPTS")
-
-    # Verify
-    if not otp_record.verify(otp_code):
-        remaining = max(otp_record.max_attempts - otp_record.attempt_count, 0)
-        raise AuthServiceError(
-            "Incorrect OTP. Please try again.",
-            "INVALID_OTP",
+    if OTP_PROVIDER == "console":
+        # Local hash verification
+        otp_record = (
+            OTPCode.objects.filter(phone=full_phone, is_consumed=False)
+            .order_by("-created_at")
+            .first()
         )
+
+        if not otp_record:
+            raise AuthServiceError("No OTP found. Please request a new one.", "OTP_NOT_FOUND")
+
+        if otp_record.is_expired:
+            raise AuthServiceError("OTP has expired. Please request a new one.", "OTP_EXPIRED")
+
+        if otp_record.is_max_attempts:
+            raise AuthServiceError("Too many incorrect attempts. Please request a new OTP.", "MAX_ATTEMPTS")
+
+        if not otp_record.verify(otp_code):
+            raise AuthServiceError("Incorrect OTP. Please try again.", "INVALID_OTP")
+    else:
+        # MSG91 verification
+        if not verify_otp_provider(full_phone, otp_code):
+            raise AuthServiceError("Invalid or expired OTP.", "INVALID_OTP")
+
+        # Mark local tracking record as consumed (if it exists)
+        otp_record = (
+            OTPCode.objects.filter(phone=full_phone, is_consumed=False)
+            .order_by("-created_at")
+            .first()
+        )
+        if otp_record:
+            otp_record.is_consumed = True
+            otp_record.save(update_fields=["is_consumed"])
 
     # Update user
     is_first_login = user.phone_verified_at is None
@@ -191,14 +215,10 @@ def complete_user_profile(user: User, data: dict) -> dict:
     """Creates or updates user profile. Email saved to users table."""
     email = data.get("email") or None
 
-   
-    email = data.get("email") or None
-
     if email:
         existing = User.objects.filter(email=email, email_verified_at__isnull=False).exclude(id=user.id).first()
         if existing:
             raise AuthServiceError("This email is already associated with another account.", "EMAIL_TAKEN", 409)
-
 
     profile, _ = UserProfile.objects.update_or_create(
         user=user,
@@ -213,7 +233,6 @@ def complete_user_profile(user: User, data: dict) -> dict:
     if "email" in data:
         new_email = data["email"] or None
         if new_email and new_email != user.email:
-            # Check if another user already has this email
             if User.objects.filter(email=new_email).exclude(id=user.id).exists():
                 raise AuthServiceError(
                     "This email is already associated with another account.",
@@ -271,6 +290,7 @@ def refresh_access_token(refresh_token_str: str) -> dict:
 
     return {"access": new_access_token}
 
+
 def get_user_profile(user: User) -> dict:
     """Returns full profile data for the profile menu."""
     try:
@@ -314,6 +334,7 @@ def get_user_profile(user: User) -> dict:
         "phone_country_code": user.phone_country_code,
     }
 
+
 def update_user_profile(user: User, data: dict) -> dict:
     """Updates profile fields. Email saved to users table."""
     try:
@@ -336,7 +357,6 @@ def update_user_profile(user: User, data: dict) -> dict:
     if "email" in data:
         new_email = data["email"] or None
         if new_email and new_email != user.email:
-            # Check if another user already has this email
             if User.objects.filter(email=new_email).exclude(id=user.id).exists():
                 raise AuthServiceError(
                     "This email is already associated with another account.",
@@ -360,7 +380,6 @@ def update_user_profile(user: User, data: dict) -> dict:
         "gender": profile.gender,
         "city": profile.city,
         "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
-
     }
 
 
@@ -369,23 +388,12 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
     Public-facing profile of another user. Used when:
     - A host views a guest's profile (from a booking)
     - A guest views a host's profile (from a listing)
-
-    Privacy guarantees:
-    - No phone, email, or DOB exposed (those are PII)
-    - Reviews are filtered: only those received in the SAME role direction
-      that's relevant. E.g. if you're viewing as a host looking at a guest,
-      you see HOST_TO_GUEST reviews about that user.
-    - Common bookings are checked: viewing_user must have or had a booking
-      with the target_user (host-guest relationship), OTHERWISE we still
-      return basic profile but no reviews — keeps it open enough for
-      pre-booking discovery, locked enough to protect users.
     """
     try:
         target = User.objects.select_related("profile").get(id=target_user_id)
     except User.DoesNotExist:
         raise AuthServiceError("User not found", "NOT_FOUND", 404)
 
-    # Profile fields (with safe defaults if no profile row)
     try:
         profile = target.profile
         first_name = profile.first_name
@@ -404,7 +412,6 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
         or "U"
     )
 
-    # Stats: bookings as guest, bookings as host
     stays_as_guest = Booking.objects.filter(
         guest_user=target,
         status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
@@ -414,8 +421,6 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
         status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
     ).count()
 
-    # Reviews received — both directions, since target may be both host and guest.
-    # We surface them all so the viewer gets a holistic picture of the user.
     reviews_qs = (
         Review.objects.filter(reviewee_user=target, is_hidden=False)
         .select_related("reviewer_user", "reviewer_user__profile")
@@ -470,8 +475,6 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
 
 def send_email_verification(user: User, email: str) -> dict:
     """Generates a verification token and sends it via email."""
-
-     # Check if another user already has this email verified
     existing = User.objects.filter(email=email, email_verified_at__isnull=False).exclude(id=user.id).first()
     if existing:
         raise AuthServiceError(
@@ -479,7 +482,7 @@ def send_email_verification(user: User, email: str) -> dict:
             "EMAIL_ALREADY_TAKEN",
             status_code=409,
         )
-    
+
     one_hour_ago = timezone.now() - timedelta(hours=1)
     recent_count = EmailVerification.objects.filter(user=user, email=email, created_at__gte=one_hour_ago).count()
 
@@ -516,6 +519,7 @@ def verify_email_token(user: User, token: str) -> dict:
 
     return {"message": "Email verified successfully", "email": record.email}
 
+
 def get_verification_status(user: User) -> dict:
     """Returns verification status including ID verification."""
     profile = user.profile if hasattr(user, "profile") else None
@@ -544,8 +548,6 @@ def get_verification_status(user: User) -> dict:
 
 def submit_id_verification(user: User, aadhaar_image, selfie_image) -> dict:
     """Upload Aadhaar photo + selfie for manual verification."""
-    
-
     profile = user.profile
 
     if profile.id_verification_status == "approved":
@@ -644,6 +646,7 @@ def get_pending_verifications() -> list:
         for p in pending
     ]
 
+
 # ─── Dashboard services ──────────────────────────────────────
 
 def get_host_dashboard(user: User) -> dict:
@@ -683,7 +686,6 @@ def _get_month_stats(user: User, month_start, today) -> dict:
     earnings = float(agg["earnings"] or 0)
     booking_count = agg["count"]
 
-    # Occupancy
     days_in_month = (today - month_start).days + 1
     booked_nights = sum(
         max((min(b.check_out_date, today) - max(b.check_in_date, month_start)).days, 0)
@@ -691,7 +693,6 @@ def _get_month_stats(user: User, month_start, today) -> dict:
     )
     occupancy_pct = round((booked_nights / days_in_month) * 100) if days_in_month > 0 else 0
 
-    # Rating
     review_agg = Review.objects.filter(
         reviewee_user=user,
         review_type=Review.ReviewType.GUEST_TO_HOST,
@@ -699,7 +700,6 @@ def _get_month_stats(user: User, month_start, today) -> dict:
 
     avg_rating = round(review_agg["avg"], 1) if review_agg["avg"] else None
 
-    # Response rate
     total_requests = Booking.objects.filter(
         host_user=user, booking_mode=Booking.BookingMode.REQUEST
     ).count()
@@ -770,20 +770,17 @@ def _get_today_activity(user: User, today) -> dict:
         "recent_reviews": recent_reviews,
     }
 
+
 # ─── Payout Account services ─────────────────────────────────
 
 def get_payout_accounts(user: User) -> list[dict]:
     """Returns all payout accounts for a user."""
-
     accounts = PayoutAccount.objects.filter(user=user)
     return [_payout_to_dict(a) for a in accounts]
 
 
 def add_bank_account(user: User, data: dict) -> dict:
     """Adds a bank account for payouts."""
-    
-
-    # If first account, make it primary
     has_accounts = PayoutAccount.objects.filter(user=user).exists()
 
     account = PayoutAccount.objects.create(
@@ -800,7 +797,6 @@ def add_bank_account(user: User, data: dict) -> dict:
 
 def add_upi_account(user: User, data: dict) -> dict:
     """Adds a UPI ID for payouts."""
-
     has_accounts = PayoutAccount.objects.filter(user=user).exists()
 
     account = PayoutAccount.objects.create(
@@ -814,7 +810,6 @@ def add_upi_account(user: User, data: dict) -> dict:
 
 def delete_payout_account(user: User, account_id: str) -> None:
     """Deletes a payout account."""
-
     try:
         account = PayoutAccount.objects.get(id=account_id, user=user)
     except PayoutAccount.DoesNotExist:
@@ -823,7 +818,6 @@ def delete_payout_account(user: User, account_id: str) -> None:
     was_primary = account.is_primary
     account.delete()
 
-    # If deleted the primary, make the next one primary
     if was_primary:
         next_account = PayoutAccount.objects.filter(user=user).first()
         if next_account:
@@ -833,13 +827,11 @@ def delete_payout_account(user: User, account_id: str) -> None:
 
 def set_primary_payout_account(user: User, account_id: str) -> dict:
     """Sets a payout account as primary."""
-
     try:
         account = PayoutAccount.objects.get(id=account_id, user=user)
     except PayoutAccount.DoesNotExist:
         raise AuthServiceError("Account not found.", "NOT_FOUND", 404)
 
-    # Unset all, then set this one
     PayoutAccount.objects.filter(user=user).update(is_primary=False)
     account.is_primary = True
     account.save(update_fields=["is_primary"])
@@ -863,10 +855,9 @@ def _payout_to_dict(account) -> dict:
         "upi_id": account.upi_id,
     }
 
+
 def upload_profile_photo(user: User, image_file) -> dict:
     """Upload user profile photo to storage. Returns URLs."""
-
-    # Delete old photo if exists
     try:
         profile = user.profile
         if profile.profile_photo_url:
@@ -887,7 +878,6 @@ def upload_profile_photo(user: User, image_file) -> dict:
     except StorageError as e:
         raise AuthServiceError(e.message, "UPLOAD_FAILED", 400)
 
-    # Update profile
     profile.profile_photo_url = result["url"]
     profile.save(update_fields=["profile_photo_url", "updated_at"])
 
@@ -900,22 +890,12 @@ def upload_profile_photo(user: User, image_file) -> dict:
 def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
     """
     Public-facing profile for one user, as seen by another user.
-
-    Privacy model:
-    - Always show: display name, photo, member-since, verification badges, city,
-      bio (if set), aggregate review stats, total stays count.
-    - Show contact info (phone, email) ONLY if the viewer has an
-      ACCEPTED/ACTIVE/COMPLETED booking with the viewed user. Hosts need
-      contact details for accepted guests; random users don't.
-    - Never show: DOB, full address, government IDs, raw review text from
-      OTHER users (only aggregated stats and counts).
+    Contact info gated on active booking relationship.
     """
     profile = getattr(viewed_user, "profile", None)
 
-    # ── Eligibility for contact details ──
     contact_visible = _has_active_booking_relationship(viewer_user, viewed_user)
 
-    # ── Aggregate review stats ──
     review_qs = Review.objects.filter(
         reviewee_user=viewed_user,
         is_hidden=False,
@@ -925,7 +905,6 @@ def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
         count=Count("id"),
     )
 
-    # ── Stays counted for "experience" signal ──
     stays_as_guest_count = Booking.objects.filter(
         guest_user=viewed_user,
         status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
@@ -936,8 +915,6 @@ def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
         status__in=[Booking.Status.COMPLETED, Booking.Status.ACTIVE],
     ).count()
 
-    # ── Recent review snippets (only ones written ABOUT this user, not BY) ──
-    # We surface these so trust signals are concrete, not just numbers.
     recent_reviews = [
         {
             "rating": r.overall_rating,
@@ -953,7 +930,7 @@ def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
         "user_id": str(viewed_user.id),
         "display_name": get_display_name(viewed_user),
         "initials": get_initials(viewed_user),
-        "profile_photo_url" : get_photo_url(profile.profile_photo_url) if profile.profile_photo_url else None,
+        "profile_photo_url": get_photo_url(profile.profile_photo_url) if profile and profile.profile_photo_url else None,
         "city": profile.city if profile else None,
         "member_since": (
             viewed_user.created_at.strftime("%B %Y")
@@ -962,7 +939,7 @@ def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
         "verifications": {
             "phone_verified": viewed_user.phone_verified_at is not None,
             "email_verified": viewed_user.email_verified_at is not None,
-            "id_verified": False,  # placeholder for Aadhaar verification later
+            "id_verified": False,
         },
         "stats": {
             "stays_as_guest": stays_as_guest_count,
@@ -973,7 +950,6 @@ def get_public_profile(viewed_user: User, viewer_user: User) -> dict:
             ),
         },
         "recent_reviews": recent_reviews,
-        # Contact info gated on active booking relationship
         "contact": (
             {
                 "phone": (
