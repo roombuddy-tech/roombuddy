@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import {
@@ -14,12 +14,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { startConversation } from '../../services/chat';
 
-import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import type { GuestStackParamList } from '../../navigation/types';
+import api from '../../services/api';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
 
@@ -92,6 +92,19 @@ export default function MyStaysScreen() {
     Linking.openURL(`tel:${phone}`);
   };
 
+  const messageHost = async (b: GuestBooking) => {
+    try {
+      const convo = await startConversation(b.booking_id);
+      navigation.navigate('Chat', {
+        conversationId: convo.conversation_id,
+        title: b.host_name,
+        subtitle: convo.listing_title ?? undefined,
+      });
+    } catch {
+      // network error — screen stays as-is; user can retry
+    }
+  };
+
   const renderBooking = ({ item }: { item: GuestBooking }) => {
     const cfg = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.pending;
     const canContact = item.status === 'accepted' || item.status === 'active';
@@ -143,16 +156,27 @@ export default function MyStaysScreen() {
               </Text>
             </View>
 
-            {canContact && item.host_phone && (
+            <View style={styles.footerActions}>
               <TouchableOpacity
-                style={styles.contactBtn}
-                onPress={() => callHost(item.host_phone!)}
+                style={styles.msgBtn}
+                onPress={() => messageHost(item)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="call-outline" size={16} color="#fff" />
-                <Text style={styles.contactBtnTxt}>Call host</Text>
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.msgBtnTxt}>Message</Text>
               </TouchableOpacity>
-            )}
+
+              {canContact && item.host_phone && (
+                <TouchableOpacity
+                  style={styles.contactBtn}
+                  onPress={() => callHost(item.host_phone!)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="call-outline" size={16} color="#fff" />
+                  <Text style={styles.contactBtnTxt}>Call</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <Text style={styles.hostName}>Hosted by {item.host_name}</Text>
@@ -319,4 +343,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28, paddingVertical: 14,
   },
   emptyBtnTxt: { color: '#fff', fontSize: 16, ...FONTS.bold },
+  footerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  msgBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.pill,
+    paddingHorizontal: 14, paddingVertical: 9,
+  },
+  msgBtnTxt: { color: COLORS.primary, fontSize: 13, ...FONTS.semibold },
 });

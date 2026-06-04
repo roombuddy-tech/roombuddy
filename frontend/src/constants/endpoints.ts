@@ -52,6 +52,8 @@ export const ENDPOINTS = {
   },
   CHAT: {
     CONVERSATIONS: '/api/conversations/',
+    MESSAGES: (conversationId: string) => `/api/conversations/${conversationId}/messages/`,
+    READ: (conversationId: string) => `/api/conversations/${conversationId}/read/`,
   },
   AMENITIES: '/api/amenities/',
 };

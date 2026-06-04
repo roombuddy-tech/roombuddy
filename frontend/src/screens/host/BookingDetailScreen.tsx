@@ -1,12 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import type { HostStackParamList } from '../../navigation/types';
+import { startConversation } from '../../services/chat';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'BookingDetail'>;
 type Route = RouteProp<HostStackParamList, 'BookingDetail'>;
@@ -47,6 +48,19 @@ export default function BookingDetailScreen() {
 
   const statusStyle = STATUS_COLORS[booking.status] || STATUS_COLORS.pending;
 
+  const messageGuest = async () => {
+    try {
+      const convo = await startConversation(booking.booking_id);
+      navigation.navigate('Chat', {
+        conversationId: convo.conversation_id,
+        title: booking.guest_name,
+        subtitle: convo.listing_title ?? undefined,
+      });
+    } catch {
+      // network error — screen stays as-is; user can retry
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -74,6 +88,11 @@ export default function BookingDetailScreen() {
             </Text>
           </View>
         </View>
+
+        <TouchableOpacity style={styles.msgButton} onPress={messageGuest} activeOpacity={0.8}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.msgButtonTxt}>Message guest</Text>
+        </TouchableOpacity>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stay details</Text>
@@ -194,4 +213,10 @@ const styles = StyleSheet.create({
   acceptBtn: { backgroundColor: COLORS.primary },
   rejectTxt: { fontSize: 15, ...FONTS.medium, color: COLORS.textSec },
   acceptTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
+  msgButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.md,
+    paddingVertical: 12, marginBottom: SPACING.lg,
+  },
+  msgButtonTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.primary },
 });
