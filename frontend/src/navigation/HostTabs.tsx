@@ -7,6 +7,7 @@ import BookingsScreen from '../screens/host/BookingsScreen';
 import DashboardScreen from '../screens/host/DashboardScreen';
 import EarningsScreen from '../screens/host/EarningsScreen';
 import ListingsScreen from '../screens/host/ListingsScreen';
+import MessagesScreen from '../screens/shared/MessagesScreen';
 import type { HostTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
@@ -64,6 +65,22 @@ export default function HostTabs() {
             <View style={styles.iconWrap}>
               <MaterialCommunityIcons
                 name={focused ? 'book-open-page-variant' : 'book-open-page-variant-outline'}
+                size={24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          tabBarLabel: 'Messages',
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons
+                name={focused ? 'message-text' : 'message-text-outline'}
                 size={24}
                 color={color}
               />

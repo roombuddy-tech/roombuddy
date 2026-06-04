@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     "apps.payments",
     "apps.reviews",
     "apps.health",
-    "apps.notifications",  
+    "apps.notifications",
+    "apps.conversations",
 ]
 
 MIDDLEWARE = [
@@ -170,7 +171,7 @@ else:
     MEDIA_ROOT = BASE_DIR / "media"
 
 # Base URL used to build absolute URLs for local media files served in dev
-SITE_URL = os.environ.get("SITE_URL", "http://192.168.1.4:8000")
+SITE_URL = os.environ.get("SITE_URL", "http://192.168.1.40:8000")
 
 # ── Email ────────────────────────────────────────────────────
 # Console for dev, SMTP (SES) for prod
