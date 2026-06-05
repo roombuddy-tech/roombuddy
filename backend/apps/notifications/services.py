@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CHANNELS = [
     NotificationChannel.EMAIL,
     NotificationChannel.SMS,
+    NotificationChannel.IN_APP,
 ]
 
 
@@ -109,20 +110,38 @@ def _enqueue_one(
         metadata["msg91_flow_id"] = context.get("msg91_flow_id", "")
         metadata["msg91_variables"] = context.get("msg91_variables", {})
 
+    now = timezone.now()
+    if channel == NotificationChannel.IN_APP:
+        defaults = {
+            "user": user,
+            "event_type": event_type,
+            "status": NotificationStatus.DELIVERED,
+            "recipient_address": recipient_address,
+            "subject": subject,
+            "body": body,
+            "payload": {**_safe_payload(context), "metadata": metadata},
+            "next_attempt_at": now,
+            "sent_at": now,
+            "delivered_at": now,
+            "read_at": None,
+        }
+    else:
+        defaults = {
+            "user": user,
+            "event_type": event_type,
+            "status": NotificationStatus.PENDING,
+            "recipient_address": recipient_address,
+            "subject": subject,
+            "body": body,
+            "payload": {**_safe_payload(context), "metadata": metadata},
+            "next_attempt_at": now,
+        }
+
     with transaction.atomic():
         Notification.objects.update_or_create(
             idempotency_key=idempotency_key,
             channel=channel,
-            defaults={
-                "user": user,
-                "event_type": event_type,
-                "status": NotificationStatus.PENDING,
-                "recipient_address": recipient_address,
-                "subject": subject,
-                "body": body,
-                "payload": {**_safe_payload(context), "metadata": metadata},
-                "next_attempt_at": timezone.now(),
-            },
+            defaults=defaults,
         )
 
 def _render_file_template(event_type: str, channel: str, kind: str, context: dict) -> str:
@@ -150,6 +169,8 @@ def _resolve_recipient_address(user, channel: str) -> Optional[str]:
         if num:
             return f"{cc}{num}".strip()
         return None
+    if channel == NotificationChannel.IN_APP:
+        return str(getattr(user, "id", "")) or None
     if channel == NotificationChannel.PUSH:
         # implement once push tokens are stored
         return None

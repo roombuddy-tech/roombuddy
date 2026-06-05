@@ -1,0 +1,1 @@
+ {% if recipient_role == "host" %}New booking received{% else %}Booking confirmed{% endif %}

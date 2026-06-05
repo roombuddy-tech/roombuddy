@@ -1,6 +1,6 @@
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from common.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -23,11 +23,11 @@ class NotificationListView(APIView):
     def get(self, request):
         qs = (
             Notification.objects
-            .filter(user=request.user)
+            .filter(user=request.user, channel=NotificationChannel.IN_APP)
             .order_by("-created_at")[:50]
         )
         unread_count = Notification.objects.filter(
-            user=request.user, read_at__isnull=True,
+            user=request.user, channel=NotificationChannel.IN_APP, read_at__isnull=True,
         ).count()
         return Response({
             "notifications": NotificationSerializer(qs, many=True).data,
@@ -52,7 +52,7 @@ class NotificationMarkAllReadView(APIView):
 
     def post(self, request):
         updated = Notification.objects.filter(
-            user=request.user, read_at__isnull=True,
+            user=request.user, channel=NotificationChannel.IN_APP, read_at__isnull=True,
         ).update(read_at=timezone.now())
         return Response({"marked_read": updated})
 

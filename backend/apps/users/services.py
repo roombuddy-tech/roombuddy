@@ -14,6 +14,8 @@ from apps.listings.models import Listing
 from third_party.storage import get_photo_url
 from third_party.email import send_verification_email
 from third_party.storage import upload_image, delete_image, StorageError
+from apps.notifications.models import EventType, NotificationChannel
+from apps.notifications.services import dispatch
 
 from common.jwt_utils import (
     generate_access_token,
@@ -616,6 +618,25 @@ def review_id_verification(user_id: str, action: str, reviewer: str, reason: str
         "id_verification_status", "id_rejection_reason",
         "id_reviewed_at", "id_reviewed_by", "updated_at",
     ])
+
+
+    reviewed_iso = profile.id_reviewed_at.isoformat()
+    if action == "approve":
+        dispatch(
+            event_type=EventType.ID_VERIFICATION_APPROVED,
+            recipients=[user],
+            context={},
+            idempotency_event_id=f"id_approved:{user.id}:{reviewed_iso}",
+            channels=[NotificationChannel.IN_APP],
+        )
+    else:
+        dispatch(
+            event_type=EventType.ID_VERIFICATION_REJECTED,
+            recipients=[user],
+            context={"reason": reason or ""},
+            idempotency_event_id=f"id_rejected:{user.id}:{reviewed_iso}",
+            channels=[NotificationChannel.IN_APP],
+        )
 
     return {
         "user_id": str(user.id),
