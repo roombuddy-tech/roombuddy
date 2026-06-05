@@ -535,6 +535,7 @@ def _build_booking_context(booking) -> dict:
     return {
         # Display fields
         "property_name": listing.title,
+        "booking_id": str(booking.id),
         "booking_reference": booking.booking_code,
         "check_in": booking.check_in_date.strftime("%a, %d %b %Y"),
         "check_out": booking.check_out_date.strftime("%a, %d %b %Y"),
@@ -574,14 +575,14 @@ def _notify_payment_succeeded(booking, payment) -> None:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
             recipients=[guest],
-            context={**base, "recipient_name": _user_first_name(guest)},
+            context={**base, "recipient_name": _user_first_name(guest), "recipient_role": "guest"},
             idempotency_event_id=idem,
         )
     if host:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
             recipients=[host],
-            context={**base, "recipient_name": _user_first_name(host)},
+            context={**base, "recipient_name": _user_first_name(host), "recipient_role": "host"},
             idempotency_event_id=idem,
         )
 

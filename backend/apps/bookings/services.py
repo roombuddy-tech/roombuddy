@@ -369,6 +369,7 @@ def _user_first_name(user) -> str:
 def _notify_booking_cancelled(booking, cancelled_by: str) -> None:
     base = {
         "property_name": booking.listing.title,
+        "booking_id": str(booking.id),
         "booking_reference": booking.booking_code,
         "check_in": booking.check_in_date.strftime("%d %b %Y"),
         "check_out": booking.check_out_date.strftime("%d %b %Y"),

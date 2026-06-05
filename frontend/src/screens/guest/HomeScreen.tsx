@@ -15,14 +15,15 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import NotificationBell from '../../components/NotificationBell';
 
+import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
+import SearchResultsMap from '../../components/maps/SearchResultsMap';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import type { GuestStackParamList, GuestTabParamList } from '../../navigation/types';
 import { searchListings } from '../../services/search';
 import type { GuestListingCard } from '../../types/listing';
-import SearchResultsMap from '../../components/maps/SearchResultsMap';
-import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import ProfileMenu from '../shared/ProfileMenu';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
@@ -414,9 +415,7 @@ export default function HomeScreen() {
                 <Text style={styles.switchBtnTxt}>Host</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Notifications')}>
-              <Ionicons name="notifications-outline" size={20} color={COLORS.text} />
-            </TouchableOpacity>
+            <NotificationBell style={styles.bellBtn} />
             <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
               {user?.profile_photo_url ? (
                 <Image source={{ uri: user.profile_photo_url }} style={styles.avatarImg} />

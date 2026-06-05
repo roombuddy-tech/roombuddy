@@ -7,6 +7,8 @@ from django.utils.dateparse import parse_datetime
 
 from apps.conversations.models import Conversation, Message
 from common.utils import get_display_name, get_initials
+from apps.notifications.models import EventType, NotificationChannel
+from apps.notifications.services import dispatch
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +127,7 @@ def create_message(conversation, sender, body: str) -> Message:
         conversation.host_last_read_at = now
         update_fields.append("host_last_read_at")
     conversation.save(update_fields=update_fields)
+    _notify_new_message(conversation, sender, message)
     return message
 
 
@@ -136,3 +139,27 @@ def mark_read(conversation, user) -> None:
     else:
         conversation.host_last_read_at = now
         conversation.save(update_fields=["host_last_read_at", "updated_at"])
+
+def _notify_new_message(conversation, sender, message) -> None:
+    recipient = (
+        conversation.host_user
+        if sender.id == conversation.guest_user_id
+        else conversation.guest_user
+    )
+    if recipient is None:
+        return
+    try:
+        listing_title = conversation.booking.listing.title
+    except Exception:
+        listing_title = None
+    dispatch(
+        event_type=EventType.MESSAGE_RECEIVED,
+        recipients=[recipient],
+        context={
+            "sender_name": get_display_name(sender),
+            "conversation_id": str(conversation.id),
+            "listing_title": listing_title or "",
+        },
+        idempotency_event_id=f"message:{conversation.id}:{recipient.id}",
+        channels=[NotificationChannel.IN_APP],
+    )

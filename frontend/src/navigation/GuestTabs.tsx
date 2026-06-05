@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { COLORS, FONTS } from '../constants/theme';
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import HomeScreen from '../screens/guest/HomeScreen';
 import MyStaysScreen from '../screens/guest/MyStaysScreen';
 import MessagesScreen from '../screens/shared/MessagesScreen';
@@ -12,6 +13,7 @@ import type { GuestTabParamList } from './types';
 const Tab = createBottomTabNavigator<GuestTabParamList>();
 
 export default function GuestTabs() {
+  const unreadMessages = useUnreadMessages();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -60,6 +62,7 @@ export default function GuestTabs() {
         component={MessagesScreen}
         options={{
           tabBarLabel: 'Messages',
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
           tabBarIcon: ({ focused, color }) => (
             <View style={styles.iconWrap}>
               <MaterialCommunityIcons
