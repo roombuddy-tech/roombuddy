@@ -1,12 +1,96 @@
 <!DOCTYPE html>
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f7f9fa; margin: 0;">
-    <div style="text-align: center; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); max-width: 400px;">
-        <h2 style="color: #0D7377; margin-top: 0;">Room<span style="color: #FF6B4A;">Buddy</span></h2>
-        <div style="font-size: 48px; margin: 20px 0;">&#x274C;</div>
-        <h3 style="color: #333;">Verification Failed</h3>
-        <p style="color: #666;">{{ message }}</p>
-        <p style="color: #999; font-size: 14px; margin-top: 20px;">Please try again from the app.</p>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verification failed &middot; RoomBuddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #0D7377;
+    --coral: #E8643C;
+    --ink: #16322f;
+    --muted: #5f706e;
+    --paper: #f6f4ef;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 14% 18%, rgba(13,115,119,0.10), transparent 42%),
+      radial-gradient(circle at 86% 82%, rgba(232,100,60,0.12), transparent 46%),
+      var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 440px;
+    background: #ffffff;
+    border-radius: 28px;
+    padding: 48px 40px 40px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(22,50,47,0.04), 0 24px 60px -20px rgba(232,100,60,0.20);
+    animation: rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  .brand {
+    font-family: 'Figtree', sans-serif;
+    font-weight: 700; font-size: 20px; letter-spacing: -0.4px;
+    color: var(--teal); margin-bottom: 28px;
+  }
+  .brand span { color: #FF6B4A; }
+  .badge {
+    width: 92px; height: 92px; margin: 0 auto 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, rgba(232,100,60,0.14), rgba(232,100,60,0.04));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .badge svg { width: 56px; height: 56px; }
+  .ring {
+    stroke: var(--coral); stroke-width: 3.5; fill: none;
+    stroke-dasharray: 151; stroke-dashoffset: 151;
+    animation: draw 0.6s ease-out 0.2s forwards;
+  }
+  .cross {
+    stroke: var(--coral); stroke-width: 4; fill: none; stroke-linecap: round;
+    stroke-dasharray: 24; stroke-dashoffset: 24;
+    animation: draw 0.35s ease-out forwards;
+  }
+  .cross.one { animation-delay: 0.7s; }
+  .cross.two { animation-delay: 0.9s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600; font-size: 30px; line-height: 1.15;
+    margin: 0 0 12px; letter-spacing: -0.5px;
+  }
+  p.lead { font-size: 16px; line-height: 1.6; color: var(--muted); margin: 0 0 28px; }
+  .hint {
+    font-size: 14px; color: #8a9795;
+    border-top: 1px solid #eef1f0; padding-top: 20px; margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">Room<span>Buddy</span></div>
+    <div class="badge">
+      <svg viewBox="0 0 56 56" aria-hidden="true">
+        <circle class="ring" cx="28" cy="28" r="24"></circle>
+        <line class="cross one" x1="20" y1="20" x2="36" y2="36"></line>
+        <line class="cross two" x1="36" y1="20" x2="20" y2="36"></line>
+      </svg>
     </div>
+    <h1>Verification failed</h1>
+    <p class="lead">{{ message }}</p>
+    <p class="hint">Please request a new link and try again from the RoomBuddy app.</p>
+  </div>
 </body>
 </html>
