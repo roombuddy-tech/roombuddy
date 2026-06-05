@@ -536,6 +536,7 @@ def get_verification_status(user: User) -> dict:
 
     return {
         "phone_verified": user.phone_verified_at is not None,
+        "phone": f"{user.phone_country_code}{user.phone_number}",
         "email_verified": user.email_verified_at is not None,
         "email": user.email or "",
         "aadhaar_verified": id_status == "approved",

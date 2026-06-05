@@ -177,6 +177,7 @@ class EmailVerificationResponseSerializer(serializers.Serializer):
 
 class VerificationStatusResponseSerializer(serializers.Serializer):
     phone_verified = serializers.BooleanField()
+    phone = serializers.CharField(allow_null=True)
     email_verified = serializers.BooleanField()
     email = serializers.CharField(allow_null=True)
     aadhaar_verified = serializers.BooleanField()

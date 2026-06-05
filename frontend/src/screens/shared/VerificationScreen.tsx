@@ -15,6 +15,7 @@ interface VerificationScreenProps {
 
 interface VerificationStatus {
   phone_verified: boolean;
+  phone: string | null;
   email_verified: boolean;
   email: string | null;
   aadhaar_verified: boolean;
@@ -162,7 +163,7 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
               <Ionicons name="call-outline" size={22} color={status?.phone_verified ? '#10B981' : COLORS.textMut} />
               <View style={styles.verifyContent}>
                 <Text style={styles.verifyLabel}>Phone number</Text>
-                <Text style={styles.verifyStatus}>{status?.phone_verified ? 'Verified' : 'Not verified'}</Text>
+                <Text style={styles.verifyStatus}>{status?.phone_verified ? `Verified\n(${status.phone})` : 'Not verified'}</Text>
               </View>
               {status?.phone_verified ? <Ionicons name="checkmark-circle" size={24} color="#10B981" /> : <Ionicons name="close-circle-outline" size={24} color={COLORS.textMut} />}
             </View>
