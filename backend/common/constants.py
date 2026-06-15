@@ -6,6 +6,9 @@ Things that DO change per environment (timeouts, payment provider, etc.) live
 in `config/settings.py` and are read via `django.conf.settings`.
 """
 from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── Money ────────────────────────────────────────────────────

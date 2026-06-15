@@ -1,5 +1,8 @@
 from django.contrib import admin
 from apps.properties.models import Property, PropertyFlatmate, PropertyPhoto
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Property)

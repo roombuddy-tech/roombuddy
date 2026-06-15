@@ -27,6 +27,9 @@ from apps.bookings.services import (
 from common.authentication import JWTAuthentication
 from common.error_codes import ErrorCode
 from common.permissions import IsAuthenticated
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BookingQuoteView(APIView):

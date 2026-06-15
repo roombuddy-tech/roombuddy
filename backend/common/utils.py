@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 def get_client_ip(request) -> str:
     """Extract client IP from request, handling proxies."""
     xff = request.META.get("HTTP_X_FORWARDED_FOR")
@@ -16,6 +19,7 @@ def get_display_name(user) -> str:
             return f"{first} {last[0]}."
         return first
     except Exception:
+        logger.exception("get_display_name failed")
         return "Guest"
 
 
@@ -27,4 +31,5 @@ def get_initials(user) -> str:
         last = profile.last_name[0] if profile.last_name else ""
         return f"{first}{last}".upper() or "G"
     except Exception:
+        logger.exception("get_initials failed")
         return "G"

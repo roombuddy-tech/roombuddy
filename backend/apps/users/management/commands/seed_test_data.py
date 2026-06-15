@@ -22,6 +22,9 @@ from apps.users.models import User, UserProfile
 from apps.properties.models import Property
 from apps.rooms.models import Room
 from apps.listings.models import Listing, ListingHouseRules
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

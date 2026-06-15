@@ -4,6 +4,9 @@ These are public-facing HTML pages, not API endpoints.
 """
 
 from django.views.generic import TemplateView
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TermsOfServiceView(TemplateView):

@@ -1,4 +1,7 @@
 from rest_framework.permissions import BasePermission
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class IsAuthenticated(BasePermission):

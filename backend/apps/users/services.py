@@ -31,6 +31,10 @@ from third_party.otp import (
     send_otp as send_otp_sms,
     verify_otp as verify_otp_provider,
 )
+import logging
+import jwt as pyjwt
+
+logger = logging.getLogger(__name__)
 
 OTP_RATE_LIMIT_PER_HOUR = 5
 OTP_EXPIRY_MINUTES = 5
@@ -49,6 +53,7 @@ class AuthServiceError(Exception):
 # ─── Auth services ───────────────────────────────────────────
 
 def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") -> dict:
+    logger.info("send_otp_to_phone country_code=%s mode=%s", country_code, mode)
     full_phone = f"{country_code}{phone_number}"
 
     # Rate limit
@@ -138,6 +143,7 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
     - console: verifies locally against stored hash
     - msg91:   verifies via MSG91 API
     """
+    logger.info("verify_otp_and_login country_code=%s", country_code)
     full_phone = f"{country_code}{phone_number}"
 
     # Find user
@@ -147,6 +153,7 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
             phone_country_code=country_code,
         )
     except User.DoesNotExist:
+        logger.warning("verify_otp_and_login: no account for %s%s", country_code, phone_number)
         raise AuthServiceError("No account found for this phone number.", "USER_NOT_FOUND", 404)
 
     if OTP_PROVIDER == "console":
@@ -161,16 +168,20 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
             raise AuthServiceError("No OTP found. Please request a new one.", "OTP_NOT_FOUND")
 
         if otp_record.is_expired:
+            logger.warning("verify_otp_and_login: OTP expired for %s%s", country_code, phone_number)
             raise AuthServiceError("OTP has expired. Please request a new one.", "OTP_EXPIRED")
 
         if otp_record.is_max_attempts:
+            logger.warning("verify_otp_and_login: max attempts for %s%s", country_code, phone_number)
             raise AuthServiceError("Too many incorrect attempts. Please request a new OTP.", "MAX_ATTEMPTS")
 
         if not otp_record.verify(otp_code):
+            logger.warning("verify_otp_and_login: incorrect OTP for %s%s", country_code, phone_number)
             raise AuthServiceError("Incorrect OTP. Please try again.", "INVALID_OTP")
     else:
         # MSG91 verification
         if not verify_otp_provider(full_phone, otp_code):
+            logger.warning("verify_otp_and_login: provider rejected OTP for %s%s", country_code, phone_number)
             raise AuthServiceError("Invalid or expired OTP.", "INVALID_OTP")
 
         # Mark local tracking record as consumed (if it exists)
@@ -215,6 +226,7 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
 
 def complete_user_profile(user: User, data: dict) -> dict:
     """Creates or updates user profile. Email saved to users table."""
+    logger.info("complete_user_profile user_id=%s", getattr(user, "id", None))
     email = data.get("email") or None
 
     if email:
@@ -260,7 +272,6 @@ def complete_user_profile(user: User, data: dict) -> dict:
 
 def refresh_access_token(refresh_token_str: str) -> dict:
     """Validates refresh token, returns new access token. Raises AuthServiceError."""
-    import jwt as pyjwt
 
     try:
         payload = decode_token(refresh_token_str)
@@ -339,6 +350,7 @@ def get_user_profile(user: User) -> dict:
 
 def update_user_profile(user: User, data: dict) -> dict:
     """Updates profile fields. Email saved to users table."""
+    logger.info("update_user_profile user_id=%s", getattr(user, "id", None))
     try:
         profile = user.profile
     except UserProfile.DoesNotExist:
@@ -477,6 +489,7 @@ def get_public_user_profile(viewing_user: User, target_user_id: str) -> dict:
 
 def send_email_verification(user: User, email: str) -> dict:
     """Generates a verification token and sends it via email."""
+    logger.info("send_email_verification user_id=%s email=%s", getattr(user, "id", None), email)
     existing = User.objects.filter(email=email, email_verified_at__isnull=False).exclude(id=user.id).first()
     if existing:
         raise AuthServiceError(
@@ -506,6 +519,7 @@ def send_email_verification(user: User, email: str) -> dict:
 
 def verify_email_token(user: User, token: str) -> dict:
     """Verifies the email token. Updates users.email only."""
+    logger.info("verify_email_token user_id=%s", getattr(user, "id", None))
     record = EmailVerification.objects.filter(user=user, is_consumed=False).order_by("-created_at").first()
 
     if not record:
@@ -551,6 +565,7 @@ def get_verification_status(user: User) -> dict:
 
 def submit_id_verification(user: User, aadhaar_image, selfie_image) -> dict:
     """Upload Aadhaar photo + selfie for manual verification."""
+    logger.info("submit_id_verification user_id=%s", getattr(user, "id", None))
     profile = user.profile
 
     if profile.id_verification_status == "approved":
@@ -588,6 +603,7 @@ def submit_id_verification(user: User, aadhaar_image, selfie_image) -> dict:
 
 def review_id_verification(user_id: str, action: str, reviewer: str, reason: str = None) -> dict:
     """Approve or reject a user's ID verification."""
+    logger.info("review_id_verification user_id=%s action=%s reason=%s", user_id, action, reason)
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
@@ -649,7 +665,6 @@ def review_id_verification(user_id: str, action: str, reviewer: str, reason: str
 
 def get_pending_verifications() -> list:
     """Returns list of users with pending ID verification."""
-    from third_party.storage import get_photo_url
 
     pending = UserProfile.objects.filter(
         id_verification_status=UserProfile.IDVerificationStatus.PENDING,
@@ -803,6 +818,7 @@ def get_payout_accounts(user: User) -> list[dict]:
 
 def add_bank_account(user: User, data: dict) -> dict:
     """Adds a bank account for payouts."""
+    logger.info("add_bank_account user_id=%s", getattr(user, "id", None))
     has_accounts = PayoutAccount.objects.filter(user=user).exists()
 
     account = PayoutAccount.objects.create(
@@ -819,6 +835,7 @@ def add_bank_account(user: User, data: dict) -> dict:
 
 def add_upi_account(user: User, data: dict) -> dict:
     """Adds a UPI ID for payouts."""
+    logger.info("add_upi_account user_id=%s", getattr(user, "id", None))
     has_accounts = PayoutAccount.objects.filter(user=user).exists()
 
     account = PayoutAccount.objects.create(
@@ -832,6 +849,7 @@ def add_upi_account(user: User, data: dict) -> dict:
 
 def delete_payout_account(user: User, account_id: str) -> None:
     """Deletes a payout account."""
+    logger.info("delete_payout_account user_id=%s account_id=%s", getattr(user, "id", None), account_id)
     try:
         account = PayoutAccount.objects.get(id=account_id, user=user)
     except PayoutAccount.DoesNotExist:
@@ -849,6 +867,7 @@ def delete_payout_account(user: User, account_id: str) -> None:
 
 def set_primary_payout_account(user: User, account_id: str) -> dict:
     """Sets a payout account as primary."""
+    logger.info("set_primary_payout_account user_id=%s account_id=%s", getattr(user, "id", None), account_id)
     try:
         account = PayoutAccount.objects.get(id=account_id, user=user)
     except PayoutAccount.DoesNotExist:
@@ -880,6 +899,7 @@ def _payout_to_dict(account) -> dict:
 
 def upload_profile_photo(user: User, image_file) -> dict:
     """Upload user profile photo to storage. Returns URLs."""
+    logger.info("upload_profile_photo user_id=%s", getattr(user, "id", None))
     try:
         profile = user.profile
         if profile.profile_photo_url:

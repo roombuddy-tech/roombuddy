@@ -114,6 +114,7 @@ def get_messages(conversation, user, *, after=None) -> list:
 
 @transaction.atomic
 def create_message(conversation, sender, body: str) -> Message:
+    logger.info("create_message conversation_id=%s sender_id=%s", getattr(conversation, "id", None), getattr(sender, "id", None))
     message = Message.objects.create(
         conversation=conversation, sender_user=sender, body=body,
     )
@@ -132,6 +133,7 @@ def create_message(conversation, sender, body: str) -> Message:
 
 
 def mark_read(conversation, user) -> None:
+    logger.info("mark_read conversation_id=%s user_id=%s", getattr(conversation, "id", None), getattr(user, "id", None))
     now = timezone.now()
     if user.id == conversation.guest_user_id:
         conversation.guest_last_read_at = now
@@ -151,6 +153,7 @@ def _notify_new_message(conversation, sender, message) -> None:
     try:
         listing_title = conversation.booking.listing.title
     except Exception:
+        logger.exception("_notify_new_message failed")
         listing_title = None
     dispatch(
         event_type=EventType.MESSAGE_RECEIVED,

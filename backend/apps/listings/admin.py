@@ -1,5 +1,8 @@
 from django.contrib import admin
 from apps.listings.models import Listing, ListingAmenity, ListingHouseRules
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Listing)

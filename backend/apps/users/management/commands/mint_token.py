@@ -8,6 +8,9 @@ from django.core.management.base import BaseCommand
 
 from apps.users.models import User
 from common.jwt_utils import generate_access_token
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

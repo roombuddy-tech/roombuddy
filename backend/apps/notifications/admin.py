@@ -1,6 +1,9 @@
 from django.contrib import admin
 
 from .models import Notification, NotificationTemplate, UserNotificationPreference
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(NotificationTemplate)
