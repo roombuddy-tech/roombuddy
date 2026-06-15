@@ -28,6 +28,7 @@ interface ListingItem {
   host_price_per_night: number;
   guest_price_per_night: number;
   status: string;
+  visible_to_guests?: boolean;
   average_rating: number | null;
   review_count: number;
   total_bookings: number;
@@ -269,6 +270,19 @@ export default function ListingsScreen() {
                             <Text style={styles.serverDraftHintTxt}>Tap to continue editing</Text>
                           </View>
                         )}
+                        {item.status === 'live' && item.visible_to_guests === false && (
+                        <TouchableOpacity
+                          style={styles.verifyBanner}
+                          activeOpacity={0.8}
+                          onPress={() => navigation.navigate('Verification')}
+                        >
+                          <Ionicons name="shield-outline" size={16} color={COLORS.accent} />
+                          <Text style={styles.verifyBannerText}>
+                            Verify your Aadhaar to make this listing visible to guests
+                          </Text>
+                          <Ionicons name="chevron-forward" size={16} color={COLORS.accent} />
+                        </TouchableOpacity>
+                      )}
                       </View>
                     </TouchableOpacity>
                   );
@@ -325,6 +339,12 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     ...SHADOW.sm,
   },
+  verifyBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10,
+    borderRadius: 10, backgroundColor: 'rgba(255,107,74,0.10)',
+    borderWidth: 1, borderColor: 'rgba(255,107,74,0.25)',
+  },
+  verifyBannerText: { flex: 1, fontSize: 12, ...FONTS.medium, color: COLORS.accent },
   draftIconWrap: {
     width: 48,
     height: 48,

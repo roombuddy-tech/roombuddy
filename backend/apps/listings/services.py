@@ -9,6 +9,8 @@ from apps.listings.serializers import CreateListingRequestSerializer
 from apps.properties.models import Property, PropertyFlatmate
 from apps.rooms.models import Room
 from apps.users.models import User
+from apps.properties.models import PropertyPhoto
+
 
 
 def get_listing_form_data(user: User, listing_id: str) -> dict | None:
@@ -337,7 +339,6 @@ def toggle_snooze(user: User, listing_id: str) -> dict | None:
 
 def get_host_listings(user: User) -> list[dict]:
     """Returns all listings owned by a host."""
-    from apps.properties.models import PropertyPhoto
 
     listings = Listing.objects.filter(
         host_user=user
@@ -345,6 +346,12 @@ def get_host_listings(user: User) -> list[dict]:
 
     results = [_listing_to_dict(listing) for listing in listings]
     _attach_cover_photos(listings, results)
+
+    profile = getattr(user, "profile", None)
+    host_verified = bool(profile and profile.id_verification_status == "approved")
+    for listing, r in zip(listings, results):
+        r["visible_to_guests"] = host_verified and listing.status == Listing.Status.LIVE
+
     return results
 
 
@@ -574,6 +581,7 @@ def search_guest_listings(
     qs = (
         Listing.objects
         .filter(status=Listing.Status.LIVE)
+        .filter(host_user__profile__id_verification_status="approved")
         .select_related("property", "room")
         .prefetch_related("listing_amenities__amenity")
         .order_by("-average_rating", "-created_at")
@@ -656,6 +664,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         listing = (
             Listing.objects
             .filter(status=Listing.Status.LIVE)
+            .filter(host_user__profile__id_verification_status="approved")
             .select_related("property", "room", "house_rules", "host_user")
             .prefetch_related("listing_amenities__amenity")
             .get(id=listing_id)
