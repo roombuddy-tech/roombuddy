@@ -39,6 +39,7 @@ export type HostStackParamList = {
   Notifications: undefined;
   NotificationPreferences: undefined;
   Chat: { conversationId: string; title?: string; subtitle?: string };
+  Verification: undefined;
 };
 
 export type GuestStackParamList = {
