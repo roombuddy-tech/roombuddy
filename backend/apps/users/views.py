@@ -59,6 +59,9 @@ from apps.users.services import (
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
 from common.utils import get_client_ip
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _error_response(err: AuthServiceError) -> Response:
@@ -277,6 +280,7 @@ class VerifyEmailWebView(APIView):
             result = verify_email_token(user, token)
             return self._render("emails/verify_success.html", {"email": result["email"]})
         except Exception as e:
+            logger.exception("VerifyEmailWebView.get failed")
             return self._render("emails/verify_error.html", {"message": str(e)})
 
     @staticmethod

@@ -29,6 +29,9 @@ from common.constants import (
 from common.error_codes import ErrorCode
 from common.redis_utils import distributed_lock
 from common.utils import get_display_name, get_initials
+from apps.payments.models import Payout
+from apps.properties.models import PropertyPhoto
+from third_party.storage import get_photo_url
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +109,7 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
     anything. Used by the app to show the guest what they'll pay before
     confirming.
     """
+    logger.info("quote_booking listing_id=%s", listing_id)
     _validate_dates(check_in, check_out, allow_past=True)
 
     try:
@@ -201,6 +205,7 @@ def create_booking(
     same dates at the same time. Also enforces a DB-level overlap check inside
     the lock (defense in depth).
     """
+    logger.info("create_booking user_id=%s listing_id=%s", getattr(user, "id", None), listing_id)
     _validate_dates(check_in, check_out)
 
     quote = quote_booking(listing_id, check_in, check_out, meal_option=meal_option)
@@ -216,9 +221,11 @@ def create_booking(
 
     with distributed_lock(lock_key) as acquired:
         if not acquired:
+            logger.warning("create_booking: lock contended for listing %s", listing_id)
             raise BookingConflictError("Another guest is currently booking these dates")
 
         if _has_overlap(listing_id, check_in, check_out):
+            logger.warning("create_booking: dates unavailable for listing %s", listing_id)
             raise BookingConflictError("These dates are no longer available")
 
         cancellation_policy = _get_cancellation_policy(listing)
@@ -306,6 +313,7 @@ def compute_refund_amount(booking: Booking, cancelled_by: str) -> Decimal:
 
 def cancel_booking(booking: Booking, user: User, reason: str = "") -> Booking:
     """Cancel a booking and trigger refund if applicable."""
+    logger.info("cancel_booking booking_id=%s user_id=%s reason=%s", getattr(booking, "id", None), getattr(user, "id", None), reason)
     if booking.status in Booking.NON_CANCELLABLE_STATUSES:
         raise ValidationError({
             "error": "Booking cannot be cancelled",
@@ -458,7 +466,6 @@ def get_host_earnings(user: User) -> dict:
     ]
 
     # Payout summary
-    from apps.payments.models import Payout
     total_paid = Payout.objects.filter(
         host_user=user, status=Payout.Status.COMPLETED,
     ).aggregate(total=Sum("amount"))["total"] or 0
@@ -588,8 +595,6 @@ def get_booking_detail(booking: Booking) -> dict:
 
 def get_guest_bookings(user: User) -> list[dict]:
     """Returns all bookings for a guest, newest first, with listing/host info."""
-    from apps.properties.models import PropertyPhoto
-    from third_party.storage import get_photo_url
 
     bookings = (
         Booking.objects.filter(guest_user=user)

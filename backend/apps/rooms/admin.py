@@ -1,5 +1,8 @@
 from django.contrib import admin
 from apps.rooms.models import Room
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Room)

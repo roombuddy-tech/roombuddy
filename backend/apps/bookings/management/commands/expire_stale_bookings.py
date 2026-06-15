@@ -24,6 +24,9 @@ from django.utils import timezone
 
 from apps.bookings.models import Booking, BookingStatusHistory
 from common.constants import StatusChangeReason
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

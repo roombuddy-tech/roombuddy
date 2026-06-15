@@ -1,6 +1,9 @@
 from django.contrib import admin
 
 from apps.conversations.models import Conversation, Message
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Conversation)

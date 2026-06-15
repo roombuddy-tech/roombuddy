@@ -1,6 +1,9 @@
 from apps.properties.models import Property, PropertyPhoto
 from apps.users.models import User
 from third_party.storage import upload_image, get_photo_url, StorageError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def upload_property_photo(user: User, property_id: str, image_file, area: str, is_cover: bool = False) -> dict | None:

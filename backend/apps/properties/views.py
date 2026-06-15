@@ -8,6 +8,9 @@ from apps.properties.services import upload_property_photo
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
 from third_party.storage import StorageError
+import logging
+
+logger = logging.getLogger(__name__)
 
 VALID_AREAS = {"bedroom", "washroom", "kitchen", "living_room", "other"}
 

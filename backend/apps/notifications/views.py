@@ -14,6 +14,9 @@ from .serializers import (
     BulkPreferenceUpdateSerializer,
     NotificationSerializer,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationListView(APIView):

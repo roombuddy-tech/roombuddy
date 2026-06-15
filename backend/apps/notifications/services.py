@@ -36,6 +36,7 @@ from .models import (
     NotificationTemplate,
     UserNotificationPreference,
 )
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ def dispatch(
     channels: Optional[List[str]] = None,
 ) -> None:
     """Queue notifications for the given event + recipients. Never raises."""
+    logger.info("dispatch event_type=%s idempotency_event_id=%s", event_type, idempotency_event_id)
     if not recipients:
         return
 
@@ -83,6 +85,7 @@ def _enqueue_one(
     context: dict,
     idempotency_event_id: Optional[str],
 ) -> None:
+    logger.info("_enqueue_one user_id=%s event_type=%s idempotency_event_id=%s", getattr(user, "id", None), event_type, idempotency_event_id)
     if not _user_wants_channel(user, event_type, channel):
         logger.debug(f"User {user.id} opted out of {event_type}/{channel}")
         return
@@ -161,6 +164,7 @@ def _user_wants_channel(user, event_type: str, channel: str) -> bool:
 
 def _resolve_recipient_address(user, channel: str) -> Optional[str]:
     """Map (user, channel) to the right address. Adapt to your User model."""
+    logger.info("_resolve_recipient_address user_id=%s", getattr(user, "id", None))
     if channel == NotificationChannel.EMAIL:
         return getattr(user, "email", None) or None
     if channel == NotificationChannel.SMS:
@@ -186,16 +190,17 @@ def _safe_payload(context: dict) -> dict:
     safe = {}
     for k, v in (context or {}).items():
         try:
-            import json
             json.dumps(v)
             safe[k] = v
         except Exception:
+            logger.exception("_safe_payload failed")
             safe[k] = str(v)
     return safe
 
 
 def schedule_retry(notification: Notification) -> None:
     """Exponential backoff: 1m, 5m, 15m, 1h, 4h."""
+    logger.info("schedule_retry notification_id=%s", getattr(notification, "id", None))
     notification.attempts += 1
     if notification.attempts >= notification.max_attempts:
         notification.status = NotificationStatus.DEAD

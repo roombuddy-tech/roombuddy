@@ -23,6 +23,7 @@ def send_otp(phone: str, otp_code: str = None) -> bool:
     - console: sends the locally generated otp_code (must be provided)
     - msg91:   triggers MSG91 to generate & send (otp_code ignored)
     """
+    logger.info("send_otp phone=%s", phone)
     if OTP_PROVIDER == "msg91":
         return _send_msg91(phone)
     return _send_console(phone, otp_code)
@@ -34,6 +35,7 @@ def verify_otp(phone: str, otp_code: str) -> bool:
     - console: returns True (local hash check handled in services.py)
     - msg91:   calls MSG91 verify endpoint
     """
+    logger.info("verify_otp phone=%s", phone)
     if OTP_PROVIDER == "msg91":
         return _verify_msg91(phone, otp_code)
     return True
@@ -43,6 +45,7 @@ def verify_otp(phone: str, otp_code: str) -> bool:
 
 def _send_console(phone: str, otp_code: str) -> bool:
     """Development: Print OTP to console."""
+    logger.info("_send_console phone=%s", phone)
     logger.info(f"[CONSOLE OTP] Phone: {phone} | OTP: {otp_code}")
     print(f"\n{'='*50}")
     print(f"  OTP for {phone}: {otp_code}")
@@ -54,6 +57,7 @@ def _send_console(phone: str, otp_code: str) -> bool:
 
 def _send_msg91(phone: str) -> bool:
     """Production: MSG91 generates and sends the OTP."""
+    logger.info("_send_msg91 phone=%s", phone)
     if not MSG91_AUTH_KEY or not MSG91_TEMPLATE_ID:
         logger.error("MSG91_AUTH_KEY or MSG91_TEMPLATE_ID not configured")
         return False
@@ -82,6 +86,7 @@ def _send_msg91(phone: str) -> bool:
 
 def _verify_msg91(phone: str, otp_code: str) -> bool:
     """Production: Verify OTP via MSG91. authkey in header."""
+    logger.info("_verify_msg91 phone=%s", phone)
     mobile = phone.lstrip("+")
     url = "https://control.msg91.com/api/v5/otp/verify"
     headers = {

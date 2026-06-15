@@ -4,6 +4,9 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from apps.payments.models import Payment, Payout, Refund, WebhookEvent
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Payment)
@@ -83,6 +86,7 @@ class PayoutAdmin(admin.ModelAdmin):
             p = obj.host_user.profile
             return f"{p.first_name} {p.last_name} ({obj.host_user.phone_number})"
         except Exception:
+            logger.exception("PayoutAdmin.host_name failed")
             return obj.host_user.phone_number
     host_name.short_description = "Host"
 

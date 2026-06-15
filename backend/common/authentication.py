@@ -6,6 +6,9 @@ from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
 from apps.users.models import User
 from common.jwt_utils import decode_token
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class JWTAuthentication(BaseAuthentication):
