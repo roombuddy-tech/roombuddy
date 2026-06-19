@@ -40,6 +40,8 @@ interface GuestBooking {
   payment_status: string;
   total_guest_pays: number;
   created_at: string;
+  can_review?: boolean;
+  has_reviewed?: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
@@ -176,6 +178,29 @@ export default function MyStaysScreen() {
                   <Text style={styles.contactBtnTxt}>Call</Text>
                 </TouchableOpacity>
               )}
+
+              {item.can_review && !item.has_reviewed && (
+              <TouchableOpacity
+                style={styles.reviewBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('WriteReview', {
+                    bookingId: item.booking_id,
+                    listingTitle: item.listing_title ?? 'Your stay',
+                    hostName: item.host_name,
+                  })
+                }
+              >
+                <Ionicons name="star-outline" size={16} color={COLORS.accent} />
+                <Text style={styles.reviewBtnTxt}>Leave a review</Text>
+              </TouchableOpacity>
+            )}
+            {item.has_reviewed && (
+              <View style={styles.reviewedBadge}>
+                <Ionicons name="star" size={14} color="#F59E0B" />
+                <Text style={styles.reviewedTxt}>Reviewed</Text>
+              </View>
+            )}
             </View>
           </View>
 
@@ -350,4 +375,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 9,
   },
   msgBtnTxt: { color: COLORS.primary, fontSize: 13, ...FONTS.semibold },
+  reviewBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm,
+    borderWidth: 1.5, borderColor: COLORS.accent, borderRadius: RADIUS.pill,
+    paddingHorizontal: 14, paddingVertical: 9, alignSelf: 'flex-start',
+  },
+  reviewBtnTxt: { color: COLORS.accent, fontSize: 13, ...FONTS.semibold },
+  reviewedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm,
+    backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start',
+  },
+  reviewedTxt: { fontSize: 13, color: '#B45309', ...FONTS.semibold },
 });

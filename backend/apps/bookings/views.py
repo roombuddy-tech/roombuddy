@@ -23,6 +23,8 @@ from apps.bookings.services import (
     get_host_bookings,
     get_host_earnings,
     quote_booking,
+    accept_booking,
+    reject_booking,
 )
 from common.authentication import JWTAuthentication
 from common.error_codes import ErrorCode
@@ -203,3 +205,38 @@ class HostEarningsView(APIView):
     def get(self, request):
         result = get_host_earnings(request.user)
         return Response(result)
+
+class HostRespondBookingView(APIView):
+    """POST /api/bookings/<booking_id>/respond/  — host accepts or declines."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, booking_id):
+        action = request.data.get("action")  # "accept" or "decline"
+        if action not in ("accept", "decline"):
+            return Response(
+                {"detail": "action must be 'accept' or 'decline'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            booking = Booking.objects.select_related(
+                "listing", "guest_user", "host_user"
+            ).get(id=booking_id, host_user=request.user)
+        except Booking.DoesNotExist:
+            return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if booking.status != Booking.Status.PENDING:
+            return Response(
+                {"detail": f"Cannot respond to a booking with status '{booking.status}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            if action == "accept":
+                booking = accept_booking(booking, request.user)
+            else:
+                reason = request.data.get("reason", "")
+                booking = reject_booking(booking, request.user, reason=reason)
+            return Response({"status": booking.status})
+        except Exception:
+            logger.exception("HostRespondBookingView failed booking_id=%s", booking_id)
+            return Response({"detail": "Failed to process response."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

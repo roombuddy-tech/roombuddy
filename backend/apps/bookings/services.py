@@ -17,6 +17,7 @@ from apps.bookings.models import Booking, BookingStatusHistory
 from apps.listings.models import Listing
 from apps.payments.services import initiate_refund_for_cancelled_booking
 from apps.users.models import User, PayoutAccount
+from apps.reviews.models import Review
 from common.constants import (
     BOOKING_CODE_LENGTH,
     BOOKING_CODE_PREFIX,
@@ -635,9 +636,81 @@ def get_guest_bookings(user: User) -> list[dict]:
             "status": b.status,
             "payment_status": b.payment_status,
             "total_guest_pays": float(b.total_guest_pays),
+            "can_review": b.status == Booking.Status.COMPLETED,
+            "has_reviewed": False,
             "created_at": b.created_at.isoformat(),
         })
+
+    # backfill has_reviewed in one query
+    reviewed_ids = set(
+        Review.objects.filter(
+            booking_id__in=[b["booking_id"] for b in results],
+            review_type=Review.ReviewType.GUEST_TO_HOST,
+        ).values_list("booking_id", flat=True)
+    )
+    for r in results:
+        if r["can_review"]:
+            r["has_reviewed"] = str(r["booking_id"]) in {str(i) for i in reviewed_ids}
     return results
+
+def accept_booking(booking: Booking, host: User) -> Booking:
+    """Host accepts a pending booking."""
+    logger.info("accept_booking booking_id=%s host_id=%s", booking.id, host.id)
+    with transaction.atomic():
+        booking.status = Booking.Status.ACCEPTED
+        booking.host_responded_at = timezone.now()
+        booking.save(update_fields=["status", "host_responded_at", "updated_at"])
+        BookingStatusHistory.objects.create(
+            booking=booking,
+            from_status=Booking.Status.PENDING,
+            to_status=Booking.Status.ACCEPTED,
+            changed_by_user=host,
+        )
+        _notify_host_responded(booking, accepted=True)
+    return booking
+
+
+def reject_booking(booking: Booking, host: User, reason: str = "") -> Booking:
+    """Host declines a pending booking."""
+    logger.info("reject_booking booking_id=%s host_id=%s", booking.id, host.id)
+    with transaction.atomic():
+        booking.status = Booking.Status.REJECTED
+        booking.host_responded_at = timezone.now()
+        booking.cancellation_reason = reason or None
+        booking.save(update_fields=["status", "host_responded_at", "cancellation_reason", "updated_at"])
+        BookingStatusHistory.objects.create(
+            booking=booking,
+            from_status=Booking.Status.PENDING,
+            to_status=Booking.Status.REJECTED,
+            changed_by_user=host,
+        )
+        _notify_host_responded(booking, accepted=False)
+    return booking
+
+
+def _notify_host_responded(booking: Booking, accepted: bool) -> None:
+    """Fire notification to the guest when host accepts or rejects."""
+    from apps.notifications.services import dispatch
+    from apps.notifications.models import EventType
+    try:
+        event = (
+            EventType.BOOKING_HOST_ACCEPTED if accepted
+            else EventType.BOOKING_HOST_REJECTED
+        )
+        dispatch(
+            event_type=event,
+            recipients=[booking.guest_user],
+            context={
+                "property_name": booking.listing.title if booking.listing else "",
+                "booking_id": str(booking.id),
+                "booking_reference": booking.booking_code,
+                "host_name": get_display_name(booking.host_user),
+                "recipient_name": _user_first_name(booking.guest_user),
+            },
+            idempotency_event_id=f"host_respond:{booking.id}:{'accept' if accepted else 'reject'}",
+        )
+    except Exception:
+        logger.exception("_notify_host_responded failed booking_id=%s", booking.id)
 
 
 def _booking_to_dict(b: Booking) -> dict:

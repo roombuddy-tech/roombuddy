@@ -6,6 +6,7 @@ import BookingConfirmScreen from '../screens/guest/BookingConfirmScreen';
 import BookingSuccessScreen from '../screens/guest/BookingSuccessScreen';
 import GuestListingDetailScreen from '../screens/guest/ListingDetailScreen';
 import RazorpayCheckoutScreen from '../screens/guest/RazorpayCheckoutScreen';
+import WriteReviewScreen from '../screens/guest/WriteReviewScreen';
 import ChatScreen from '../screens/shared/ChatScreen';
 import NotificationPreferencesScreen from '../screens/shared/NotificationPreferencesScreen';
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
@@ -26,6 +27,7 @@ export default function GuestStack() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }}/>
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Notification preferences' }}/>
+      <Stack.Screen name="WriteReview" component={WriteReviewScreen} />
     </Stack.Navigator>
   );
 }

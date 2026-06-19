@@ -70,4 +70,5 @@ export type GuestStackParamList = {
   Notifications: undefined;
   NotificationPreferences: undefined;
   Chat: { conversationId: string; title?: string; subtitle?: string };
+  WriteReview: { bookingId: string; listingTitle: string; hostName: string };
 };

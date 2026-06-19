@@ -20,9 +20,9 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import type { GuestStackParamList } from '../../navigation/types';
+import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
 import type { GuestListingDetail } from '../../types/listing';
 
@@ -70,11 +70,71 @@ function initials(name: string) {
     .join('');
 }
 
-function getDateInDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+// ─── Review sub-components ────────────────────────────────────────────────────
+
+function StarDisplay({ rating, size = 14 }: { rating: number; size?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Ionicons
+          key={n}
+          name={n <= rating ? 'star' : 'star-outline'}
+          size={size}
+          color="#F59E0B"
+        />
+      ))}
+    </View>
+  );
 }
+
+function ReviewCard({ review }: { review: ReviewItem }) {
+  return (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewCardTop}>
+        <View style={styles.reviewerAvatar}>
+          <Text style={styles.reviewerInitials}>
+            {initials(review.reviewer_name) || 'G'}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
+          <Text style={styles.reviewDate}>
+            {new Date(review.submitted_at).toLocaleDateString('en-IN', {
+              month: 'long',
+              year: 'numeric',
+            })}
+          </Text>
+        </View>
+        <StarDisplay rating={review.overall_rating} size={13} />
+      </View>
+
+      {review.title ? (
+        <Text style={styles.reviewTitle}>{review.title}</Text>
+      ) : null}
+      {review.body ? (
+        <Text style={styles.reviewBody} numberOfLines={4}>
+          {review.body}
+        </Text>
+      ) : null}
+
+      {review.host_response ? (
+        <View style={styles.hostReply}>
+          <Text style={styles.hostReplyLabel}>Response from host</Text>
+          <Text style={styles.hostReplyBody}>{review.host_response}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const BREAKDOWN_LABELS: Record<string, string> = {
+  cleanliness: 'Cleanliness',
+  accuracy: 'Accuracy',
+  communication: 'Communication',
+  location: 'Location',
+  value: 'Value',
+  food: 'Food & Kitchen',
+};
 
 export default function GuestListingDetailScreen() {
   const navigation = useNavigation<Nav>();
@@ -90,6 +150,7 @@ export default function GuestListingDetailScreen() {
   const [bookStep, setBookStep] = useState<'rules' | 'dates'>('rules');
   const [checkIn, setCheckIn] = useState<string | null>(passedCheckIn ?? null);
   const [checkOut, setCheckOut] = useState<string | null>(passedCheckOut ?? null);
+  const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
@@ -139,6 +200,7 @@ export default function GuestListingDetailScreen() {
       .then((data) => setListing(data))
       .catch(() => setError('Could not load listing'))
       .finally(() => setLoading(false));
+    getListingReviews(listingId).then(setReviewsData).catch(() => {});
   }, [listingId]);
 
   const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -169,9 +231,15 @@ export default function GuestListingDetailScreen() {
   const photoUrls = listing.photos.map((p) => p.url).filter(Boolean);
   const subtitleParts = [
     listing.area_name,
-    listing.room.bed_type ? `${listing.room.bed_type.charAt(0).toUpperCase()}${listing.room.bed_type.slice(1)} bed` : null,
+    listing.room.bed_type
+      ? `${listing.room.bed_type.charAt(0).toUpperCase()}${listing.room.bed_type.slice(1)} bed`
+      : null,
     listing.amenities.find((a) => a.display_name === 'AC') ? 'AC' : null,
-    listing.room.bathroom_type === 'attached' ? 'Attached bath' : listing.room.bathroom_type === 'shared' ? 'Shared bath' : null,
+    listing.room.bathroom_type === 'attached'
+      ? 'Attached bath'
+      : listing.room.bathroom_type === 'shared'
+      ? 'Shared bath'
+      : null,
   ].filter(Boolean);
 
   const handleBookNow = () => {
@@ -191,10 +259,16 @@ export default function GuestListingDetailScreen() {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // Reviews helpers
+  const hasReviews = reviewsData && reviewsData.total > 0;
+  const breakdownEntries = reviewsData
+    ? Object.entries(reviewsData.breakdown).filter(([, v]) => v != null) as [string, number][]
+    : [];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Photo carousel */}
+        {/* ── Photo carousel ── */}
         <View style={styles.photoWrap}>
           {photoUrls.length > 0 ? (
             <FlatList
@@ -230,11 +304,24 @@ export default function GuestListingDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          {/* Title */}
+          {/* ── Title ── */}
           <Text style={styles.title}>{listing.title}</Text>
           <Text style={styles.subtitle}>{subtitleParts.join(' · ')}</Text>
 
-          {/* Badges */}
+          {/* ── Rating summary (inline, under subtitle) ── */}
+          {hasReviews && (
+            <View style={styles.ratingSummaryRow}>
+              <Ionicons name="star" size={15} color="#F59E0B" />
+              <Text style={styles.ratingSummaryText}>
+                {reviewsData!.average_rating?.toFixed(1)}{' '}
+                <Text style={styles.ratingSummaryCount}>
+                  ({reviewsData!.total} review{reviewsData!.total !== 1 ? 's' : ''})
+                </Text>
+              </Text>
+            </View>
+          )}
+
+          {/* ── Badges ── */}
           <View style={styles.badgeRow}>
             <View style={styles.badge}>
               <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
@@ -248,7 +335,7 @@ export default function GuestListingDetailScreen() {
             )}
           </View>
 
-          {/* Description */}
+          {/* ── Description ── */}
           {listing.description ? (
             <>
               <Divider />
@@ -259,44 +346,52 @@ export default function GuestListingDetailScreen() {
             </>
           ) : null}
 
-          {/* Flatmates */}
+          {/* ── Flatmates ── */}
           {listing.flatmates.length > 0 && (
             <>
               <Divider />
               <Text style={styles.sectionTitle}>👥 Meet your flatmates</Text>
 
-              {listing.host_info && (listing.host_info.occupation || listing.host_info.hobbies) && (
-                <View style={styles.flatmateCard}>
-                  <View style={styles.flatmateAvatar}>
-                    <Text style={styles.flatmateInitials}>
-                      {listing.host_name ? initials(listing.host_name) : 'H'}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
-                      <View style={styles.hostBadge}>
-                        <Text style={styles.hostBadgeText}>Host</Text>
-                      </View>
+              {listing.host_info &&
+                (listing.host_info.occupation || listing.host_info.hobbies) && (
+                  <View style={styles.flatmateCard}>
+                    <View style={styles.flatmateAvatar}>
+                      <Text style={styles.flatmateInitials}>
+                        {listing.host_name ? initials(listing.host_name) : 'H'}
+                      </Text>
                     </View>
-                    {listing.host_info.occupation ? (
-                      <Text style={styles.flatmateDetail}>{listing.host_info.occupation}</Text>
-                    ) : null}
-                    {listing.host_info.hobbies ? (
-                      <Text style={styles.flatmateDetail}>{listing.host_info.hobbies}</Text>
-                    ) : null}
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
+                        <View style={styles.hostBadge}>
+                          <Text style={styles.hostBadgeText}>Host</Text>
+                        </View>
+                      </View>
+                      {listing.host_info.occupation ? (
+                        <Text style={styles.flatmateDetail}>{listing.host_info.occupation}</Text>
+                      ) : null}
+                      {listing.host_info.hobbies ? (
+                        <Text style={styles.flatmateDetail}>{listing.host_info.hobbies}</Text>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-              )}
+                )}
 
               {listing.flatmates.map((fm, idx) => (
-                <View key={idx} style={[styles.flatmateCard, idx === listing.flatmates.length - 1 && { borderBottomWidth: 0 }]}>
+                <View
+                  key={idx}
+                  style={[
+                    styles.flatmateCard,
+                    idx === listing.flatmates.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                >
                   <View style={styles.flatmateAvatar}>
                     <Text style={styles.flatmateInitials}>{initials(fm.name)}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.flatmateName}>
-                      {fm.name}{fm.age ? `, ${fm.age}` : ''}
+                      {fm.name}
+                      {fm.age ? `, ${fm.age}` : ''}
                     </Text>
                     {fm.occupation ? (
                       <Text style={styles.flatmateDetail}>{fm.occupation}</Text>
@@ -310,7 +405,7 @@ export default function GuestListingDetailScreen() {
             </>
           )}
 
-          {/* Food options */}
+          {/* ── Food options ── */}
           {(listing.food.kitchen_access || listing.food.meals_available) && (
             <>
               <Divider />
@@ -340,7 +435,7 @@ export default function GuestListingDetailScreen() {
             </>
           )}
 
-          {/* Amenities */}
+          {/* ── Amenities ── */}
           {listing.amenities.length > 0 && (
             <>
               <Divider />
@@ -360,7 +455,7 @@ export default function GuestListingDetailScreen() {
             </>
           )}
 
-          {/* The space */}
+          {/* ── The space ── */}
           <Divider />
           <Text style={styles.sectionTitle}>The space</Text>
           <View style={styles.spaceGrid}>
@@ -373,7 +468,11 @@ export default function GuestListingDetailScreen() {
             </View>
             <View style={styles.spaceCard}>
               <MaterialCommunityIcons
-                name={listing.room.room_type === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
+                name={
+                  listing.room.room_type === 'private'
+                    ? 'door-closed-lock'
+                    : 'bunk-bed-outline'
+                }
                 size={22}
                 color={COLORS.primary}
               />
@@ -382,20 +481,26 @@ export default function GuestListingDetailScreen() {
               </Text>
               {listing.room.bed_type && (
                 <Text style={styles.spaceCardSub}>
-                  {listing.room.bed_type.charAt(0).toUpperCase() + listing.room.bed_type.slice(1)} bed
+                  {listing.room.bed_type.charAt(0).toUpperCase() +
+                    listing.room.bed_type.slice(1)}{' '}
+                  bed
                 </Text>
               )}
             </View>
             <View style={styles.spaceCard}>
               <Ionicons name="water-outline" size={22} color={COLORS.primary} />
               <Text style={styles.spaceCardLabel}>
-                {listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}
+                {listing.room.bathroom_type === 'attached'
+                  ? 'Attached bath'
+                  : 'Shared bath'}
               </Text>
             </View>
             {listing.room.room_size_sqft && (
               <View style={styles.spaceCard}>
                 <Ionicons name="expand-outline" size={22} color={COLORS.primary} />
-                <Text style={styles.spaceCardLabel}>{listing.room.room_size_sqft} sq ft</Text>
+                <Text style={styles.spaceCardLabel}>
+                  {listing.room.room_size_sqft} sq ft
+                </Text>
               </View>
             )}
           </View>
@@ -410,7 +515,7 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* Approximate location map */}
+          {/* ── Approximate location map ── */}
           {listing.property.latitude && listing.property.longitude && (
             <>
               <Divider />
@@ -442,11 +547,13 @@ export default function GuestListingDetailScreen() {
                   />
                 </MapView>
               </View>
-              <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
+              <Text style={styles.locationDisclaimer}>
+                Exact location shared after booking
+              </Text>
             </>
           )}
 
-          {/* Check-in / Check-out */}
+          {/* ── Check-in / Check-out ── */}
           {(listing.check_in_from || listing.check_out_by) && (
             <>
               <Divider />
@@ -470,41 +577,112 @@ export default function GuestListingDetailScreen() {
             </>
           )}
 
-          {/* Stay info */}
+          {/* ── Stay info ── */}
           <Divider />
           <View style={styles.stayInfoRow}>
             <View style={styles.stayInfoItem}>
               <Text style={styles.stayInfoLabel}>Min stay</Text>
-              <Text style={styles.stayInfoValue}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
+              <Text style={styles.stayInfoValue}>
+                {listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}
+              </Text>
             </View>
             <View style={styles.stayInfoItem}>
               <Text style={styles.stayInfoLabel}>Max stay</Text>
-              <Text style={styles.stayInfoValue}>{listing.max_nights} night{listing.max_nights !== 1 ? 's' : ''}</Text>
+              <Text style={styles.stayInfoValue}>
+                {listing.max_nights} night{listing.max_nights !== 1 ? 's' : ''}
+              </Text>
             </View>
             {listing.security_deposit > 0 && (
               <View style={styles.stayInfoItem}>
                 <Text style={styles.stayInfoLabel}>Deposit</Text>
-                <Text style={styles.stayInfoValue}>₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
+                <Text style={styles.stayInfoValue}>
+                  ₹{listing.security_deposit.toLocaleString('en-IN')}
+                </Text>
               </View>
             )}
           </View>
+
+          {/* ── Reviews ── */}
+          {hasReviews && (
+            <>
+              <Divider />
+
+              {/* Header */}
+              <View style={styles.reviewsHeader}>
+                <Ionicons name="star" size={20} color="#F59E0B" />
+                <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+                  {reviewsData!.average_rating?.toFixed(1)}
+                  {'  ·  '}
+                  {reviewsData!.total} review{reviewsData!.total !== 1 ? 's' : ''}
+                </Text>
+              </View>
+
+              {/* Breakdown bars */}
+              {breakdownEntries.length > 0 && (
+                <View style={styles.breakdownWrap}>
+                  {breakdownEntries.map(([key, val]) => (
+                    <View key={key} style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>
+                        {BREAKDOWN_LABELS[key] ?? key}
+                      </Text>
+                      <View style={styles.breakdownTrack}>
+                        <View
+                          style={[
+                            styles.breakdownFill,
+                            { width: `${(val / 5) * 100}%` as any },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.breakdownVal}>{val.toFixed(1)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Review cards — first 3 */}
+              {reviewsData!.reviews.slice(0, 3).map((r) => (
+                <ReviewCard key={r.id} review={r} />
+              ))}
+
+              {reviewsData!.total > 3 && (
+                <Text style={styles.moreReviews}>
+                  + {reviewsData!.total - 3} more review{reviewsData!.total - 3 !== 1 ? 's' : ''}
+                </Text>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
 
-      {/* Sticky bottom bar */}
+      {/* ── Sticky bottom bar ── */}
       <View style={styles.stickyBar}>
         <View>
           <Text style={styles.stickyPrice}>
             ₹{listing.guest_price_per_night.toLocaleString('en-IN')}
             <Text style={styles.stickyPriceUnit}>/night</Text>
           </Text>
+          {hasReviews && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <Ionicons name="star" size={12} color="#F59E0B" />
+              <Text style={styles.stickyRating}>
+                {reviewsData!.average_rating?.toFixed(1)} · {reviewsData!.total} reviews
+              </Text>
+            </View>
+          )}
         </View>
-        <TouchableOpacity style={styles.stickyBookBtn} activeOpacity={0.85} onPress={() => { setBookStep('rules'); setShowBookModal(true); }}>
+        <TouchableOpacity
+          style={styles.stickyBookBtn}
+          activeOpacity={0.85}
+          onPress={() => {
+            setBookStep('rules');
+            setShowBookModal(true);
+          }}
+        >
           <Text style={styles.stickyBookBtnText}>Book now</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Booking modal — Step 1: House rules, Step 2: Dates */}
+      {/* ── Booking modal ── */}
       <Modal visible={showBookModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -521,7 +699,10 @@ export default function GuestListingDetailScreen() {
                   Please review the house rules before booking
                 </Text>
 
-                <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  style={styles.rulesScroll}
+                  showsVerticalScrollIndicator={false}
+                >
                   {listing.house_rules.no_smoking && (
                     <View style={styles.modalRuleRow}>
                       <Ionicons name="close-circle" size={20} color={COLORS.danger} />
@@ -542,16 +723,32 @@ export default function GuestListingDetailScreen() {
                   )}
                   {listing.house_rules.custom_rules && (
                     <View style={styles.modalCustomRules}>
-                      <Ionicons name="document-text-outline" size={16} color={COLORS.textSec} style={{ marginBottom: 4 }} />
-                      <Text style={styles.modalCustomRulesText}>{listing.house_rules.custom_rules}</Text>
+                      <Ionicons
+                        name="document-text-outline"
+                        size={16}
+                        color={COLORS.textSec}
+                        style={{ marginBottom: 4 }}
+                      />
+                      <Text style={styles.modalCustomRulesText}>
+                        {listing.house_rules.custom_rules}
+                      </Text>
                     </View>
                   )}
-                  {!listing.house_rules.no_smoking && !listing.house_rules.no_pets && !listing.house_rules.no_alcohol && !listing.house_rules.custom_rules && (
-                    <Text style={styles.noRulesText}>No specific house rules</Text>
-                  )}
+                  {!listing.house_rules.no_smoking &&
+                    !listing.house_rules.no_pets &&
+                    !listing.house_rules.no_alcohol &&
+                    !listing.house_rules.custom_rules && (
+                      <Text style={styles.noRulesText}>No specific house rules</Text>
+                    )}
                 </ScrollView>
 
-                <TouchableOpacity style={styles.modalBtn} onPress={() => hasDatesFromSearch ? handleBookNow() : setBookStep('dates')} activeOpacity={0.85}>
+                <TouchableOpacity
+                  style={styles.modalBtn}
+                  onPress={() =>
+                    hasDatesFromSearch ? handleBookNow() : setBookStep('dates')
+                  }
+                  activeOpacity={0.85}
+                >
                   <Text style={styles.modalBtnText}>I agree, continue</Text>
                 </TouchableOpacity>
               </>
@@ -568,7 +765,11 @@ export default function GuestListingDetailScreen() {
                 </View>
 
                 <Text style={styles.calendarHint}>
-                  {!checkIn ? 'Select check-in date' : !checkOut ? 'Select check-out date' : `${checkIn}  →  ${checkOut}`}
+                  {!checkIn
+                    ? 'Select check-in date'
+                    : !checkOut
+                    ? 'Select check-out date'
+                    : `${checkIn}  →  ${checkOut}`}
                 </Text>
 
                 <Calendar
@@ -594,7 +795,10 @@ export default function GuestListingDetailScreen() {
                 )}
 
                 <TouchableOpacity
-                  style={[styles.modalBtn, (!checkIn || !checkOut) && styles.modalBtnDisabled]}
+                  style={[
+                    styles.modalBtn,
+                    (!checkIn || !checkOut) && styles.modalBtnDisabled,
+                  ]}
                   onPress={handleBookNow}
                   activeOpacity={0.85}
                   disabled={!checkIn || !checkOut}
@@ -612,9 +816,18 @@ export default function GuestListingDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg, padding: SPACING.lg },
-  errorText: { fontSize: 16, color: COLORS.text, textAlign: 'center', marginTop: SPACING.md, ...FONTS.medium },
-  retryBtn: { marginTop: SPACING.lg, paddingVertical: 12, paddingHorizontal: 24, backgroundColor: COLORS.primary, borderRadius: RADIUS.md },
+  center: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.bg, padding: SPACING.lg,
+  },
+  errorText: {
+    fontSize: 16, color: COLORS.text, textAlign: 'center',
+    marginTop: SPACING.md, ...FONTS.medium,
+  },
+  retryBtn: {
+    marginTop: SPACING.lg, paddingVertical: 12, paddingHorizontal: 24,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
+  },
   retryBtnText: { color: '#fff', ...FONTS.semibold },
 
   photoWrap: { position: 'relative', width: SCREEN_W, height: 240, backgroundColor: COLORS.warm },
@@ -638,7 +851,13 @@ const styles = StyleSheet.create({
   body: { padding: SPACING.lg },
 
   title: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm },
+  subtitle: { fontSize: 14, color: COLORS.textSec, marginBottom: 6 },
+
+  ratingSummaryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: SPACING.sm,
+  },
+  ratingSummaryText: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  ratingSummaryCount: { ...FONTS.regular, color: COLORS.textSec },
 
   badgeRow: { flexDirection: 'row', gap: 8, marginBottom: SPACING.sm },
   badge: {
@@ -726,6 +945,54 @@ const styles = StyleSheet.create({
   stayInfoLabel: { fontSize: 12, color: COLORS.textSec, marginBottom: 4 },
   stayInfoValue: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
 
+  // ── Reviews ──────────────────────────────────────────────────────────────
+  reviewsHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md,
+  },
+  breakdownWrap: { marginBottom: SPACING.md },
+  breakdownRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10,
+  },
+  breakdownLabel: { width: 116, fontSize: 13, color: COLORS.textSec },
+  breakdownTrack: {
+    flex: 1, height: 4, borderRadius: 2, backgroundColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  breakdownFill: { height: 4, borderRadius: 2, backgroundColor: '#F59E0B' },
+  breakdownVal: {
+    width: 30, fontSize: 13, ...FONTS.semibold, color: COLORS.text, textAlign: 'right',
+  },
+
+  reviewCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
+    padding: SPACING.md, marginBottom: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  reviewCardTop: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8,
+  },
+  reviewerAvatar: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: COLORS.primaryAlpha,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  reviewerInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
+  reviewerName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  reviewDate: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
+  reviewTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
+  reviewBody: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
+  hostReply: {
+    marginTop: 10, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  hostReplyLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
+  hostReplyBody: { fontSize: 13, color: COLORS.textSec, lineHeight: 19 },
+  moreReviews: {
+    fontSize: 13, color: COLORS.primary, ...FONTS.semibold,
+    textAlign: 'center', marginBottom: SPACING.md,
+  },
+
+  // ── Sticky bar ──────────────────────────────────────────────────────────
   stickyBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -735,19 +1002,19 @@ const styles = StyleSheet.create({
   },
   stickyPrice: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
+  stickyRating: { fontSize: 12, color: COLORS.textSec },
   stickyBookBtn: {
     backgroundColor: COLORS.accent, paddingVertical: 13, paddingHorizontal: 28,
     borderRadius: RADIUS.md,
   },
   stickyBookBtnText: { color: '#fff', fontSize: 15, ...FONTS.semibold },
 
-  modalOverlay: {
-    flex: 1, backgroundColor: COLORS.overlay,
-    justifyContent: 'flex-end',
-  },
+  // ── Modal ───────────────────────────────────────────────────────────────
+  modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
   modalContent: {
-    backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg, paddingBottom: 40, maxHeight: '80%',
+    backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl, padding: SPACING.lg,
+    paddingBottom: 40, maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -755,13 +1022,22 @@ const styles = StyleSheet.create({
   },
   rulesIntro: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.md },
   rulesScroll: { marginBottom: SPACING.md },
-  modalRuleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  modalRuleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
   modalRuleText: { fontSize: 15, color: COLORS.text, ...FONTS.medium },
-  modalCustomRules: { backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, padding: SPACING.md, marginTop: SPACING.sm },
+  modalCustomRules: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.sm,
+    padding: SPACING.md, marginTop: SPACING.sm,
+  },
   modalCustomRulesText: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
   noRulesText: { fontSize: 14, color: COLORS.textMut, paddingVertical: SPACING.md },
   modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
-  calendarHint: { fontSize: 14, color: COLORS.primary, ...FONTS.medium, textAlign: 'center', marginBottom: SPACING.sm },
+  calendarHint: {
+    fontSize: 14, color: COLORS.primary, ...FONTS.medium,
+    textAlign: 'center', marginBottom: SPACING.sm,
+  },
   modalHint: { fontSize: 12, color: COLORS.textMut, marginTop: SPACING.sm },
   modalBtn: {
     backgroundColor: COLORS.accent, paddingVertical: 16,

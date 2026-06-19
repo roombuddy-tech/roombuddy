@@ -8,6 +8,7 @@ from apps.bookings.views import (
     GuestBookingsListView,
     HostBookingsListView,
     HostEarningsView,
+    HostRespondBookingView,
 )
 
 urlpatterns = [
@@ -21,4 +22,5 @@ urlpatterns = [
     # Host-facing endpoints
     path("host/", HostBookingsListView.as_view(), name="host-bookings-list"),
     path("host/earnings/", HostEarningsView.as_view(), name="host-earnings"),
+    path("<uuid:booking_id>/respond/", HostRespondBookingView.as_view(), name="booking-respond"),
 ]

@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import type { HostStackParamList } from '../../navigation/types';
+import api from '../../services/api';
 import { startConversation } from '../../services/chat';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'BookingDetail'>;
@@ -46,7 +47,6 @@ export default function BookingDetailScreen() {
   const route = useRoute<Route>();
   const { booking } = route.params;
 
-  const statusStyle = STATUS_COLORS[booking.status] || STATUS_COLORS.pending;
 
   const messageGuest = async () => {
     try {
@@ -59,6 +59,43 @@ export default function BookingDetailScreen() {
     } catch {
       // network error — screen stays as-is; user can retry
     }
+  };
+
+  const [bookingStatus, setBookingStatus] = useState<string>(booking.status);
+  const [responding, setResponding] = useState(false);
+
+  const statusStyle = STATUS_COLORS[bookingStatus] || STATUS_COLORS.pending;
+
+
+  const respond = async (action: 'accept' | 'decline') => {
+    const label = action === 'accept' ? 'Accept' : 'Decline';
+    Alert.alert(
+      `${label} booking?`,
+      action === 'accept'
+        ? `Accept ${booking.guest_name}'s booking request?`
+        : `Decline ${booking.guest_name}'s booking request?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: label,
+          style: action === 'decline' ? 'destructive' : 'default',
+          onPress: async () => {
+            setResponding(true);
+            try {
+              const res = await api.post(
+                `/api/bookings/${booking.booking_id}/respond/`,
+                { action },
+              );
+              setBookingStatus(res.data.status);
+            } catch {
+              Alert.alert('Error', 'Could not process your response. Please try again.');
+            } finally {
+              setResponding(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -84,7 +121,7 @@ export default function BookingDetailScreen() {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.statusTxt, { color: statusStyle.text }]}>
-              {formatStatus(booking.status)}
+              {formatStatus(bookingStatus)}
             </Text>
           </View>
         </View>
@@ -116,16 +153,45 @@ export default function BookingDetailScreen() {
           </View>
         </View>
 
-        {booking.status === 'pending' && (
+        {bookingStatus === 'pending' && (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]}>
-              <Text style={styles.rejectTxt}>Decline</Text>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.rejectBtn]}
+              onPress={() => respond('decline')}
+              disabled={responding}
+              activeOpacity={0.8}
+            >
+              {responding
+                ? <ActivityIndicator size="small" color={COLORS.danger} />
+                : <Text style={styles.rejectTxt}>Decline</Text>}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.acceptBtn]}>
-              <Text style={styles.acceptTxt}>Accept</Text>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.acceptBtn]}
+              onPress={() => respond('accept')}
+              disabled={responding}
+              activeOpacity={0.8}
+            >
+              {responding
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.acceptTxt}>Accept</Text>}
             </TouchableOpacity>
           </View>
         )}
+
+        {bookingStatus === 'accepted' && (
+          <View style={styles.acceptedBanner}>
+            <Ionicons name="checkmark-circle" size={18} color="#047857" />
+            <Text style={styles.acceptedBannerTxt}>Booking accepted</Text>
+          </View>
+        )}
+
+        {bookingStatus === 'rejected' && (
+          <View style={styles.rejectedBanner}>
+            <Ionicons name="close-circle" size={18} color={COLORS.danger} />
+            <Text style={styles.rejectedBannerTxt}>Booking declined</Text>
+          </View>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -144,7 +210,18 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
   headerTitle: { fontSize: 17, ...FONTS.semibold, color: COLORS.text },
-
+  acceptedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#D1FAE5', borderRadius: RADIUS.md,
+    padding: SPACING.md, marginTop: SPACING.md,
+  },
+  acceptedBannerTxt: { fontSize: 15, ...FONTS.semibold, color: '#047857' },
+  rejectedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FEE2E2', borderRadius: RADIUS.md,
+    padding: SPACING.md, marginTop: SPACING.md,
+  },
+  rejectedBannerTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.danger },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
 
   guestCard: {
