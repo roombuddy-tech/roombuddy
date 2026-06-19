@@ -113,12 +113,12 @@ export default function DashboardScreen() {
 
         {/* Greeting */}
         <Text style={styles.greeting}>{getGreeting()}</Text>
-        <Text style={styles.name}>{name} 👋</Text>
+        <Text style={styles.name}>{name}</Text>
 
         {/* Stats grid */}
         {/* Stats grid */}
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: '#E6F5F0' }]}>
+          <View style={[styles.statCard, { backgroundColor: COLORS.accentSoft }]}>
             <Text style={[styles.statLabel, { color: COLORS.primary }]}>This month</Text>
             <Text style={[styles.statValue, { color: COLORS.primary }]}>
               ₹{(d?.this_month.earnings || 0).toLocaleString('en-IN')}
@@ -127,9 +127,9 @@ export default function DashboardScreen() {
               {(d?.this_month.bookings || 0) === 0 ? 'No bookings yet' : `${d?.this_month.bookings} bookings`}
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FFF8E6' }]}>
-            <Text style={[styles.statLabel, { color: '#B8860B' }]}>Occupancy</Text>
-            <Text style={[styles.statValue, { color: '#B8860B' }]}>
+          <View style={[styles.statCard, { backgroundColor: COLORS.chip }]}>
+            <Text style={[styles.statLabel, { color: COLORS.primary }]}>Occupancy</Text>
+            <Text style={[styles.statValue, { color: COLORS.primary }]}>
               {d?.this_month.occupancy_pct != null ? `${d.this_month.occupancy_pct}%` : '—'}
             </Text>
             <Text style={styles.statSub}>
@@ -138,7 +138,7 @@ export default function DashboardScreen() {
                 : 'No active listings'}
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#E6F5F0' }]}>
+          <View style={[styles.statCard, { backgroundColor: COLORS.accentSoft }]}>
             <Text style={[styles.statLabel, { color: COLORS.primary }]}>Avg rating</Text>
             <Text style={[styles.statValue, { color: COLORS.primary }]}>
               {d?.this_month.avg_rating || '—'}
@@ -147,9 +147,9 @@ export default function DashboardScreen() {
               {(d?.this_month.review_count || 0) === 0 ? 'No reviews yet' : `${d?.this_month.review_count} reviews`}
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FFF8E6' }]}>
-            <Text style={[styles.statLabel, { color: '#B8860B' }]}>Response</Text>
-            <Text style={[styles.statValue, { color: '#B8860B' }]}>
+          <View style={[styles.statCard, { backgroundColor: COLORS.chip }]}>
+            <Text style={[styles.statLabel, { color: COLORS.primary }]}>Response</Text>
+            <Text style={[styles.statValue, { color: COLORS.primary }]}>
               {d?.this_month.response_rate_pct != null ? `${d.this_month.response_rate_pct}%` : '—'}
             </Text>
             <Text style={styles.statSub}>
@@ -168,8 +168,8 @@ export default function DashboardScreen() {
               activeOpacity={0.7}
               onPress={() => openBooking(ci.booking_id)}
             >
-              <View style={[styles.activityIcon, { backgroundColor: '#FFF8E6' }]}>
-                <Text style={{ fontSize: 20 }}>🔑</Text>
+              <View style={[styles.activityIcon, { backgroundColor: COLORS.chip }]}>
+                <Ionicons name="key-outline" size={20} color={COLORS.primary} />
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>{ci.guest_name} checks in today</Text>
@@ -182,8 +182,8 @@ export default function DashboardScreen() {
           ))
         ) : (
           <View style={styles.activityCard}>
-            <View style={[styles.activityIcon, { backgroundColor: COLORS.surface }]}>
-              <Text style={{ fontSize: 20 }}>📅</Text>
+            <View style={[styles.activityIcon, { backgroundColor: COLORS.chip }]}>
+              <Ionicons name="calendar-outline" size={20} color={COLORS.textMut} />
             </View>
             <View style={styles.activityContent}>
               <Text style={styles.activityTitle}>No check-ins today</Text>
@@ -200,8 +200,8 @@ export default function DashboardScreen() {
               activeOpacity={0.7}
               onPress={() => openBooking(co.booking_id)}
             >
-              <View style={[styles.activityIcon, { backgroundColor: '#E6F5F0' }]}>
-                <Text style={{ fontSize: 20 }}>👋</Text>
+              <View style={[styles.activityIcon, { backgroundColor: COLORS.accentSoft }]}>
+                <Ionicons name="exit-outline" size={20} color={COLORS.accent} />
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>{co.guest_name} checks out today</Text>
@@ -213,8 +213,8 @@ export default function DashboardScreen() {
         {d?.today.recent_reviews && d?.today.recent_reviews.length > 0 && (
           d?.today.recent_reviews.map((rv, i) => (
             <View key={`rv-${i}`} style={styles.activityCard}>
-              <View style={[styles.activityIcon, { backgroundColor: '#FFF8E6' }]}>
-                <Text style={{ fontSize: 20 }}>⭐</Text>
+              <View style={[styles.activityIcon, { backgroundColor: COLORS.chip }]}>
+                <Ionicons name="star" size={20} color={COLORS.star} />
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>New review from {rv.reviewer_name}</Text>
@@ -236,10 +236,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
-  brand: { fontSize: 20, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
+  brand: { fontSize: 24, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5 },
+  brandAccent: { ...FONTS.serifItalic, color: COLORS.primary },
   avatarBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  avatarText: { color: '#fff', fontSize: 14, ...FONTS.bold },
+  avatarText: { color: COLORS.onPrimary, fontSize: 14, ...FONTS.semibold },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   switchBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -248,19 +248,19 @@ const styles = StyleSheet.create({
   },
   switchBtnTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.semibold },
   bellBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
-  greeting: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  name: { fontSize: 28, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.lg },
+  greeting: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 4 },
+  name: { fontSize: 32, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5, marginBottom: SPACING.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },
-  statCard: { width: '48%', borderRadius: RADIUS.md, padding: SPACING.md, ...SHADOW.sm },
+  statCard: { width: '48%', borderRadius: RADIUS.lg, padding: SPACING.md, ...SHADOW.sm },
   statLabel: { fontSize: 12, ...FONTS.semibold, marginBottom: 4 },
-  statValue: { fontSize: 26, ...FONTS.bold, marginBottom: 2 },
+  statValue: { fontSize: 26, ...FONTS.serif, marginBottom: 2 },
   statSub: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
-  sectionTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
   activityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, gap: 12 },
   activityIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   activityContent: { flex: 1 },
   activityTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
   activitySub: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
   viewBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.pill },
-  viewBtnText: { color: '#fff', fontSize: 13, ...FONTS.semibold },
+  viewBtnText: { color: COLORS.onPrimary, fontSize: 13, ...FONTS.semibold },
 });

@@ -42,13 +42,13 @@ interface DraftData {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  live: { label: 'Listed', color: '#10B981' },
-  hidden: { label: 'Hidden', color: '#D97706' },
-  pending: { label: 'Pending', color: '#F59E0B' },
-  draft: { label: 'Draft', color: '#F59E0B' },
-  paused: { label: 'Paused', color: '#94A3B8' },
-  snoozed: { label: 'Snoozed', color: '#94A3B8' },
-  delisted: { label: 'Delisted', color: '#EF4444' },
+  live: { label: 'Listed', color: COLORS.success },
+  hidden: { label: 'Hidden', color: COLORS.primary },
+  pending: { label: 'Pending', color: COLORS.primary },
+  draft: { label: 'Draft', color: COLORS.primary },
+  paused: { label: 'Paused', color: COLORS.textMut },
+  snoozed: { label: 'Snoozed', color: COLORS.textMut },
+  delisted: { label: 'Delisted', color: COLORS.danger },
 };
 
 function ListingThumbnail({ uri }: { uri: string | null }) {
@@ -65,7 +65,7 @@ function ListingThumbnail({ uri }: { uri: string | null }) {
   }
   return (
     <View style={[styles.photo, styles.photoPlaceholder]}>
-      <Text style={styles.photoEmoji}>🏠</Text>
+      <Ionicons name="home-outline" size={26} color={COLORS.textMut} />
     </View>
   );
 }
@@ -238,7 +238,7 @@ export default function ListingsScreen() {
                   <Ionicons
                     name={idVerificationStatus === 'pending' ? 'hourglass-outline' : idVerificationStatus === 'rejected' ? 'alert-circle' : 'shield-outline'}
                     size={24}
-                    color={idVerificationStatus === 'rejected' ? '#EF4444' : '#D97706'}
+                    color={idVerificationStatus === 'rejected' ? COLORS.danger : COLORS.primary}
                   />
                 </View>
                 <View style={styles.verifyBannerContent}>
@@ -321,7 +321,7 @@ export default function ListingsScreen() {
 
                         {item.status === 'draft' && (
                           <View style={styles.serverDraftHint}>
-                            <Ionicons name="pencil-outline" size={12} color={COLORS.accent} />
+                            <Ionicons name="pencil-outline" size={12} color={COLORS.primary} />
                             <Text style={styles.serverDraftHintTxt}>Tap to continue editing</Text>
                           </View>
                         )}
@@ -347,7 +347,9 @@ export default function ListingsScreen() {
             {/* Empty state — no drafts and no listings */}
             {!draft && listings.length === 0 && (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>🏠</Text>
+                <View style={styles.emptyIconChip}>
+                  <Ionicons name="home-outline" size={28} color={COLORS.primary} />
+                </View>
                 <Text style={styles.emptyTitle}>No listings yet</Text>
                 <Text style={styles.emptySub}>List your first room and start earning.</Text>
               </View>
@@ -369,7 +371,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   scrollContent: { paddingBottom: SPACING.xl },
 
-  pageTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.lg },
+  pageTitle: { fontSize: 30, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5, marginTop: SPACING.md, marginBottom: SPACING.lg },
 
   loadingArea: { paddingVertical: 60, alignItems: 'center' },
 
@@ -381,14 +383,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
-  draftSectionTitle: { fontSize: 13, ...FONTS.semibold, color: '#92400E' },
+  draftSectionTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.primaryDark },
 
   draftCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: COLORS.raised,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     ...SHADOW.sm,
@@ -397,24 +399,24 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.sm,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.chip,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   draftContent: { flex: 1, marginRight: 12 },
   draftTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
-  draftProgress: { fontSize: 12, color: '#92400E', ...FONTS.medium, marginBottom: 6 },
+  draftProgress: { fontSize: 12, color: COLORS.primaryDark, ...FONTS.medium, marginBottom: 6 },
 
   draftProgressTrack: {
     height: 4,
-    backgroundColor: '#FDE68A',
+    backgroundColor: COLORS.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
   draftProgressFill: {
     height: '100%',
-    backgroundColor: '#D97706',
+    backgroundColor: COLORS.primary,
     borderRadius: 2,
   },
 
@@ -422,12 +424,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#D97706',
+    backgroundColor: COLORS.primary,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: RADIUS.pill,
   },
-  draftContinueTxt: { fontSize: 13, ...FONTS.semibold, color: '#fff' },
+  draftContinueTxt: { fontSize: 13, ...FONTS.semibold, color: COLORS.onPrimary },
 
   // ── Listings section ──
   listingsSection: { marginBottom: SPACING.md },
@@ -452,7 +454,7 @@ const styles = StyleSheet.create({
   detailsContainer: { flex: 1 },
 
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
-  listingTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, flex: 1, marginRight: 8 },
+  listingTitle: { fontSize: 16, ...FONTS.serif, color: COLORS.text, flex: 1, marginRight: 8 },
 
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
   areaName: { fontSize: 13, color: COLORS.textSec, marginBottom: 6 },
 
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  price: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
+  price: { fontSize: 17, ...FONTS.serif, color: COLORS.text },
   priceUnit: { fontSize: 12, ...FONTS.regular, color: COLORS.textSec },
 
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -471,7 +473,7 @@ const styles = StyleSheet.create({
   bookingCount: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
 
   serverDraftHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  serverDraftHintTxt: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
+  serverDraftHintTxt: { fontSize: 11, color: COLORS.primary, ...FONTS.medium },
 
   hiddenHint: {
     flexDirection: 'row',
@@ -480,21 +482,26 @@ const styles = StyleSheet.create({
     marginTop: 6,
     alignSelf: 'flex-start',
   },
-  hiddenHintTxt: { fontSize: 12, color: '#D97706', ...FONTS.medium },
+  hiddenHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
 
   // ── Empty state ──
   emptyState: { alignItems: 'center', paddingVertical: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
-  emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
+  emptyIconChip: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: COLORS.chip,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  emptyTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.xs },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', paddingHorizontal: SPACING.xl },
 
   // ── Verification banner ──
   verifyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: COLORS.raised,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
@@ -504,24 +511,24 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: RADIUS.sm,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.chip,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   verifyBannerContent: { flex: 1, marginRight: 12 },
-  verifyBannerTitle: { fontSize: 14, ...FONTS.semibold, color: '#92400E', marginBottom: 2 },
-  verifyBannerText: { fontSize: 12, color: '#92400E', lineHeight: 17 },
+  verifyBannerTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.primaryDark, marginBottom: 2 },
+  verifyBannerText: { fontSize: 12, color: COLORS.primaryDark, lineHeight: 17 },
   verifyBannerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#D97706',
+    backgroundColor: COLORS.primary,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: RADIUS.pill,
   },
-  verifyBannerBtnTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
+  verifyBannerBtnTxt: { fontSize: 12, ...FONTS.semibold, color: COLORS.onPrimary },
 
   // ── Add new listing button (bottom) ──
   addNewBtn: {
@@ -529,10 +536,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.primary,
     paddingVertical: 14,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     marginTop: SPACING.md,
   },
-  addNewBtnTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
+  addNewBtnTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.onPrimary },
 });

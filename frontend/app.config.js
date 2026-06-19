@@ -7,12 +7,12 @@ module.exports = {
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
-    userInterfaceStyle: "light",
+    userInterfaceStyle: "dark",
     newArchEnabled: true,
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#0E0F12",
     },
     ios: {
       supportsTablet: true,
@@ -27,7 +27,7 @@ module.exports = {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#0E0F12",
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -44,6 +44,6 @@ module.exports = {
       googlePlacesApiKeyIos: process.env.GOOGLE_MAPS_API_KEY_IOS,
       googlePlacesApiKeyAndroid: process.env.GOOGLE_MAPS_API_KEY_ANDROID,
     },
-    plugins: ["@react-native-community/datetimepicker"],
+    plugins: ["@react-native-community/datetimepicker", "expo-font"],
   },
 };

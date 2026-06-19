@@ -679,7 +679,9 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       showsVerticalScrollIndicator={false}
     >
       <View style={wlSt.hero}>
-        <Text style={{ fontSize: 56, marginBottom: SPACING.md }}>🏠</Text>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md }}>
+          <Ionicons name="home-outline" size={32} color={COLORS.primary} />
+        </View>
         <Text style={wlSt.title}>List your spare room</Text>
         <Text style={wlSt.sub}>
           Turn your temporarily empty room into income.{'\n'}Takes just a few minutes.
@@ -687,19 +689,21 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       </View>
 
       {[
-        { icon: '📝', label: 'Property & room details' },
-        { icon: '👥', label: 'Flatmate profiles' },
-        { icon: '📸', label: 'Photos' },
-        { icon: '💰', label: 'Pricing & availability' },
+        { icon: 'create-outline' as const, label: 'Property & room details' },
+        { icon: 'people-outline' as const, label: 'Flatmate profiles' },
+        { icon: 'camera-outline' as const, label: 'Photos' },
+        { icon: 'pricetag-outline' as const, label: 'Pricing & availability' },
       ].map((s) => (
         <View key={s.label} style={wlSt.card}>
-          <Text style={{ fontSize: 26, marginRight: 12 }}>{s.icon}</Text>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+            <Ionicons name={s.icon} size={20} color={COLORS.primary} />
+          </View>
           <Text style={{ fontSize: 15, ...FONTS.medium, color: COLORS.text }}>{s.label}</Text>
         </View>
       ))}
 
       <TouchableOpacity style={wlSt.cta} onPress={onNext} activeOpacity={0.85}>
-        <Text style={{ color: '#fff', fontSize: 16, ...FONTS.semibold }}>Get started</Text>
+        <Text style={{ color: COLORS.onPrimary, fontSize: 16, ...FONTS.semibold }}>Get started</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -1408,7 +1412,7 @@ const fmSt = StyleSheet.create({
     padding: SPACING.sm,
     marginBottom: SPACING.md,
   },
-  bannerTxt: { fontSize: 13, color: '#92400E' },
+  bannerTxt: { fontSize: 13, color: COLORS.primaryDark },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1761,8 +1765,8 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
 }
 
 const phSt = StyleSheet.create({
-  tipBox: { backgroundColor: '#FFFBEB', borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
-  tipTxt: { fontSize: 12, color: '#92400E', lineHeight: 18 },
+  tipBox: { backgroundColor: COLORS.raised, borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
+  tipTxt: { fontSize: 12, color: COLORS.primaryDark, lineHeight: 18 },
 
   categoryCard: {
     borderWidth: 1,
@@ -1777,9 +1781,9 @@ const phSt = StyleSheet.create({
   categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
   categoryIcon: { fontSize: 18 },
   categoryName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
-  requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: '#FFF0EB', borderWidth: 1, borderColor: '#FECDB9' },
+  requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.border },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
-  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: '#ECFDF5' },
+  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentSoft },
   doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.success },
   addBtn: {
     width: 34,
@@ -2235,7 +2239,7 @@ function StepReview({
           <Image source={{ uri: coverUri }} style={rvSt.coverPhoto} resizeMode="cover" />
         ) : (
           <View style={rvSt.photoPlaceholder}>
-            <Text style={{ fontSize: 40 }}>🏠</Text>
+            <Ionicons name="home-outline" size={36} color={COLORS.textMut} />
           </View>
         )}
 

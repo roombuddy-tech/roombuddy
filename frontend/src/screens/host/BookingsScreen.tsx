@@ -32,16 +32,16 @@ interface BookingItem {
 const FILTERS = ['All', 'Active', 'Upcoming', 'Completed'];
 
 const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
-  active: { text: '#0D7377', bg: '#E6F5F0' },
-  accepted: { text: '#0D7377', bg: '#E6F5F0' },
-  pending: { text: '#B8860B', bg: '#FFF8E6' },
-  upcoming: { text: '#B8860B', bg: '#FFF8E6' },
-  completed: { text: '#5F7285', bg: '#F7F9FA' },
-  cancelled_by_guest: { text: '#EF4444', bg: '#FFF0F0' },
-  cancelled_by_host: { text: '#EF4444', bg: '#FFF0F0' },
-  rejected: { text: '#EF4444', bg: '#FFF0F0' },
-  expired: { text: '#94A3B8', bg: '#F7F9FA' },
-  no_show: { text: '#EF4444', bg: '#FFF0F0' },
+  active: { text: COLORS.success, bg: COLORS.accentSoft },
+  accepted: { text: COLORS.success, bg: COLORS.accentSoft },
+  pending: { text: COLORS.primaryDark, bg: COLORS.raised },
+  upcoming: { text: COLORS.primaryDark, bg: COLORS.raised },
+  completed: { text: COLORS.textSec, bg: COLORS.chip },
+  cancelled_by_guest: { text: COLORS.danger, bg: COLORS.raised },
+  cancelled_by_host: { text: COLORS.danger, bg: COLORS.raised },
+  rejected: { text: COLORS.danger, bg: COLORS.raised },
+  expired: { text: COLORS.textMut, bg: COLORS.chip },
+  no_show: { text: COLORS.danger, bg: COLORS.raised },
 };
 
 function formatDateRange(checkIn: string, checkOut: string): string {

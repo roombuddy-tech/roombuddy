@@ -29,11 +29,11 @@ import ProfileMenu from '../shared/ProfileMenu';
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
 
 const POPULAR_CITIES = [
-  { name: 'Bangalore', color: '#EDF1F7' },
-  { name: 'Mumbai', color: '#FEF6EE' },
-  { name: 'Pune', color: '#E8F0ED' },
-  { name: 'Hyderabad', color: '#F3EEFC' },
-  { name: 'Delhi NCR', color: '#FEF0F0' },
+  { name: 'Bangalore' },
+  { name: 'Mumbai' },
+  { name: 'Pune' },
+  { name: 'Hyderabad' },
+  { name: 'Delhi NCR' },
 ];
 
 const AMENITY_SHORT: Record<string, { icon: string; label: string }> = {
@@ -319,7 +319,9 @@ export default function HomeScreen() {
     </View>
   ) : (
     <View style={styles.emptyWrap}>
-      <Text style={{ fontSize: 48 }}>🏠</Text>
+      <View style={styles.emptyIconChip}>
+        <Ionicons name="home-outline" size={26} color={COLORS.primary} />
+      </View>
       <Text style={styles.emptyTitle}>No rooms found</Text>
       <Text style={styles.emptySub}>Try a different area or adjust your dates</Text>
     </View>
@@ -496,13 +498,8 @@ export default function HomeScreen() {
                   setShowCalendar(true);
                 }}
               >
-                <View style={[styles.cityCircle, { backgroundColor: city.color }]}>
-                  <Text style={styles.cityEmoji}>
-                    {city.name === 'Bangalore' ? '🏙️' :
-                     city.name === 'Mumbai' ? '🌊' :
-                     city.name === 'Pune' ? '⛰️' :
-                     city.name === 'Hyderabad' ? '🕌' : '🏛️'}
-                  </Text>
+                <View style={styles.cityCircle}>
+                  <Text style={styles.cityInitial}>{city.name.charAt(0)}</Text>
                 </View>
                 <Text style={styles.cityName}>{city.name}</Text>
               </TouchableOpacity>
@@ -513,13 +510,15 @@ export default function HomeScreen() {
           <Text style={styles.sectionHead}>Why RoomBuddy?</Text>
           <View style={styles.whyGrid}>
             {[
-              { emoji: '💰', title: 'Budget-friendly', sub: 'Rooms from ₹500/night' },
-              { emoji: '🍽️', title: 'Home meals', sub: 'Home-cooked food available' },
-              { emoji: '✅', title: 'Verified hosts', sub: 'ID verified for safety' },
-              { emoji: '📅', title: 'Flexible stays', sub: '1 night to 1 month' },
+              { icon: 'pricetag-outline' as const, title: 'Budget-friendly', sub: 'Rooms from ₹500/night' },
+              { icon: 'restaurant-outline' as const, title: 'Home meals', sub: 'Home-cooked food available' },
+              { icon: 'shield-checkmark-outline' as const, title: 'Verified hosts', sub: 'ID verified for safety' },
+              { icon: 'calendar-outline' as const, title: 'Flexible stays', sub: '1 night to 1 month' },
             ].map((w) => (
               <View key={w.title} style={styles.whyCard}>
-                <Text style={{ fontSize: 24, marginBottom: 6 }}>{w.emoji}</Text>
+                <View style={styles.whyIconWrap}>
+                  <Ionicons name={w.icon} size={20} color={COLORS.primary} />
+                </View>
                 <Text style={styles.whyTitle}>{w.title}</Text>
                 <Text style={styles.whySub}>{w.sub}</Text>
               </View>
@@ -530,9 +529,9 @@ export default function HomeScreen() {
           <Text style={styles.sectionHead}>How it works</Text>
           <View style={styles.howRow}>
             {[
-              { n: '1', title: 'Search', sub: 'Pick a city & dates', bg: COLORS.primaryAlpha, fg: COLORS.primary },
-              { n: '2', title: 'Book', sub: 'Reserve instantly', bg: COLORS.accentAlpha, fg: COLORS.accent },
-              { n: '3', title: 'Stay', sub: 'Enjoy your stay', bg: '#E8F0ED', fg: '#1B7A4E' },
+              { n: '1', title: 'Search', sub: 'Pick a city & dates', bg: COLORS.chip, fg: COLORS.primary },
+              { n: '2', title: 'Book', sub: 'Reserve instantly', bg: COLORS.chip, fg: COLORS.primary },
+              { n: '3', title: 'Stay', sub: 'Enjoy your stay', bg: COLORS.chip, fg: COLORS.primary },
             ].map((s, i) => (
               <React.Fragment key={s.n}>
                 {i > 0 && (
@@ -567,8 +566,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     marginBottom: SPACING.md,
   },
-  brand: { fontSize: 20, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
+  brand: { fontSize: 24, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5 },
+  brandAccent: { ...FONTS.serifItalic, color: COLORS.primary },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   switchBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -588,7 +587,7 @@ const styles = StyleSheet.create({
   avatarTxt: { color: '#fff', fontSize: 14, ...FONTS.bold },
 
   // ── Search form ──
-  pageTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.lg, marginTop: SPACING.sm },
+  pageTitle: { fontSize: 30, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5, marginBottom: SPACING.lg, marginTop: SPACING.sm },
 
   fieldLabel: {
     fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 4,
@@ -661,20 +660,27 @@ const styles = StyleSheet.create({
   pillTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   pillSub: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
 
-  sectionHead: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
+  sectionHead: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
   citiesRow: { gap: 14, paddingBottom: SPACING.xl },
   cityCard: { alignItems: 'center', width: 72 },
   cityCircle: {
     width: 64, height: 64, borderRadius: 32,
+    backgroundColor: COLORS.chip,
     justifyContent: 'center', alignItems: 'center', marginBottom: 6,
   },
   cityEmoji: { fontSize: 26 },
+  cityInitial: { fontSize: 22, ...FONTS.serif, color: COLORS.primary },
   cityName: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec, textAlign: 'center' },
 
   whyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },
   whyCard: {
-    width: '47%', backgroundColor: COLORS.bg,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md,
+    width: '47%', backgroundColor: COLORS.surface,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, padding: SPACING.md,
+  },
+  whyIconWrap: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.chip,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
   whyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   whySub: { fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
@@ -693,7 +699,7 @@ const styles = StyleSheet.create({
   },
   cardImg: { width: '100%', height: 180, backgroundColor: COLORS.surface },
   cardBody: { padding: SPACING.md },
-  cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  cardTitle: { fontSize: 17, ...FONTS.serif, color: COLORS.text, marginBottom: 2 },
   cardArea: { fontSize: 13, color: COLORS.textSec, marginBottom: 4 },
   cardDesc: { fontSize: 13, color: COLORS.textMut, lineHeight: 18, marginBottom: 8 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
@@ -708,12 +714,17 @@ const styles = StyleSheet.create({
   },
   mealTagText: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardPrice: { fontSize: 17, ...FONTS.bold, color: COLORS.text },
+  cardPrice: { fontSize: 20, ...FONTS.serif, color: COLORS.text },
   cardPriceUnit: { fontSize: 12, ...FONTS.regular, color: COLORS.textSec },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   ratingText: { fontSize: 12, color: COLORS.text, ...FONTS.medium },
 
   emptyWrap: { alignItems: 'center', paddingVertical: SPACING.xxl },
-  emptyTitle: { fontSize: 18, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.md },
+  emptyIconChip: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: COLORS.chip,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  emptyTitle: { fontSize: 18, ...FONTS.serif, color: COLORS.text, marginTop: SPACING.md },
   emptySub: { fontSize: 14, color: COLORS.textMut, marginTop: 4 },
 });

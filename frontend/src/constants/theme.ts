@@ -1,47 +1,181 @@
-export const COLORS = {
-  // Primary - Teal
-  primary: '#0D7377',
-  primaryLight: '#14919B',
-  primaryDark: '#0A5C5F',
-  primaryDeep: '#072829',
+// ─────────────────────────────────────────────────────────────────────────
+// RoomBuddy design tokens — Terracotta (light) + Luxe Dark
+// Active palette: Luxe Dark. To revert to light, set `COLORS = COLORS_LIGHT`.
+// ─────────────────────────────────────────────────────────────────────────
 
-  // Accent - Coral
-  accent: '#FF6B4A',
-  accentHover: '#E85A3A',
+const COLORS_LIGHT = {
+  // Brand
+  primary: '#B85C38',
+  primaryDark: '#8F4426',
+  primaryDeep: '#5E2E1A',
+  onPrimary: '#FBF4EC',
 
-  // Warm backgrounds
-  warm: '#FFF8F0',
-  warmAlt: '#FFF1E6',
+  // Secondary accent (sparing — trust, meals, success-ish)
+  accent: '#3F5145',
+  accentSoft: '#E4EAE2',
 
-  // Neutrals
-  bg: '#FFFFFF',
-  surface: '#F7F9FA',
-  border: '#E8ECEF',
+  // Grounds
+  canvas: '#E7E2D8',
+  bg: '#F4F0EA',
+  surface: '#FFFFFF',
+  raised: '#FBF8F3',
 
-  // Text
-  text: '#1A2B3C',
-  textSec: '#5F7285',
-  textMut: '#94A3B8',
+  // Ink / text
+  text: '#2A2420',
+  textSec: '#6E6458',
+  textMut: '#A89C8B',
 
-  // Status
-  success: '#10B981',
-  danger: '#EF4444',
-  star: '#FFB800',
-  info: '#3B82F6',
+  // Lines
+  border: '#E8DFD2',
+  borderSubtle: '#EFE8DC',
 
-  // Transparent
-  overlay: 'rgba(0,0,0,0.5)',
-  primaryAlpha: 'rgba(13,115,119,0.08)',
-  accentAlpha: 'rgba(255,107,74,0.08)',
-};
+  // Support
+  chip: '#F1E9DD',
+  chipInk: '#7A6A57',
+  star: '#C8923C',
+  success: '#3F7A52',
+  danger: '#C2452F',
+
+  // Overlays
+  overlay: 'rgba(36,26,18,0.45)',
+  primaryAlpha: 'rgba(184,92,56,0.08)',
+
+  // ── Backward-compat aliases (legacy key names → new palette) ──
+  primaryLight: '#B85C38',
+  accentHover: '#3F5145',
+  warm: '#F4F0EA',
+  warmAlt: '#FBF8F3',
+  info: '#3F5145',
+  accentAlpha: 'rgba(184,92,56,0.08)',
+} as const;
+
+const COLORS_DARK = {
+  primary: '#C9A24B',
+  primaryDark: '#A9863A',
+  primaryDeep: '#7E6126',
+  onPrimary: '#15120A',
+
+  accent: '#8FA58C',
+  accentSoft: 'rgba(143,165,140,0.14)',
+
+  canvas: '#070809',
+  bg: '#0E0F12',
+  surface: '#16181C',
+  raised: '#1D2026',
+
+  text: '#F3F1EC',
+  textSec: '#AEB2BA',
+  textMut: '#71757E',
+
+  border: 'rgba(255,255,255,0.09)',
+  borderSubtle: 'rgba(255,255,255,0.06)',
+
+  chip: 'rgba(201,162,75,0.13)',
+  chipInk: '#D9BE7E',
+  star: '#C9A24B',
+  success: '#7FB890',
+  danger: '#E0795F',
+
+  overlay: 'rgba(0,0,0,0.55)',
+  primaryAlpha: 'rgba(201,162,75,0.12)',
+
+  // Legacy aliases
+  primaryLight: '#C9A24B',
+  accentHover: '#8FA58C',
+  warm: '#0E0F12',
+  warmAlt: '#1D2026',
+  info: '#8FA58C',
+  accentAlpha: 'rgba(201,162,75,0.12)',
+} as const;
+
+// Active palette — swap to COLORS_LIGHT for Terracotta.
+export const COLORS = COLORS_DARK;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Typography — Newsreader (serif, headlines/prices) + Hanken Grotesk (UI)
+// ─────────────────────────────────────────────────────────────────────────
 
 export const FONTS = {
-  regular: { fontWeight: '400' as const },
-  medium: { fontWeight: '500' as const },
-  semibold: { fontWeight: '600' as const },
-  bold: { fontWeight: '700' as const },
-  extrabold: { fontWeight: '800' as const },
-};
+  // Serif — headlines & prices only
+  serifLight: { fontFamily: 'Newsreader_300Light' },
+  serif: { fontFamily: 'Newsreader_400Regular' },
+  serifMedium: { fontFamily: 'Newsreader_500Medium' },
+  serifItalic: { fontFamily: 'Newsreader_400Regular_Italic' },
+
+  // Sans — everything else
+  regular: { fontFamily: 'HankenGrotesk_400Regular' },
+  medium: { fontFamily: 'HankenGrotesk_500Medium' },
+  semibold: { fontFamily: 'HankenGrotesk_600SemiBold' },
+  bold: { fontFamily: 'HankenGrotesk_700Bold' },
+
+  // Legacy alias — spec drops extrabold; map to bold to keep call sites alive
+  extrabold: { fontFamily: 'HankenGrotesk_700Bold' },
+} as const;
+
+export const TYPOGRAPHY = {
+  display: {
+    ...FONTS.serifLight,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.5,
+    color: COLORS.text,
+  },
+  title: {
+    ...FONTS.serif,
+    fontSize: 23,
+    lineHeight: 30,
+    letterSpacing: -0.2,
+    color: COLORS.text,
+  },
+  headline: {
+    ...FONTS.serif,
+    fontSize: 17,
+    lineHeight: 24,
+    color: COLORS.text,
+  },
+  price: {
+    ...FONTS.serif,
+    fontSize: 20,
+    lineHeight: 26,
+    color: COLORS.text,
+  },
+  bodyLg: {
+    ...FONTS.regular,
+    fontSize: 16,
+    lineHeight: 24,
+    color: COLORS.text,
+  },
+  body: {
+    ...FONTS.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: COLORS.text,
+  },
+  label: {
+    ...FONTS.semibold,
+    fontSize: 12.5,
+    lineHeight: 16,
+    color: COLORS.text,
+  },
+  caption: {
+    ...FONTS.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: COLORS.textSec,
+  },
+  eyebrow: {
+    ...FONTS.semibold,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase' as const,
+    color: COLORS.textSec,
+  },
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Spacing / radius / shadow
+// ─────────────────────────────────────────────────────────────────────────
 
 export const SPACING = {
   xs: 4,
@@ -53,33 +187,33 @@ export const SPACING = {
 };
 
 export const RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 28,
   pill: 9999,
 };
 
 export const SHADOW = {
   sm: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
     elevation: 2,
   },
   md: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 26,
+    elevation: 5,
   },
   lg: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.7,
+    shadowRadius: 44,
+    elevation: 9,
   },
 };
