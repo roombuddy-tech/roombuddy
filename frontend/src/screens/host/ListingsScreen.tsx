@@ -43,6 +43,7 @@ interface DraftData {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   live: { label: 'Listed', color: '#10B981' },
+  hidden: { label: 'Hidden', color: '#D97706' },
   pending: { label: 'Pending', color: '#F59E0B' },
   draft: { label: 'Draft', color: '#F59E0B' },
   paused: { label: 'Paused', color: '#94A3B8' },
@@ -231,7 +232,7 @@ export default function ListingsScreen() {
             )}
 
             {/* Aadhaar verification banner */}
-            {!aadhaarVerified && listings.some((l) => l.status === 'pending') && (
+            {!aadhaarVerified && listings.some((l) => l.status === 'pending' || l.visible_to_guests === false) && (
               <View style={styles.verifyBanner}>
                 <View style={styles.verifyBannerIcon}>
                   <Ionicons
@@ -277,7 +278,8 @@ export default function ListingsScreen() {
                   </Text>
                 )}
                 {listings.map((item) => {
-                  const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.draft;
+                  const isHidden = item.status === 'live' && item.visible_to_guests === false;
+                  const statusConfig = STATUS_CONFIG[isHidden ? 'hidden' : item.status] || STATUS_CONFIG.draft;
                   return (
                     <TouchableOpacity
                       key={item.listing_id}
@@ -323,19 +325,18 @@ export default function ListingsScreen() {
                             <Text style={styles.serverDraftHintTxt}>Tap to continue editing</Text>
                           </View>
                         )}
-                        {item.status === 'live' && item.visible_to_guests === false && (
-                        <TouchableOpacity
-                          style={styles.verifyBanner}
-                          activeOpacity={0.8}
-                          onPress={() => navigation.navigate('Verification')}
-                        >
-                          <Ionicons name="shield-outline" size={16} color={COLORS.accent} />
-                          <Text style={styles.verifyBannerText}>
-                            Verify your Aadhaar to make this listing visible to guests
-                          </Text>
-                          <Ionicons name="chevron-forward" size={16} color={COLORS.accent} />
-                        </TouchableOpacity>
-                      )}
+                        {isHidden && (
+                          <TouchableOpacity
+                            style={styles.hiddenHint}
+                            activeOpacity={0.6}
+                            onPress={() => setShowVerification(true)}
+                            hitSlop={8}
+                          >
+                            <Ionicons name="shield-outline" size={13} color="#D97706" />
+                            <Text style={styles.hiddenHintTxt}>Verify Aadhaar to publish</Text>
+                            <Ionicons name="chevron-forward" size={13} color="#D97706" />
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </TouchableOpacity>
                   );
@@ -392,12 +393,6 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     ...SHADOW.sm,
   },
-  verifyBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10,
-    borderRadius: 10, backgroundColor: 'rgba(255,107,74,0.10)',
-    borderWidth: 1, borderColor: 'rgba(255,107,74,0.25)',
-  },
-  verifyBannerText: { flex: 1, fontSize: 12, ...FONTS.medium, color: COLORS.accent },
   draftIconWrap: {
     width: 48,
     height: 48,
@@ -477,6 +472,15 @@ const styles = StyleSheet.create({
 
   serverDraftHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   serverDraftHintTxt: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
+
+  hiddenHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  hiddenHintTxt: { fontSize: 12, color: '#D97706', ...FONTS.medium },
 
   // ── Empty state ──
   emptyState: { alignItems: 'center', paddingVertical: 60 },
