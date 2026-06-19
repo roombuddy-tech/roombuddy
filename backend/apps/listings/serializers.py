@@ -14,6 +14,7 @@ class ListingItemSerializer(serializers.Serializer):
     review_count = serializers.IntegerField()
     total_bookings = serializers.IntegerField()
     cover_photo_url = serializers.CharField(allow_null=True)
+    visible_to_guests = serializers.BooleanField(required=False, default=False)
 
 
 class HostListingsResponseSerializer(serializers.Serializer):

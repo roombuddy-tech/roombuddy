@@ -1,5 +1,8 @@
 from django.contrib import admin
 from apps.reviews.models import Review
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Review)

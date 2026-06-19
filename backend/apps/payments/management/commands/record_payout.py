@@ -28,6 +28,9 @@ from django.utils import timezone
 from apps.bookings.models import Booking
 from apps.payments.models import Payout
 from apps.users.models import User, PayoutAccount
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

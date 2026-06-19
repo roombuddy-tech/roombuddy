@@ -20,6 +20,9 @@ shapes and our uniform response contract:
 """
 from rest_framework.views import exception_handler
 from common.error_codes import ErrorCode
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 _GENERIC_CODE = "ERROR"

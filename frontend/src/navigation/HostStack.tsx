@@ -1,14 +1,22 @@
+import { useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import BookingDetailScreen from '../screens/host/BookingDetailScreen';
 import ListingEditorScreen from '../screens/host/ListingEditorScreen';
+import ChatScreen from '../screens/shared/ChatScreen';
 import ListingDetailScreen from '../screens/shared/ListingDetailScreen';
 import NotificationPreferencesScreen from '../screens/shared/NotificationPreferencesScreen';
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
+import VerificationScreen from '../screens/shared/VerificationScreen';
 import HostTabs from './HostTabs';
 import type { HostStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<HostStackParamList>();
+
+function VerificationRoute() {
+  const navigation = useNavigation<any>();
+  return <VerificationScreen visible onClose={() => navigation.goBack()} />;
+}
 
 export default function HostStack() {
   return (
@@ -23,6 +31,8 @@ export default function HostStack() {
       <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }}/>
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Notification preferences' }}/>
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="Verification" component={VerificationRoute} />
     </Stack.Navigator>
   );
 }

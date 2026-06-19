@@ -1,27 +1,19 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { COLORS, FONTS } from '../constants/theme';
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import HomeScreen from '../screens/guest/HomeScreen';
 import MyStaysScreen from '../screens/guest/MyStaysScreen';
+import MessagesScreen from '../screens/shared/MessagesScreen';
 import type { GuestTabParamList } from './types';
 
-function PlaceholderScreen({ title, icon }: { title: string; icon: string }) {
-  return (
-    <View style={styles.placeholder}>
-      <MaterialCommunityIcons name={icon as any} size={48} color={COLORS.border} />
-      <Text style={styles.placeholderText}>{title}</Text>
-      <Text style={styles.placeholderSub}>Coming soon</Text>
-    </View>
-  );
-}
-
-function MessagesScreen() { return <PlaceholderScreen title="Messages" icon="message-text-outline" />; }
 
 const Tab = createBottomTabNavigator<GuestTabParamList>();
 
 export default function GuestTabs() {
+  const unreadMessages = useUnreadMessages();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -70,6 +62,7 @@ export default function GuestTabs() {
         component={MessagesScreen}
         options={{
           tabBarLabel: 'Messages',
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
           tabBarIcon: ({ focused, color }) => (
             <View style={styles.iconWrap}>
               <MaterialCommunityIcons

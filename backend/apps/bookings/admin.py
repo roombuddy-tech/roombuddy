@@ -1,5 +1,8 @@
 from django.contrib import admin
 from apps.bookings.models import Booking, BookingStatusHistory
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Booking)

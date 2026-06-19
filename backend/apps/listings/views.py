@@ -15,6 +15,9 @@ from apps.listings.services import (
 )
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class HostListingsListView(APIView):
@@ -50,8 +53,6 @@ class CreateListingView(APIView):
         responses={201: CreateListingResponseSerializer},
     )
     def post(self, request):
-        import logging
-        logger = logging.getLogger(__name__)
         s = CreateListingRequestSerializer(data=request.data)
         if not s.is_valid():
             logger.warning("Listing validation errors: %s", s.errors)

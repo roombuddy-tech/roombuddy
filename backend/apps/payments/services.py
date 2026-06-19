@@ -29,6 +29,7 @@ from apps.notifications.services import dispatch
 from common.error_codes import ErrorCode
 from common.redis_utils import idempotency_seen
 from third_party import razorpay as rzp
+from apps.properties.models import PropertyPhoto
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ def create_order_for_booking(booking: Booking) -> dict:
     Creates a Razorpay order for the booking with the configured payment window.
     Sets `booking.expires_at` so abandoned bookings auto-free their dates.
     """
+    logger.info("create_order_for_booking booking_id=%s", getattr(booking, "id", None))
     if booking.status not in (Booking.Status.PENDING, Booking.Status.ACCEPTED):
         raise ValidationError({
             "error": "Booking is not in a payable state",
@@ -131,6 +133,7 @@ def verify_and_capture(
     truth is the webhook. If verify succeeds but the webhook is delayed,
     the reconciliation cron will catch up.
     """
+    logger.info("verify_and_capture razorpay_order_id=%s razorpay_payment_id=%s", razorpay_order_id, razorpay_payment_id)
     if not rzp.verify_payment_signature(
         razorpay_order_id, razorpay_payment_id, razorpay_signature,
     ):
@@ -182,6 +185,7 @@ def handle_webhook(
     3. Check Redis idempotency (so duplicate retries are dropped)
     4. Dispatch to the appropriate handler based on event_type
     """
+    logger.info("handle_webhook event_type=%s event_id=%s", event_type, event_id)
     signature_valid = rzp.verify_webhook_signature(raw_body, signature)
 
     event = WebhookEvent.objects.create(
@@ -223,6 +227,7 @@ def handle_webhook(
 
 def _dispatch_webhook_event(event_type: str, payload: dict) -> None:
     """Route an event to its handler based on type."""
+    logger.info("_dispatch_webhook_event event_type=%s", event_type)
     if event_type in (
         WebhookEventType.PAYMENT_CAPTURED,
         WebhookEventType.ORDER_PAID,  # sometimes fires alongside payment.captured
@@ -239,6 +244,7 @@ def _dispatch_webhook_event(event_type: str, payload: dict) -> None:
 
 
 def _handle_payment_captured(payload: dict) -> None:
+    logger.info("_handle_payment_captured")
     pe = payload.get("payload", {}).get("payment", {}).get("entity", {})
     order_id = pe.get("order_id")
     payment_id = pe.get("id")
@@ -268,6 +274,7 @@ def _handle_payment_captured(payload: dict) -> None:
 
 
 def _handle_payment_failed(payload: dict) -> None:
+    logger.info("_handle_payment_failed")
     pe = payload.get("payload", {}).get("payment", {}).get("entity", {})
     order_id = pe.get("order_id")
 
@@ -303,6 +310,7 @@ def _handle_payment_failed(payload: dict) -> None:
 
 
 def _handle_refund_processed(payload: dict) -> None:
+    logger.info("_handle_refund_processed")
     re = payload.get("payload", {}).get("refund", {}).get("entity", {})
     refund_id = re.get("id")
 
@@ -341,6 +349,7 @@ def _handle_refund_processed(payload: dict) -> None:
 
 
 def _handle_refund_failed(payload: dict) -> None:
+    logger.info("_handle_refund_failed")
     re = payload.get("payload", {}).get("refund", {}).get("entity", {})
     refund_id = re.get("id")
     try:
@@ -359,6 +368,7 @@ def initiate_refund_for_cancelled_booking(
     booking: Booking, amount: Decimal, cancelled_by: str,
 ) -> Refund | None:
     """Create a refund record and call Razorpay to actually refund the money."""
+    logger.info("initiate_refund_for_cancelled_booking booking_id=%s amount=%s", getattr(booking, "id", None), amount)
     if amount <= 0:
         logger.info(f"No refund due for booking {booking.booking_code}")
         return None
@@ -411,6 +421,7 @@ def _mark_booking_paid_and_maybe_accept(booking: Booking, by_user) -> None:
 
     Caller must wrap this in a transaction.
     """
+    logger.info("_mark_booking_paid_and_maybe_accept booking_id=%s", getattr(booking, "id", None))
     booking.payment_status = Booking.PaymentStatus.PAID
 
     if (
@@ -453,7 +464,6 @@ def _get_cover_photo(listing):
         return None
 
     # Lazy import to avoid circular imports
-    from apps.properties.models import PropertyPhoto
 
     cover = (
         PropertyPhoto.objects
@@ -519,7 +529,6 @@ def _build_booking_context(booking) -> dict:
     # FLEXIBLE = until check-in, MODERATE = 5 days before, STRICT = 14 days before.
     free_cancel_text = "the check-in date"
     try:
-        from datetime import timedelta
         policy = booking.cancellation_policy
         if policy == booking.CancellationPolicy.MODERATE:
             deadline = booking.check_in_date - timedelta(days=5)
@@ -530,11 +539,13 @@ def _build_booking_context(booking) -> dict:
         else:  # FLEXIBLE or None
             free_cancel_text = booking.check_in_date.strftime("%d %b %Y")
     except Exception:
+        logger.exception("_build_booking_context failed")
         pass
 
     return {
         # Display fields
         "property_name": listing.title,
+        "booking_id": str(booking.id),
         "booking_reference": booking.booking_code,
         "check_in": booking.check_in_date.strftime("%a, %d %b %Y"),
         "check_out": booking.check_out_date.strftime("%a, %d %b %Y"),
@@ -574,14 +585,14 @@ def _notify_payment_succeeded(booking, payment) -> None:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
             recipients=[guest],
-            context={**base, "recipient_name": _user_first_name(guest)},
+            context={**base, "recipient_name": _user_first_name(guest), "recipient_role": "guest"},
             idempotency_event_id=idem,
         )
     if host:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
             recipients=[host],
-            context={**base, "recipient_name": _user_first_name(host)},
+            context={**base, "recipient_name": _user_first_name(host), "recipient_role": "host"},
             idempotency_event_id=idem,
         )
 

@@ -4,6 +4,7 @@ import logging
 from io import BytesIO
 from PIL import Image
 from pathlib import Path
+from django.conf import settings
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,6 @@ def get_photo_url(url: str, expires_in: int = 3600) -> str:
         return _generate_presigned_url(key, expires_in, bucket, region)
 
     if url.startswith("/media/"):
-        from django.conf import settings
         site_url = getattr(settings, "SITE_URL", "http://localhost:8000").rstrip("/")
         return f"{site_url}{url}"
 
@@ -93,6 +93,7 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
         file_obj.seek(0)
         image = Image.open(file_obj)
     except Exception:
+        logger.exception("upload_image failed")
         raise StorageError("Invalid image file. Please upload a JPEG or PNG.")
 
     if image.mode in ("RGBA", "P"):
@@ -160,7 +161,6 @@ def _image_to_buffer(image: Image.Image, quality: int = 85) -> BytesIO:
 # ─── Local storage (dev) ──────────────────────────────────────
 
 def _upload_local(buffer: BytesIO, key: str) -> str:
-    from django.conf import settings
     local_media_dir = os.getenv("LOCAL_MEDIA_DIR", "media")
     media_dir = Path(settings.BASE_DIR) / local_media_dir
     file_path = media_dir / key
@@ -174,7 +174,6 @@ def _upload_local(buffer: BytesIO, key: str) -> str:
 
 
 def _delete_local(key: str) -> bool:
-    from django.conf import settings
     local_media_dir = os.getenv("LOCAL_MEDIA_DIR", "media")
     file_path = Path(settings.BASE_DIR) / local_media_dir / key
     thumb_path = Path(settings.BASE_DIR) / local_media_dir / key.replace(key.split("/")[-1], f"thumbs/{key.split('/')[-1]}")

@@ -7,6 +7,9 @@ All error responses follow the shape:
 Frontend can switch on `code` for i18n/UX without depending on the
 human-readable message.
 """
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorCode:

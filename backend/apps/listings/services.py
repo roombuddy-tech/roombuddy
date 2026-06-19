@@ -9,6 +9,15 @@ from apps.listings.serializers import CreateListingRequestSerializer
 from apps.properties.models import Property, PropertyFlatmate
 from apps.rooms.models import Room
 from apps.users.models import User
+from apps.properties.models import PropertyPhoto
+import logging
+import math
+from datetime import date as date_type
+from third_party.storage import get_photo_url
+from third_party.maps import geocode_address
+
+logger = logging.getLogger(__name__)
+
 
 
 def get_listing_form_data(user: User, listing_id: str) -> dict | None:
@@ -69,8 +78,6 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
     host_fm = next((f for f in flatmates_qs if f["name"] == "__host__"), None)
     real_flatmates = [f for f in flatmates_qs if f["name"] != "__host__"]
 
-    from apps.properties.models import PropertyPhoto
-    from third_party.storage import get_photo_url
 
     # Area key → frontend category key
     area_to_frontend = {
@@ -160,6 +167,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
 
 def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
     """Update all fields of an existing listing atomically."""
+    logger.info("update_listing user_id=%s listing_id=%s", getattr(user, "id", None), listing_id)
     serializer = CreateListingRequestSerializer(data=data)
     serializer.is_valid(raise_exception=True)
     d = serializer.validated_data
@@ -194,7 +202,6 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         prop.save()
 
         if not prop.latitude:
-            from third_party.maps import geocode_address
             geo = geocode_address(f"{prop.address_line1}, {prop.city_name}")
             if geo:
                 prop.latitude = geo["latitude"]
@@ -278,6 +285,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
 
 def delete_listing(user: User, listing_id: str) -> bool:
     """Delete a listing and its associated property, room, and related data."""
+    logger.info("delete_listing user_id=%s listing_id=%s", getattr(user, "id", None), listing_id)
     try:
         listing = Listing.objects.select_related("property", "room").get(id=listing_id, host_user=user)
     except Listing.DoesNotExist:
@@ -293,6 +301,7 @@ def delete_listing(user: User, listing_id: str) -> bool:
 
 def update_blocked_dates(user: User, listing_id: str, blocked_dates: list[dict]) -> dict | None:
     """Replace all blocked dates for a listing."""
+    logger.info("update_blocked_dates user_id=%s listing_id=%s", getattr(user, "id", None), listing_id)
     try:
         listing = Listing.objects.get(id=listing_id, host_user=user)
     except Listing.DoesNotExist:
@@ -319,6 +328,7 @@ def update_blocked_dates(user: User, listing_id: str, blocked_dates: list[dict])
 
 def toggle_snooze(user: User, listing_id: str) -> dict | None:
     """Toggle a listing between live and snoozed status."""
+    logger.info("toggle_snooze user_id=%s listing_id=%s", getattr(user, "id", None), listing_id)
     try:
         listing = Listing.objects.get(id=listing_id, host_user=user)
     except Listing.DoesNotExist:
@@ -337,7 +347,6 @@ def toggle_snooze(user: User, listing_id: str) -> dict | None:
 
 def get_host_listings(user: User) -> list[dict]:
     """Returns all listings owned by a host."""
-    from apps.properties.models import PropertyPhoto
 
     listings = Listing.objects.filter(
         host_user=user
@@ -345,11 +354,18 @@ def get_host_listings(user: User) -> list[dict]:
 
     results = [_listing_to_dict(listing) for listing in listings]
     _attach_cover_photos(listings, results)
+
+    profile = getattr(user, "profile", None)
+    host_verified = bool(profile and profile.id_verification_status == "approved")
+    for listing, r in zip(listings, results):
+        r["visible_to_guests"] = host_verified and listing.status == Listing.Status.LIVE
+
     return results
 
 
 def create_listing(user: User, data: dict) -> dict:
     """Create a full listing atomically from wizard form data."""
+    logger.info("create_listing user_id=%s", getattr(user, "id", None))
     serializer = CreateListingRequestSerializer(data=data)
     serializer.is_valid(raise_exception=True)
     d = serializer.validated_data
@@ -377,7 +393,6 @@ def create_listing(user: User, data: dict) -> dict:
         )
 
         if not prop.latitude:
-            from third_party.maps import geocode_address
             geo = geocode_address(f"{prop.address_line1}, {prop.city_name}")
             if geo:
                 prop.latitude = geo["latitude"]
@@ -507,6 +522,7 @@ def _format_time(t) -> str:
         dt = datetime.strptime(str(t)[:5], "%H:%M")
         return dt.strftime("%I:%M %p").lstrip("0")
     except Exception:
+        logger.exception("_format_time failed")
         return ""
 
 
@@ -546,12 +562,11 @@ def _get_area_name(listing: Listing) -> str:
             return prop.formatted_address.split(",")[0]
         return prop.apartment_name or prop.city_name
     except Exception:
+        logger.exception("_get_area_name failed")
         return ""
 
 
 def _attach_cover_photos(listings, results: list[dict]):
-    from apps.properties.models import PropertyPhoto
-    from third_party.storage import get_photo_url
 
     if not results:
         return
@@ -585,11 +600,11 @@ def search_guest_listings(
     lng: float | None = None,
     radius_km: float = 5.0,
 ) -> list[dict]:
-    from datetime import date as date_type
 
     qs = (
         Listing.objects
         .filter(status=Listing.Status.LIVE)
+        .filter(host_user__profile__id_verification_status="approved")
         .select_related("property", "room")
         .prefetch_related("listing_amenities__amenity")
         .order_by("-average_rating", "-created_at")
@@ -623,7 +638,6 @@ def search_guest_listings(
         return combined
 
     if lat is not None and lng is not None:
-        import math
         effective_radius = max(radius_km, 15.0)
         delta_lat = effective_radius / 111.0
         delta_lng = effective_radius / (111.0 * math.cos(math.radians(lat)))
@@ -665,13 +679,12 @@ def search_guest_listings(
 
 
 def get_guest_listing_detail(listing_id: str) -> dict | None:
-    from apps.properties.models import PropertyPhoto
-    from third_party.storage import get_photo_url
 
     try:
         listing = (
             Listing.objects
             .filter(status=Listing.Status.LIVE)
+            .filter(host_user__profile__id_verification_status="approved")
             .select_related("property", "room", "house_rules", "host_user")
             .prefetch_related("listing_amenities__amenity")
             .get(id=listing_id)
@@ -721,6 +734,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         profile = listing.host_user.profile
         host_name = f"{profile.first_name} {profile.last_name[0]}." if profile.last_name else profile.first_name
     except Exception:
+        logger.exception("get_guest_listing_detail failed")
         pass
 
     # Food

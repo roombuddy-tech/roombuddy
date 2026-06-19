@@ -32,6 +32,7 @@ from common.authentication import JWTAuthentication
 from common.constants import WEBHOOK_DEFAULT_EVENT_TYPE
 from common.error_codes import ErrorCode
 from common.permissions import IsAuthenticated
+from django.db.models import Sum
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +191,6 @@ class HostPayoutsView(APIView):
             })
 
         # Summary
-        from django.db.models import Sum
         total_paid = Payout.objects.filter(
             host_user=request.user,
             status=Payout.Status.COMPLETED,
@@ -208,4 +208,5 @@ def _get_guest_name(booking):
         profile = booking.guest_user.profile
         return f"{profile.first_name} {profile.last_name}".strip() or "Guest"
     except Exception:
+        logger.exception("_get_guest_name failed")
         return "Guest"

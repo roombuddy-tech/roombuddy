@@ -8,6 +8,7 @@ class NotificationChannel(models.TextChoices):
     EMAIL = "email", "Email"
     SMS = "sms", "SMS"
     PUSH = "push", "Push"
+    IN_APP = "in_app", "In-app"
     # WHATSAPP = "whatsapp", "WhatsApp"  # phase 2
 
 
@@ -31,6 +32,9 @@ class EventType(models.TextChoices):
     BOOKING_HOST_CANCELLED = "booking.host_cancelled", "Host cancelled booking"
     BOOKING_REFUND_INITIATED = "booking.refund_initiated", "Refund initiated"
     BOOKING_REFUND_COMPLETED = "booking.refund_completed", "Refund completed"
+    MESSAGE_RECEIVED = "message.received", "New message received"
+    ID_VERIFICATION_APPROVED = "id_verification.approved", "ID verification approved"
+    ID_VERIFICATION_REJECTED = "id_verification.rejected", "ID verification rejected"
 
 
 class NotificationTemplate(models.Model):

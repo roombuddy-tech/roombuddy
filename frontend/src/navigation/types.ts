@@ -16,6 +16,7 @@ export type HostTabParamList = {
   Listing: undefined;
   Bookings: undefined;
   Earnings: undefined;
+  Messages: undefined;
 };
 
 export type HostStackParamList = {
@@ -37,6 +38,8 @@ export type HostStackParamList = {
   GuestProfile: { userId: string };
   Notifications: undefined;
   NotificationPreferences: undefined;
+  Chat: { conversationId: string; title?: string; subtitle?: string };
+  Verification: undefined;
 };
 
 export type GuestStackParamList = {
@@ -66,4 +69,5 @@ export type GuestStackParamList = {
   };
   Notifications: undefined;
   NotificationPreferences: undefined;
+  Chat: { conversationId: string; title?: string; subtitle?: string };
 };

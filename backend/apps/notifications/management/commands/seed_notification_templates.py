@@ -1,6 +1,9 @@
 from django.core.management.base import BaseCommand
 
 from apps.notifications.models import EventType, NotificationChannel, NotificationTemplate
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 TEMPLATES = [

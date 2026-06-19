@@ -11,6 +11,9 @@ Usage:
 from django.core.management.base import BaseCommand, CommandError
 from apps.users.models import User, UserProfile
 from apps.users.services import review_id_verification, get_pending_verifications, AuthServiceError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

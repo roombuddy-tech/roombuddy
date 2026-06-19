@@ -1,4 +1,4 @@
-export type NotificationChannel = 'email' | 'sms' | 'push';
+export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app';
 
 export type NotificationStatus =
   | 'pending'
@@ -19,6 +19,7 @@ export interface AppNotification {
   created_at: string;
   sent_at: string | null;
   read_at: string | null;
+  payload?: Record<string, any> | null;
 }
 
 export interface NotificationListResponse {

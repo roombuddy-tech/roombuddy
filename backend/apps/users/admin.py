@@ -1,5 +1,11 @@
 from django.contrib import admin
 from apps.users.models import User, UserProfile, UserSession, OTPCode
+import logging
+from django.utils.html import format_html
+from django.utils import timezone
+from third_party.storage import get_photo_url
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(User)
@@ -36,7 +42,6 @@ class UserProfileAdmin(admin.ModelAdmin):
     )
 
     def id_status_badge(self, obj):
-        from django.utils.html import format_html
         colors = {
             "not_submitted": "#888",
             "pending": "#F59E0B",
@@ -51,18 +56,14 @@ class UserProfileAdmin(admin.ModelAdmin):
     id_status_badge.short_description = "ID Status"
 
     def aadhaar_preview(self, obj):
-        from django.utils.html import format_html
         if obj.aadhaar_photo_url:
-            from third_party.storage import get_photo_url
             url = get_photo_url(obj.aadhaar_photo_url)
             return format_html('<img src="{}" style="max-width:400px;max-height:300px;border-radius:8px;border:1px solid #ddd;" />', url)
         return "No Aadhaar photo uploaded"
     aadhaar_preview.short_description = "Aadhaar Photo"
 
     def selfie_preview(self, obj):
-        from django.utils.html import format_html
         if obj.selfie_photo_url:
-            from third_party.storage import get_photo_url
             url = get_photo_url(obj.selfie_photo_url)
             return format_html('<img src="{}" style="max-width:300px;max-height:300px;border-radius:8px;border:1px solid #ddd;" />', url)
         return "No selfie uploaded"
@@ -71,7 +72,6 @@ class UserProfileAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if change and "id_verification_status" in form.changed_data:
             if obj.id_verification_status in ("approved", "rejected"):
-                from django.utils import timezone
                 obj.id_reviewed_at = timezone.now()
                 obj.id_reviewed_by = str(request.user)
         super().save_model(request, obj, form, change)
@@ -80,7 +80,6 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     @admin.action(description="Approve selected ID verifications")
     def approve_verifications(self, request, queryset):
-        from django.utils import timezone
         updated = queryset.filter(id_verification_status="pending").update(
             id_verification_status="approved",
             id_rejection_reason=None,

@@ -48,6 +48,7 @@ def create_order(
     enforces its own expiry via `booking.expires_at`. This argument is kept so
     callers can document intent.
     """
+    logger.info("create_order amount=%s", amount)
     amount_paise = int(Decimal(amount) * PAISE_PER_RUPEE)
     provider = settings.PAYMENT_PROVIDER
 
@@ -65,6 +66,7 @@ def verify_payment_signature(order_id: str, payment_id: str, signature: str) -> 
     Verify the HMAC signature returned after a successful checkout.
     Razorpay computes this as HMAC_SHA256(order_id|payment_id, key_secret).
     """
+    logger.info("verify_payment_signature order_id=%s payment_id=%s", order_id, payment_id)
     if settings.PAYMENT_PROVIDER == PaymentProvider.CONSOLE:
         return signature.startswith(_CONSOLE_PAYMENT_SIG_PREFIX)
 
@@ -81,6 +83,7 @@ def verify_payment_signature(order_id: str, payment_id: str, signature: str) -> 
 
 def verify_webhook_signature(raw_body: bytes, signature: str) -> bool:
     """Verify the signature on an incoming webhook from Razorpay."""
+    logger.info("verify_webhook_signature")
     if settings.PAYMENT_PROVIDER == PaymentProvider.CONSOLE:
         return signature == _CONSOLE_WEBHOOK_SIG
 
@@ -96,6 +99,7 @@ def verify_webhook_signature(raw_body: bytes, signature: str) -> bool:
 
 def fetch_payment(payment_id: str) -> dict | None:
     """Fetch a payment by id. Used by reconciliation jobs."""
+    logger.info("fetch_payment payment_id=%s", payment_id)
     if settings.PAYMENT_PROVIDER == PaymentProvider.CONSOLE:
         return {"id": payment_id, "status": "captured", "amount": 0}
 
@@ -111,6 +115,7 @@ def fetch_payment(payment_id: str) -> dict | None:
 
 def create_refund(payment_id: str, amount: Decimal, notes: dict | None = None) -> dict | None:
     """Create a refund against a captured payment. Amount in rupees."""
+    logger.info("create_refund payment_id=%s amount=%s", payment_id, amount)
     amount_paise = int(Decimal(amount) * PAISE_PER_RUPEE)
 
     if settings.PAYMENT_PROVIDER == PaymentProvider.CONSOLE:
@@ -154,6 +159,7 @@ def _build_client():
 
 def _create_order_console(amount_paise, currency, receipt, notes, expire_in_minutes):
     """In console mode, fake an order so local dev works end-to-end."""
+    logger.info("_create_order_console")
     order_id = f"order_console_{uuid.uuid4().hex[:14]}"
     expire_by = int(time.time()) + (expire_in_minutes * 60) if expire_in_minutes else None
     logger.info(
@@ -173,6 +179,7 @@ def _create_order_console(amount_paise, currency, receipt, notes, expire_in_minu
 
 def _create_order_razorpay(amount_paise, currency, receipt, notes):
     """Call the real Razorpay orders API."""
+    logger.info("_create_order_razorpay")
     client = _build_client()
     if client is None:
         raise RuntimeError("Razorpay client could not be constructed")

@@ -4,6 +4,9 @@ from datetime import datetime, timedelta, timezone
 
 import jwt # type: ignore
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Token lifetimes (configurable via settings or env)
 ACCESS_TOKEN_LIFETIME_MINUTES = getattr(settings, "ACCESS_TOKEN_LIFETIME_MINUTES", 30)

@@ -3,15 +3,18 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { COLORS, FONTS } from '../constants/theme';
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import BookingsScreen from '../screens/host/BookingsScreen';
 import DashboardScreen from '../screens/host/DashboardScreen';
 import EarningsScreen from '../screens/host/EarningsScreen';
 import ListingsScreen from '../screens/host/ListingsScreen';
+import MessagesScreen from '../screens/shared/MessagesScreen';
 import type { HostTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<HostTabParamList>();
 
 export default function HostTabs() {
+  const unreadMessages = useUnreadMessages();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -64,6 +67,23 @@ export default function HostTabs() {
             <View style={styles.iconWrap}>
               <MaterialCommunityIcons
                 name={focused ? 'book-open-page-variant' : 'book-open-page-variant-outline'}
+                size={24}
+                color={color}
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
+          tabBarLabel: 'Messages',
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons
+                name={focused ? 'message-text' : 'message-text-outline'}
                 size={24}
                 color={color}
               />

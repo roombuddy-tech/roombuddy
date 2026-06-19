@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/payments/", include("apps.payments.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
+    path("api/conversations/", include("apps.conversations.urls")),
     path("api/health/", health, name="health"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

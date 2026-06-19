@@ -27,6 +27,7 @@ def _render_email(token: str, user_id: str) -> tuple[str, str]:
 
 def send_verification_email(to_email: str, token: str, user_id: str) -> bool:
     """Send email verification via configured provider."""
+    logger.info("send_verification_email user_id=%s", user_id)
     provider = EMAIL_PROVIDER.lower()
 
     if provider == "console":
@@ -40,6 +41,7 @@ def send_verification_email(to_email: str, token: str, user_id: str) -> bool:
 
 def _send_console(to_email: str, token: str, user_id: str) -> bool:
     """Development: Print verification link to console."""
+    logger.info("_send_console user_id=%s", user_id)
     verify_link = _get_verify_link(token, user_id)
     logger.info(f"[CONSOLE EMAIL] To: {to_email}")
     print(f"\n{'='*60}")
@@ -51,6 +53,7 @@ def _send_console(to_email: str, token: str, user_id: str) -> bool:
 
 def _send_ses(to_email: str, token: str, user_id: str) -> bool:
     """Production: Send email via Amazon SES."""
+    logger.info("_send_ses user_id=%s", user_id)
     try:
         import boto3
         from botocore.exceptions import ClientError
