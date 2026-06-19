@@ -211,7 +211,7 @@ export default function GuestListingDetailScreen() {
             />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Text style={{ fontSize: 60 }}>🏠</Text>
+              <Ionicons name="home-outline" size={48} color={COLORS.textMut} />
             </View>
           )}
 

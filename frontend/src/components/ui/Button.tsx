@@ -47,7 +47,7 @@ export default function Button({
       style={containerStyles}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' || variant === 'ghost' ? COLORS.primary : '#fff'} size="small" />
+        <ActivityIndicator color={variant === 'outline' || variant === 'ghost' ? COLORS.primary : COLORS.onPrimary} size="small" />
       ) : (
         <>
           {icon}
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
   },
   full: { width: '100%' },
   disabled: { opacity: 0.5 },
@@ -72,25 +72,25 @@ const styles = StyleSheet.create({
   // Variants
   container_primary: { backgroundColor: COLORS.primary },
   container_accent: { backgroundColor: COLORS.accent },
-  container_outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.primary },
-  container_ghost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.border },
-  container_danger: { backgroundColor: '#FFF0F0', borderWidth: 1, borderColor: '#FECACA' },
+  container_outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
+  container_ghost: { backgroundColor: 'transparent' },
+  container_danger: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.danger },
 
   // Sizes
-  size_sm: { paddingVertical: 8, paddingHorizontal: 16 },
-  size_md: { paddingVertical: 12, paddingHorizontal: 24 },
-  size_lg: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: RADIUS.pill },
+  size_sm: { paddingVertical: 10, paddingHorizontal: 18 },
+  size_md: { paddingVertical: 14, paddingHorizontal: 24 },
+  size_lg: { paddingVertical: 16, paddingHorizontal: 32 },
 
   // Text
-  text: { ...FONTS.semibold },
-  text_primary: { color: '#FFFFFF' },
-  text_accent: { color: '#FFFFFF' },
-  text_outline: { color: COLORS.primary },
-  text_ghost: { color: COLORS.textSec },
+  text: { ...FONTS.semibold, letterSpacing: 0.1 },
+  text_primary: { color: COLORS.onPrimary },
+  text_accent: { color: COLORS.onPrimary },
+  text_outline: { color: COLORS.text },
+  text_ghost: { color: COLORS.primary },
   text_danger: { color: COLORS.danger },
   textDisabled: { color: COLORS.textMut },
 
   textSize_sm: { fontSize: 13 },
-  textSize_md: { fontSize: 15 },
+  textSize_md: { fontSize: 14.5 },
   textSize_lg: { fontSize: 16 },
 });

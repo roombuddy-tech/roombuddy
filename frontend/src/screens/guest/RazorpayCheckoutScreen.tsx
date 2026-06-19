@@ -104,14 +104,14 @@ function buildCheckoutHtml(order: any, bookingCode: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RoomBuddy Payment</title>
   <style>
-    body { font-family: -apple-system, sans-serif; background: #f7f9fa; padding: 40px 20px; text-align: center; }
-    .container { max-width: 360px; margin: 60px auto; background: white; border-radius: 12px; padding: 32px 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .logo { font-size: 22px; font-weight: 700; color: #0D7377; margin-bottom: 8px; }
-    .accent { color: #FF6B4A; }
-    .booking { font-size: 14px; color: #5F7285; margin-bottom: 24px; }
-    .amount { font-size: 32px; font-weight: 700; color: #1A2B3C; margin-bottom: 24px; }
-    button { width: 100%; padding: 14px; background: #0D7377; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
-    .hint { font-size: 12px; color: #94A3B8; margin-top: 16px; }
+    body { font-family: -apple-system, sans-serif; background: #0E0F12; padding: 40px 20px; text-align: center; }
+    .container { max-width: 360px; margin: 60px auto; background: #16181C; border-radius: 20px; padding: 32px 24px; box-shadow: 0 18px 44px rgba(0,0,0,0.7); }
+    .logo { font-size: 26px; font-weight: 400; color: #F3F1EC; margin-bottom: 8px; font-family: Georgia, 'Times New Roman', serif; }
+    .accent { color: #C9A24B; font-style: italic; }
+    .booking { font-size: 14px; color: #AEB2BA; margin-bottom: 24px; }
+    .amount { font-size: 36px; font-weight: 400; color: #F3F1EC; margin-bottom: 24px; font-family: Georgia, 'Times New Roman', serif; }
+    button { width: 100%; padding: 16px; background: #C9A24B; color: #15120A; border: none; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .hint { font-size: 12px; color: #71757E; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -137,7 +137,7 @@ function buildCheckoutHtml(order: any, bookingCode: string): string {
         currency: ${JSON.stringify(order.currency)},
         name: "RoomBuddy",
         description: "Booking ${bookingCode}",
-        theme: { color: "#0D7377" },
+        theme: { color: "#C9A24B" },
         handler: function(response) {
           post({
             type: "payment_success",

@@ -290,7 +290,7 @@ export default function ListingDetailScreen() {
             />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Text style={{ fontSize: 60 }}>🏠</Text>
+              <Ionicons name="home-outline" size={48} color={COLORS.textMut} />
             </View>
           )}
 
@@ -585,9 +585,9 @@ export default function ListingDetailScreen() {
                     theme={{
                       todayTextColor: COLORS.primary,
                       arrowColor: COLORS.primary,
-                      textDayFontFamily: FONTS.medium.fontWeight,
-                      textMonthFontFamily: FONTS.semibold.fontWeight,
-                      textDayHeaderFontFamily: FONTS.medium.fontWeight,
+                      textDayFontFamily: FONTS.medium.fontFamily,
+                      textMonthFontFamily: FONTS.semibold.fontFamily,
+                      textDayHeaderFontFamily: FONTS.medium.fontFamily,
                     }}
                     style={{ borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}
                   />
@@ -650,8 +650,8 @@ export default function ListingDetailScreen() {
                       value={listingStatus === 'snoozed'}
                       onValueChange={handleToggleSnooze}
                       disabled={togglingSnooze}
-                      trackColor={{ false: '#E2E8F0', true: '#FDE68A' }}
-                      thumbColor={listingStatus === 'snoozed' ? '#F59E0B' : '#fff'}
+                      trackColor={{ false: COLORS.border, true: COLORS.chip }}
+                      thumbColor={listingStatus === 'snoozed' ? COLORS.primary : COLORS.surface}
                     />
                   </View>
                 </>
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#FED7AA',
   },
-  previewBannerTxt: { fontSize: 12, color: '#92400E', ...FONTS.medium, flex: 1 },
+  previewBannerTxt: { fontSize: 12, color: COLORS.primaryDark, ...FONTS.medium, flex: 1 },
 
   photoWrap: { position: 'relative', width: SCREEN_W, height: 240, backgroundColor: COLORS.warm },
   coverPhoto: { width: SCREEN_W, height: 240 },
@@ -755,7 +755,7 @@ const styles = StyleSheet.create({
   },
   body: { padding: SPACING.lg },
 
-  title: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
+  title: { fontSize: 24, ...FONTS.serif, color: COLORS.text, letterSpacing: -0.3, marginBottom: 4 },
   subtitle: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm },
 
   badgeRow: { flexDirection: 'row', gap: 8, marginBottom: SPACING.sm },
@@ -774,11 +774,11 @@ const styles = StyleSheet.create({
   miniMap: { width: '100%', height: 180 },
   locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
   priceRow: { marginBottom: SPACING.sm },
-  price: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
+  price: { fontSize: 22, ...FONTS.serif, color: COLORS.text },
   priceUnit: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec },
   guestPrice: { fontSize: 12, color: COLORS.textMut, marginTop: 2 },
 
-  sectionHeader: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
+  sectionHeader: { fontSize: 18, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
 
   description: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
 
@@ -879,9 +879,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: COLORS.raised,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     marginTop: SPACING.lg,
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
   },
   bookBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.semibold },
 
-  stickyPrice: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
+  stickyPrice: { fontSize: 20, ...FONTS.serif, color: COLORS.text },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyBookBtn: {
     backgroundColor: COLORS.accent, paddingVertical: 13, paddingHorizontal: 28,
