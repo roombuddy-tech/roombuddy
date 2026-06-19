@@ -128,10 +128,10 @@ export default function EarningsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#10B981';
-      case 'pending': return '#F59E0B';
-      case 'processing': return '#3B82F6';
-      case 'failed': return '#EF4444';
+      case 'completed': return COLORS.success;
+      case 'pending': return COLORS.primary;
+      case 'processing': return COLORS.accent;
+      case 'failed': return COLORS.danger;
       default: return COLORS.textMut;
     }
   };
@@ -183,15 +183,15 @@ export default function EarningsScreen() {
 
         {/* Payout summary cards */}
         <View style={styles.payoutSummaryRow}>
-          <View style={[styles.payoutSummaryCard, { borderLeftColor: '#10B981' }]}>
+          <View style={[styles.payoutSummaryCard, { borderLeftColor: COLORS.success }]}>
             <Text style={styles.payoutSummaryLabel}>Paid out</Text>
-            <Text style={[styles.payoutSummaryValue, { color: '#10B981' }]}>
+            <Text style={[styles.payoutSummaryValue, { color: COLORS.success }]}>
               {formatCurrency(ps?.total_paid_out || 0)}
             </Text>
           </View>
-          <View style={[styles.payoutSummaryCard, { borderLeftColor: '#F59E0B' }]}>
+          <View style={[styles.payoutSummaryCard, { borderLeftColor: COLORS.primary }]}>
             <Text style={styles.payoutSummaryLabel}>Pending</Text>
-            <Text style={[styles.payoutSummaryValue, { color: '#F59E0B' }]}>
+            <Text style={[styles.payoutSummaryValue, { color: COLORS.primary }]}>
               {formatCurrency((ps?.pending_amount || 0) + (ps?.unpaid_amount || 0))}
             </Text>
           </View>
@@ -363,15 +363,15 @@ const styles = StyleSheet.create({
 
   // Lifetime card
   lifetimeCard: {
-    backgroundColor: COLORS.primaryDark,
-    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primaryDeep,
+    borderRadius: RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.md,
     ...SHADOW.md,
   },
-  lifetimeLabel: { fontSize: 14, color: 'rgba(255,255,255,0.7)', ...FONTS.medium, marginBottom: SPACING.xs },
-  lifetimeAmount: { fontSize: 36, ...FONTS.bold, color: '#FFFFFF', marginBottom: SPACING.xs },
-  lifetimeSub: { fontSize: 14, color: 'rgba(255,255,255,0.6)', ...FONTS.medium },
+  lifetimeLabel: { fontSize: 11, color: 'rgba(251,244,236,0.65)', ...FONTS.semibold, letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: SPACING.xs },
+  lifetimeAmount: { fontSize: 42, ...FONTS.serifLight, color: COLORS.onPrimary, letterSpacing: -0.8, marginBottom: SPACING.xs },
+  lifetimeSub: { fontSize: 14, color: 'rgba(251,244,236,0.55)', ...FONTS.medium },
 
   // Payout summary row
   payoutSummaryRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.md },
@@ -416,15 +416,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#FFF0ED',
+    backgroundColor: COLORS.raised,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
   },
-  warningText: { flex: 1, fontSize: 13, color: COLORS.accent, lineHeight: 19 },
+  warningText: { flex: 1, fontSize: 13, color: COLORS.primaryDark, lineHeight: 19 },
 
   // Section
-  sectionTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.md },
 
   // Monthly
   monthCard: {
@@ -440,7 +442,7 @@ const styles = StyleSheet.create({
   },
   monthName: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   monthBookings: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
-  monthEarnings: { fontSize: 16, ...FONTS.bold, color: COLORS.primary },
+  monthEarnings: { fontSize: 18, ...FONTS.serif, color: COLORS.primary },
   emptyMonth: { paddingVertical: SPACING.xl, alignItems: 'center' },
   emptyText: { fontSize: 14, color: COLORS.textMut },
 
@@ -455,18 +457,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
+  modalTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text },
 
   modalSummary: {
-    backgroundColor: COLORS.primaryDark,
-    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primaryDeep,
+    borderRadius: RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.lg,
     alignItems: 'center',
   },
-  modalSummaryLabel: { fontSize: 13, color: 'rgba(255,255,255,0.6)', ...FONTS.medium },
-  modalSummaryValue: { fontSize: 32, ...FONTS.bold, color: '#fff', marginVertical: 4 },
-  modalSummaryCount: { fontSize: 13, color: 'rgba(255,255,255,0.5)', ...FONTS.medium },
+  modalSummaryLabel: { fontSize: 11, color: 'rgba(251,244,236,0.65)', ...FONTS.semibold, letterSpacing: 1.3, textTransform: 'uppercase' },
+  modalSummaryValue: { fontSize: 36, ...FONTS.serifLight, color: COLORS.onPrimary, marginVertical: 4, letterSpacing: -0.5 },
+  modalSummaryCount: { fontSize: 13, color: 'rgba(251,244,236,0.55)', ...FONTS.medium },
 
   // Empty payouts
   emptyPayouts: { alignItems: 'center', paddingVertical: SPACING.xxl },

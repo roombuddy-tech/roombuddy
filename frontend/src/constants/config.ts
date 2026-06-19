@@ -1,6 +1,6 @@
 // ── API endpoint toggle ─────────────────────────────────────
 // Choose where Expo hits the backend.
-//   "local"    = local Django on your Mac (http://192.168.1.4:8000)
+//   "local"    = local Django on your Mac (http://192.168.1.2:8000)
 //   "aws"      = AWS-hosted Django (https://api.roombuddy.co.in)
 //   "prod"     = real production (used in release builds; same URL as aws for now)
 //
@@ -12,7 +12,7 @@ type ApiTarget = 'local' | 'aws' | 'prod';
 const API_TARGET: ApiTarget = 'local';
 
 const API_URLS: Record<ApiTarget, string> = {
-  local: 'http://192.168.1.4:8000',
+  local: 'http://192.168.1.2:8000',
   aws: 'https://api.roombuddy.co.in',
   prod: 'https://api.roombuddy.co.in',
 };
