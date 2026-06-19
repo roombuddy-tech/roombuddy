@@ -1,132 +1,1016 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RoomBuddy — Affordable Short-Term Stays in Shared Homes</title>
-<meta name="description" content="Book affordable rooms in shared apartments across India. Home food, friendly flatmates, verified hosts. Download the app.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--pri:#0D7377;--pri-l:#14919B;--pri-d:#0A5C5F;--pri-dp:#072829;--acc:#FF6B4A;--acc-h:#E85A3A;--warm:#FFF8F0;--bg:#FFF;--sf:#F7F9FA;--bd:#E8ECEF;--tx:#1A2B3C;--txs:#5F7285;--txm:#94A3B8;--ok:#10B981}
-*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Outfit',sans-serif;color:var(--tx);background:var(--bg);overflow-x:hidden}
-@keyframes fadeUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:translateX(0)}}
-@keyframes slideR{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.an{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.16,1,.3,1)}.an.v{opacity:1;transform:translateY(0)}.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(232,236,239,.5);transition:all .3s}
-nav.sc{box-shadow:0 4px 30px rgba(0,0,0,.06)}
-.ni{max-width:1200px;margin:0 auto;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
-.nl{font-family:'Playfair Display',serif;font-size:26px;font-weight:800;color:var(--pri-d);text-decoration:none}.nl span{color:var(--acc)}
-.nk{display:flex;align-items:center;gap:32px}.nk a{font-size:14px;font-weight:500;color:var(--txs);text-decoration:none;transition:color .2s}.nk a:hover{color:var(--pri)}
-.nc{padding:10px 24px;background:var(--acc);color:#fff;border-radius:50px;font-size:14px;font-weight:600;text-decoration:none;transition:all .2s}
-.nc:hover{background:var(--acc-h);transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,107,74,.3)}
-.hero{min-height:100vh;padding:140px 32px 80px;background:linear-gradient(160deg,var(--pri-dp) 0%,var(--pri) 40%,var(--pri-l) 100%);background-size:200% 200%;animation:grad 8s ease infinite;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-50%;right:-20%;width:80%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.04) 0%,transparent 70%)}
-.hi{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:1}
-.ht{animation:slideL 1s cubic-bezier(.16,1,.3,1)}
-.hb{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:50px;font-size:13px;font-weight:500;color:rgba(255,255,255,.85);margin-bottom:24px;backdrop-filter:blur(10px)}
-.hb .dt{width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 2s infinite}
-.hero h1{font-family:'Playfair Display',serif;font-size:clamp(40px,5vw,62px);font-weight:800;color:#fff;line-height:1.1;margin-bottom:20px}
-.hero h1 em{font-style:normal;color:var(--acc)}
-.hs{font-size:18px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:36px;max-width:480px}
-.ha{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px}
-.bp{display:inline-flex;align-items:center;gap:8px;padding:16px 32px;background:var(--acc);color:#fff;border-radius:50px;font-size:16px;font-weight:700;text-decoration:none;transition:all .3s;border:none;cursor:pointer;font-family:inherit}
-.bp:hover{background:var(--acc-h);transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,107,74,.4)}
-.bo{display:inline-flex;align-items:center;gap:8px;padding:16px 32px;background:rgba(255,255,255,.08);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:50px;font-size:16px;font-weight:600;text-decoration:none;transition:all .3s;backdrop-filter:blur(10px)}
-.bo:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4)}
-.hst{display:flex;gap:40px}.hst div{text-align:left}.hst .n{font-size:28px;font-weight:800;color:#fff}.hst .l{font-size:13px;color:rgba(255,255,255,.55)}
-.hv{animation:slideR 1s cubic-bezier(.16,1,.3,1) .2s both;text-align:center}
-.pm{width:280px;height:560px;background:#111;border-radius:40px;border:4px solid #333;margin:0 auto;position:relative;box-shadow:0 40px 80px rgba(0,0,0,.3);overflow:hidden;animation:float 4s ease-in-out infinite}
-.pn{width:120px;height:28px;background:#111;border-radius:0 0 20px 20px;position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:2}
-.ps{width:100%;height:100%;background:linear-gradient(180deg,var(--pri-d),var(--pri));padding:48px 20px 20px;display:flex;flex-direction:column;align-items:center}
-.ps .pl{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:16px}.ps .pl span{color:var(--acc)}
-.ps .sb{width:100%;padding:10px 14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.5);font-size:12px;margin-bottom:16px}
-.pc{width:100%;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid rgba(255,255,255,.08)}
-.pr{display:flex;gap:10px;align-items:center}
-.pi{width:50px;height:50px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.pf{flex:1}.pt{font-size:12px;font-weight:600;color:#fff}.pp{font-size:10px;color:rgba(255,255,255,.5)}.px{font-size:14px;font-weight:700;color:var(--acc)}
-.sec{padding:100px 32px}.si{max-width:1200px;margin:0 auto}
-.st{display:inline-block;padding:6px 18px;background:rgba(13,115,119,.08);color:var(--pri);border-radius:50px;font-size:13px;font-weight:600;letter-spacing:.5px;margin-bottom:16px}
-.sh{font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,48px);font-weight:700;color:var(--tx);margin-bottom:12px;line-height:1.2}
-.sd{font-size:17px;color:var(--txs);max-width:560px;line-height:1.6;margin-bottom:48px}
-.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
-.fc{padding:32px 28px;background:var(--bg);border-radius:20px;border:1.5px solid var(--bd);transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
-.fc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pri),var(--acc));transform:scaleX(0);transition:transform .4s;transform-origin:left}
-.fc:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,.08);border-color:var(--pri)}.fc:hover::before{transform:scaleX(1)}
-.fic{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:18px}
-.ft{background:rgba(13,115,119,.08)}.fo{background:rgba(255,107,74,.08)}.fg2{background:rgba(16,185,129,.08)}.fa{background:rgba(255,184,0,.08)}
-.fc h3{font-size:18px;font-weight:700;margin-bottom:8px}.fc p{font-size:14px;color:var(--txs);line-height:1.6}
-.hw{padding:100px 32px;background:linear-gradient(180deg,var(--sf) 0%,var(--bg) 100%)}
-.hg{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:48px}
-.hs2{text-align:center;position:relative}.hs2::after{content:'→';position:absolute;right:-20px;top:36px;font-size:24px;color:var(--txm)}.hs2:last-child::after{display:none}
-.hn{width:64px;height:64px;border-radius:20px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri-l));box-shadow:0 8px 24px rgba(13,115,119,.25)}
-.hs2 h3{font-size:18px;font-weight:700;margin-bottom:8px}.hs2 p{font-size:14px;color:var(--txs);line-height:1.5;max-width:280px;margin:0 auto}
-.hban{max-width:1200px;margin:0 auto;padding:56px 48px;background:linear-gradient(135deg,var(--pri-dp),var(--pri),var(--pri-l));border-radius:28px;color:#fff;position:relative;overflow:hidden;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center}
-.hban::before{content:'';position:absolute;right:-60px;top:-60px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04)}
-.hc{position:relative;z-index:1}.hc h2{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;margin-bottom:12px}.hc p{font-size:16px;opacity:.8;line-height:1.6;margin-bottom:24px}
-.he{text-align:center;position:relative;z-index:1;padding:32px;background:rgba(255,255,255,.08);border-radius:20px;border:1px solid rgba(255,255,255,.1)}
-.he .am{font-size:40px;font-weight:800}.he .lb{font-size:14px;opacity:.7;margin-top:4px}
-.bw{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:#fff;color:var(--pri-d);border-radius:50px;font-size:15px;font-weight:700;text-decoration:none;transition:all .3s}
-.bw:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.15)}
-.ssg{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
-.sc2{text-align:center;padding:32px 20px}.sn{font-size:42px;font-weight:800;color:var(--pri);margin-bottom:4px}.sl{font-size:14px;color:var(--txs);font-weight:500}
-.tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:48px}
-.tc{padding:28px;background:var(--bg);border-radius:20px;border:1.5px solid var(--bd);transition:all .3s}.tc:hover{box-shadow:0 12px 40px rgba(0,0,0,.06)}
-.ts2{font-size:16px;margin-bottom:12px}.tt{font-size:15px;color:var(--tx);line-height:1.6;margin-bottom:16px;font-style:italic}
-.ta{display:flex;align-items:center;gap:12px}.tv{width:40px;height:40px;border-radius:50%;background:rgba(13,115,119,.1);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--pri);font-size:14px}
-.tn{font-size:14px;font-weight:600}.tr{font-size:12px;color:var(--txm)}
-.dl{padding:100px 32px;background:linear-gradient(160deg,var(--pri-dp),var(--pri));text-align:center;color:#fff;position:relative;overflow:hidden}
-.dl::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 50%,rgba(255,255,255,.03),transparent 60%),radial-gradient(circle at 70% 50%,rgba(255,107,74,.04),transparent 60%)}
-.dc{position:relative;z-index:1}.dc h2{font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,44px);font-weight:700;margin-bottom:12px}
-.dc p{font-size:18px;opacity:.75;margin-bottom:36px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.6}
-.sb2{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
-.sb3{display:flex;align-items:center;gap:12px;padding:14px 28px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);border-radius:14px;color:#fff;text-decoration:none;transition:all .3s;backdrop-filter:blur(10px)}
-.sb3:hover{background:rgba(255,255,255,.18);transform:translateY(-2px);border-color:rgba(255,255,255,.35)}
-.sb3 .si2{font-size:28px}.sb3 .st2{text-align:left}.sb3 .ss{font-size:11px;opacity:.7}.sb3 .sn2{font-size:17px;font-weight:700}
-.de{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:rgba(255,107,74,.15);border:1px solid rgba(255,107,74,.25);border-radius:50px;color:var(--acc);font-size:15px;font-weight:600}
-footer{padding:60px 32px 32px;background:var(--pri-dp);color:rgba(255,255,255,.7)}
-.fi2{max-width:1200px;margin:0 auto}.fgr{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:48px;margin-bottom:48px}
-.fb .fl{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#fff;margin-bottom:12px}.fb .fl span{color:var(--acc)}
-.fb p{font-size:14px;line-height:1.6;opacity:.6;max-width:280px}
-.fcl h4{font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;letter-spacing:.5px;text-transform:uppercase}
-.fcl a{display:block;font-size:14px;color:rgba(255,255,255,.5);text-decoration:none;margin-bottom:10px;transition:color .2s}.fcl a:hover{color:var(--acc)}
-.fbt{padding-top:24px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.5}
-.fso{display:flex;gap:12px}.fso a{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);text-decoration:none;font-size:14px;transition:all .2s}.fso a:hover{background:var(--acc);color:#fff}
-@media(max-width:900px){.hi{grid-template-columns:1fr;text-align:center}.hs{margin:0 auto 36px}.ha{justify-content:center}.hst{justify-content:center}.hv{order:-1}.pm{width:220px;height:440px}.hban{grid-template-columns:1fr;text-align:center}.hg{grid-template-columns:1fr}.hs2::after{display:none}.ssg{grid-template-columns:1fr 1fr}.fgr{grid-template-columns:1fr 1fr}.nk{display:none}}
-@media(max-width:600px){.fg{grid-template-columns:1fr}.ssg{grid-template-columns:1fr}.fgr{grid-template-columns:1fr}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoomBuddy — Stay in a real home, not a hotel</title>
+  <meta name="description" content="Short-term furnished rooms in verified shared homes across India. Kitchen access, friendly flatmates, Aadhaar-verified hosts. Starting at ₹500/night.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #2C4A58;
+      background: #F4EBDC;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    ::selection { background: #D97055; color: #fff; }
+
+    /* tokens */
+    :root {
+      --teal: #2C4A58;
+      --teal-mid: #3D6070;
+      --coral: #D97055;
+      --coral-dark: #C05D3F;
+      --parchment: #F4EBDC;
+      --parchment-light: #FBF5EA;
+      --white: #ffffff;
+      --text-muted: #5A727E;
+      --border: rgba(44,74,88,.10);
+      --r: 18px;
+      --r-lg: 26px;
+    }
+
+    /* nav */
+    #nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(44,74,88,.92);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      transition: box-shadow .3s;
+    }
+    .nav-inner {
+      max-width: 1160px; margin: 0 auto;
+      padding: 13px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px; text-decoration: none;
+    }
+    .nav-logo img { width: 38px; height: 38px; object-fit: contain; }
+    .nav-logo span {
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 23px;
+      color: #fff; letter-spacing: -.01em;
+    }
+    .nav-logo span em { color: var(--coral); font-style: normal; }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a {
+      font-size: 14px; font-weight: 600; color: rgba(255,255,255,.7);
+      text-decoration: none; transition: color .2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 22px; background: var(--coral); color: #fff;
+      border-radius: 999px; font-size: 14px; font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(217,112,85,.35);
+      transition: background .2s, transform .15s;
+    }
+    .nav-cta:hover { background: var(--coral-dark); transform: translateY(-1px); }
+
+    /* hero */
+    #hero {
+      background: var(--teal);
+      padding: 140px 28px 90px;
+      position: relative; overflow: hidden;
+    }
+    #hero::before {
+      content: '';
+      position: absolute; top: -200px; right: -200px;
+      width: 700px; height: 700px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(217,112,85,.18), transparent 65%);
+      pointer-events: none;
+    }
+    #hero::after {
+      content: '';
+      position: absolute; bottom: -200px; left: -200px;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.04), transparent 65%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: 1160px; margin: 0 auto;
+      display: grid; grid-template-columns: 1.1fr .9fr; gap: 60px;
+      align-items: center; position: relative; z-index: 1;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 16px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      font-size: 13px; font-weight: 600; color: rgba(255,255,255,.85);
+      margin-bottom: 22px;
+    }
+    .hero-eyebrow-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--coral);
+      box-shadow: 0 0 0 3px rgba(217,112,85,.3);
+    }
+    .hero-h1 {
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: clamp(44px, 5.5vw, 70px);
+      line-height: 1.03; letter-spacing: -.025em;
+      color: #fff; margin-bottom: 20px;
+    }
+    .hero-h1 em { color: var(--coral); font-style: normal; }
+    .hero-sub {
+      font-size: 17px; line-height: 1.7; color: rgba(255,255,255,.72);
+      max-width: 460px; margin-bottom: 34px;
+    }
+    .hero-sub strong { color: rgba(255,255,255,.95); font-weight: 600; }
+    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 15px 30px; background: var(--coral); color: #fff;
+      border-radius: 999px; font-size: 15.5px; font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(217,112,85,.38);
+      transition: background .2s, transform .15s;
+    }
+    .btn-primary:hover { background: var(--coral-dark); transform: translateY(-2px); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 15px 30px;
+      background: rgba(255,255,255,.08);
+      border: 1.5px solid rgba(255,255,255,.18);
+      color: #fff; border-radius: 999px;
+      font-size: 15.5px; font-weight: 600; text-decoration: none;
+      transition: background .2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.14); }
+    .hero-trust {
+      display: flex; align-items: center; gap: 8px;
+      color: rgba(255,255,255,.55); font-size: 13px; font-weight: 500;
+    }
+    .hero-trust-avatars { display: flex; }
+    .hero-trust-avatars span {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid var(--teal);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 11px;
+      color: #fff; margin-left: -8px;
+    }
+    .hero-trust-avatars span:first-child { margin-left: 0; }
+
+    /* phone mock */
+    .phone-wrap {
+      display: flex; justify-content: center; align-items: center;
+    }
+    .phone {
+      width: 282px; height: 572px;
+      background: #1a2e38;
+      border-radius: 44px; padding: 9px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.06),
+        0 40px 80px rgba(0,0,0,.5),
+        0 0 80px rgba(217,112,85,.12);
+      animation: float 5.5s ease-in-out infinite;
+    }
+    .phone-screen {
+      width: 100%; height: 100%;
+      background: var(--parchment);
+      border-radius: 36px; overflow: hidden;
+      padding: 44px 14px 14px;
+      position: relative;
+      display: flex; flex-direction: column;
+    }
+    .phone-notch {
+      position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 22px;
+      background: #1a2e38; border-radius: 0 0 14px 14px;
+    }
+    .phone-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .phone-logo {
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 17px; color: var(--teal);
+    }
+    .phone-logo em { color: var(--coral); font-style: normal; }
+    .phone-search {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 12px; background: #fff;
+      border-radius: 10px; margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(44,74,88,.06);
+    }
+    .phone-search span { font-size: 11.5px; color: #94A8B0; font-weight: 500; }
+    .phone-cards { display: flex; flex-direction: column; gap: 9px; flex: 1; }
+    .phone-card {
+      background: #fff; border-radius: 13px; padding: 10px 11px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 2px 10px rgba(44,74,88,.07);
+    }
+    .phone-card.dark { background: var(--teal); }
+    .phone-card-icon {
+      width: 44px; height: 44px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .phone-card-text { flex: 1; min-width: 0; }
+    .phone-card-title { font-size: 12px; font-weight: 700; color: var(--teal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .phone-card.dark .phone-card-title { color: #fff; }
+    .phone-card-sub { font-size: 10px; color: #94A8B0; margin-top: 1px; }
+    .phone-card.dark .phone-card-sub { color: rgba(255,255,255,.5); }
+    .phone-card-price {
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: 13px; color: var(--coral); flex-shrink: 0;
+    }
+
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-16px)} }
+
+    /* persona strip */
+    #personas {
+      background: var(--parchment);
+      padding: 60px 28px;
+    }
+    .personas-inner {
+      max-width: 1160px; margin: 0 auto;
+    }
+    .personas-label {
+      font-size: 12px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--coral); margin-bottom: 28px;
+    }
+    .personas-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    }
+    .persona-card {
+      background: #fff; border-radius: var(--r); padding: 26px 24px;
+      border-left: 4px solid var(--coral);
+      box-shadow: 0 2px 16px rgba(44,74,88,.06);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .persona-card:nth-child(2) { border-left-color: var(--teal); }
+    .persona-card:nth-child(3) { border-left-color: #8BA89A; }
+    .persona-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(44,74,88,.10); }
+    .persona-who {
+      font-size: 12px; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--coral); margin-bottom: 8px;
+    }
+    .persona-card:nth-child(2) .persona-who { color: var(--teal); }
+    .persona-card:nth-child(3) .persona-who { color: #8BA89A; }
+    .persona-headline {
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: 20px; color: var(--teal); margin-bottom: 8px; line-height: 1.2;
+    }
+    .persona-body { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+
+    /* two ways */
+    #two-ways {
+      background: #fff;
+      padding: 90px 28px;
+    }
+    .section-inner { max-width: 1160px; margin: 0 auto; }
+    .section-eyebrow {
+      display: inline-block; padding: 6px 15px;
+      background: rgba(44,74,88,.07); color: var(--teal);
+      border-radius: 999px; font-size: 12px; font-weight: 700;
+      letter-spacing: .05em; text-transform: uppercase; margin-bottom: 14px;
+    }
+    .section-h2 {
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: clamp(30px, 3.8vw, 44px);
+      line-height: 1.1; letter-spacing: -.02em; color: var(--teal);
+      margin-bottom: 12px;
+    }
+    .section-sub {
+      font-size: 16.5px; line-height: 1.6; color: var(--text-muted);
+      max-width: 540px;
+    }
+    .two-ways-header { margin-bottom: 44px; }
+    .two-ways-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
+    }
+    .way-card {
+      border-radius: var(--r-lg); padding: 42px 40px;
+      position: relative; overflow: hidden;
+    }
+    .way-card.guest { background: var(--coral); }
+    .way-card.host { background: var(--teal); }
+    .way-card-blob {
+      position: absolute; right: -50px; bottom: -50px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: rgba(255,255,255,.07);
+      pointer-events: none;
+    }
+    .way-card-inner { position: relative; z-index: 1; }
+    .way-icon { margin-bottom: 20px; }
+    .way-h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: 28px; line-height: 1.15; color: #fff;
+      margin-bottom: 12px;
+    }
+    .way-body {
+      font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.85);
+      margin-bottom: 28px; max-width: 380px;
+    }
+    .way-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 999px;
+      font-size: 14.5px; font-weight: 700; text-decoration: none;
+      transition: transform .15s;
+    }
+    .way-btn:hover { transform: translateY(-2px); }
+    .way-card.guest .way-btn { background: #fff; color: var(--coral-dark); }
+    .way-card.host .way-btn { background: #E89478; color: var(--teal); }
+
+    /* why */
+    #why {
+      background: var(--parchment-light);
+      padding: 90px 28px;
+      border-top: 1px solid rgba(44,74,88,.06);
+    }
+    .why-header { margin-bottom: 48px; }
+    .why-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+    }
+    .why-card {
+      background: #fff; border-radius: var(--r); padding: 28px 22px;
+      border: 1px solid rgba(44,74,88,.07);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .why-card:hover { transform: translateY(-5px); box-shadow: 0 12px 32px rgba(44,74,88,.09); }
+    .why-icon { margin-bottom: 14px; }
+    .why-h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: 18px; color: var(--teal); margin-bottom: 7px;
+    }
+    .why-body { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+
+    /* how */
+    #how {
+      background: #fff;
+      padding: 90px 28px;
+    }
+    .how-header { text-align: center; margin-bottom: 52px; }
+    .how-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px;
+    }
+    .how-card {
+      background: var(--parchment-light);
+      border-radius: var(--r); padding: 34px 28px;
+      position: relative;
+      border: 1px solid rgba(44,74,88,.07);
+    }
+    .how-num {
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: 60px; line-height: 1;
+      color: rgba(44,74,88,.07);
+      position: absolute; top: 16px; right: 22px;
+    }
+    .how-icon { margin-bottom: 16px; }
+    .how-h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: 20px; color: var(--teal); margin-bottom: 8px;
+    }
+    .how-body { font-size: 14.5px; line-height: 1.65; color: var(--text-muted); }
+    .how-connector {
+      display: none;
+    }
+
+    /* honest band */
+    #honest {
+      background: var(--teal);
+      padding: 70px 28px;
+    }
+    .honest-inner {
+      max-width: 1160px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+    }
+    .honest-left h2 {
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: clamp(28px, 3.5vw, 40px);
+      line-height: 1.15; color: #fff; margin-bottom: 16px;
+    }
+    .honest-left h2 em { color: var(--coral); font-style: normal; }
+    .honest-left p { font-size: 16px; line-height: 1.7; color: rgba(255,255,255,.7); }
+    .honest-items { display: flex; flex-direction: column; gap: 14px; }
+    .honest-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 18px 20px; background: rgba(255,255,255,.06);
+      border-radius: var(--r); border: 1px solid rgba(255,255,255,.08);
+    }
+    .honest-item-icon {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(217,112,85,.18);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .honest-item-text { flex: 1; }
+    .honest-item-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .honest-item-body { font-size: 13px; color: rgba(255,255,255,.6); line-height: 1.5; }
+
+    /* testimonials */
+    #testimonials {
+      background: var(--parchment);
+      padding: 90px 28px;
+    }
+    .testi-header { text-align: center; margin-bottom: 48px; }
+    .testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .testi-card {
+      background: #fff; border-radius: var(--r); padding: 28px 26px;
+      border: 1px solid rgba(44,74,88,.07);
+      display: flex; flex-direction: column;
+    }
+    .testi-stars { color: var(--coral); font-size: 15px; letter-spacing: 2px; margin-bottom: 12px; }
+    .testi-quote {
+      font-size: 15px; line-height: 1.7; color: #2C4A58;
+      margin-bottom: 20px; flex: 1;
+      font-style: italic;
+    }
+    .testi-quote::before { content: '\201C'; }
+    .testi-quote::after { content: '\201D'; }
+    .testi-person { display: flex; align-items: center; gap: 11px; }
+    .testi-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 13px;
+    }
+    .testi-name { font-size: 13.5px; font-weight: 700; color: var(--teal); }
+    .testi-role { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+    /* download */
+    #download {
+      background: var(--parchment-light);
+      padding: 90px 28px;
+      border-top: 1px solid rgba(44,74,88,.06);
+    }
+    .download-inner {
+      max-width: 680px; margin: 0 auto; text-align: center;
+    }
+    .download-inner img { width: 76px; height: 76px; object-fit: contain; margin-bottom: 20px; }
+    .download-h2 {
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: clamp(30px, 4vw, 46px);
+      letter-spacing: -.02em; color: var(--teal); margin-bottom: 12px;
+    }
+    .download-sub {
+      font-size: 17px; color: var(--text-muted); max-width: 420px;
+      margin: 0 auto 32px; line-height: 1.65;
+    }
+    .store-btns {
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .store-btn {
+      display: inline-flex; align-items: center; gap: 11px;
+      padding: 14px 24px; background: var(--teal);
+      border-radius: 14px; text-decoration: none; color: #fff;
+      transition: background .2s, transform .15s;
+    }
+    .store-btn:hover { background: var(--teal-mid); transform: translateY(-2px); }
+    .store-btn-label { text-align: left; }
+    .store-btn-small { font-size: 10px; opacity: .65; line-height: 1.1; }
+    .store-btn-name {
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 17px;
+    }
+    .support-link {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 20px; background: rgba(217,112,85,.10);
+      border-radius: 999px; color: var(--coral-dark);
+      font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: background .2s;
+    }
+    .support-link:hover { background: rgba(217,112,85,.18); }
+
+    /* footer */
+    footer {
+      background: #1e3440;
+      padding: 60px 28px 28px;
+      color: rgba(255,255,255,.6);
+    }
+    .footer-inner {
+      max-width: 1160px; margin: 0 auto;
+      display: grid; grid-template-columns: 1.6fr 1fr 1.2fr; gap: 44px;
+      margin-bottom: 44px;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+    .footer-brand img { width: 34px; height: 34px; object-fit: contain; }
+    .footer-brand span {
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 21px; color: #fff;
+    }
+    .footer-brand span em { color: #E89478; font-style: normal; }
+    .footer-desc { font-size: 13.5px; line-height: 1.65; max-width: 270px; margin-bottom: 20px; }
+    .social-row { display: flex; gap: 8px; }
+    .social-btn {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: rgba(255,255,255,.07);
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; transition: background .2s;
+    }
+    .social-btn:hover { background: rgba(255,255,255,.14); }
+    .footer-col h4 {
+      font-size: 12px; font-weight: 700; color: #fff;
+      letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px;
+    }
+    .footer-col a {
+      display: block; font-size: 13.5px; color: rgba(255,255,255,.55);
+      text-decoration: none; margin-bottom: 8px; transition: color .2s;
+    }
+    .footer-col a:hover { color: #fff; }
+    .newsletter-form { display: flex; gap: 8px; margin-top: 6px; }
+    .newsletter-input {
+      flex: 1; min-width: 0; padding: 10px 13px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px; color: #fff;
+      font-family: inherit; font-size: 13px; outline: none;
+    }
+    .newsletter-input::placeholder { color: rgba(255,255,255,.3); }
+    .newsletter-btn {
+      padding: 10px 15px; background: #E89478; color: var(--teal);
+      border: none; border-radius: 10px;
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 14px;
+      cursor: pointer; transition: background .2s;
+    }
+    .newsletter-btn:hover { background: #d97868; }
+    .footer-bottom {
+      padding-top: 22px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .footer-bottom span { font-size: 12.5px; color: rgba(255,255,255,.35); }
+    .footer-bottom-links { display: flex; gap: 20px; }
+    .footer-bottom-links a {
+      font-size: 12.5px; color: rgba(255,255,255,.35); text-decoration: none; transition: color .2s;
+    }
+    .footer-bottom-links a:hover { color: rgba(255,255,255,.7); }
+
+    /* scroll reveal */
+    [data-r] {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity .65s cubic-bezier(.16,1,.3,1), transform .65s cubic-bezier(.16,1,.3,1);
+    }
+    [data-r].visible { opacity: 1; transform: none; }
+
+    /* responsive */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .phone-wrap { display: none; }
+      .two-ways-grid { grid-template-columns: 1fr; }
+      .why-grid { grid-template-columns: 1fr 1fr; }
+      .how-grid { grid-template-columns: 1fr; }
+      .testi-grid { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+      .personas-grid { grid-template-columns: 1fr; }
+      .honest-inner { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .why-grid { grid-template-columns: 1fr; }
+      .nav-links a:not(.nav-cta) { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .phone { animation: none; }
+      [data-r] { transition: none; opacity: 1; transform: none; }
+    }
+  </style>
 </head>
 <body>
 
-<nav id="nav"><div class="ni"><a href="#" class="nl">Room<span>Buddy</span></a><div class="nk"><a href="#features">Features</a><a href="#how">How it works</a><a href="#host">Become a host</a><a href="#download" class="nc">Download App</a></div></div></nav>
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <img src="assets/logo.png" alt="RoomBuddy">
+      <span>Room<em>Buddy</em></span>
+    </a>
+    <div class="nav-links">
+      <a href="#why">Why us</a>
+      <a href="#how">How it works</a>
+      <a href="#host">For hosts</a>
+      <a href="#download" class="nav-cta">Get the app</a>
+    </div>
+  </div>
+</nav>
 
-<section class="hero"><div class="hi">
-<div class="ht"><div class="hb"><div class="dt"></div> Now available across India</div><h1>Book a room,<br>not a <em>hotel</em></h1><p class="hs">Affordable short-term stays in shared homes. Furnished rooms with kitchen access, friendly flatmates, and prices starting at ₹500/night.</p><div class="ha"><a href="#download" class="bp">📱 Download App</a><a href="#host" class="bo">🏠 List your room</a></div><div class="hst"><div><div class="n">500+</div><div class="l">Verified rooms</div></div><div><div class="n">50+</div><div class="l">Cities</div></div><div><div class="n">4.8★</div><div class="l">Avg rating</div></div></div></div>
-<div class="hv"><div class="pm"><div class="pn"></div><div class="ps"><div class="pl">Room<span>Buddy</span></div><div class="sb">🔍 Search by city, area...</div><div class="pc"><div class="pr"><div class="pi">🏠</div><div class="pf"><div class="pt">Cozy room in 2BHK</div><div class="pp">Koramangala · AC · WiFi</div></div><div class="px">₹750</div></div></div><div class="pc"><div class="pr"><div class="pi">🌅</div><div class="pf"><div class="pt">Sunny private room</div><div class="pp">HSR Layout · Kitchen</div></div><div class="px">₹650</div></div></div><div class="pc"><div class="pr"><div class="pi">✨</div><div class="pf"><div class="pt">Spacious 3BHK room</div><div class="pp">Whitefield · Parking</div></div><div class="px">₹900</div></div></div><div class="pc"><div class="pr"><div class="pi">🚇</div><div class="pf"><div class="pt">Near metro room</div><div class="pp">Indiranagar · Budget</div></div><div class="px">₹500</div></div></div></div></div></div>
-</div></section>
+<!-- HERO -->
+<header id="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Now live in Bangalore · more cities coming soon
+      </div>
+      <h1 class="hero-h1">
+        Stay in a real home,<br>not a <em>hotel</em>.
+      </h1>
+      <p class="hero-sub">
+        India's hotels cost a fortune. PGs are a gamble.
+        RoomBuddy puts you in a <strong>furnished room in a real shared home</strong> —
+        kitchen, flatmates, WiFi — from ₹500 a night. No brokerage, no lock-in.
+      </p>
+      <div class="hero-btns">
+        <a href="#download" class="btn-primary">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          Download the app
+        </a>
+        <a href="#host" class="btn-ghost">List your room</a>
+      </div>
+      <div class="hero-trust">
+        <div class="hero-trust-avatars">
+          <span style="background:#D97055">RS</span>
+          <span style="background:#3D6070">PM</span>
+          <span style="background:#8BA89A">AJ</span>
+        </div>
+        &nbsp;Trusted by early guests & hosts in Bangalore
+      </div>
+    </div>
 
-<section class="sec" id="features"><div class="si"><div class="an"><span class="st">Why RoomBuddy</span></div><h2 class="sh an d1">Not a hotel. Not a PG.<br>Something <em>better</em>.</h2><p class="sd an d2">We're building a new category of stays — affordable, flexible, and human. Like staying at a friend's place, but anywhere in India.</p><div class="fg"><div class="fc an"><div class="fic ft">🏠</div><h3>Real homes, not hotels</h3><p>Stay in a furnished room in a real apartment. Queen bed, WiFi, attached bathroom — at 60% less than a hotel.</p></div><div class="fc an d1"><div class="fic fo">🍳</div><h3>Food sorted</h3><p>Full kitchen access to cook your meals. Or choose a local tiffin service starting ₹120/meal. No overpriced room service.</p></div><div class="fc an d2"><div class="fic fg2">🤝</div><h3>Friendly flatmates</h3><p>See who you'll be living with before you book. Real profiles, shared interests. Like a friend's place, but anywhere.</p></div><div class="fc an d3"><div class="fic fa">🔒</div><h3>100% verified & safe</h3><p>Every guest and host is Aadhaar-verified. Secure payments via Razorpay. 24/7 support and SOS button.</p></div></div></div></section>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="phone-bar">
+            <span class="phone-logo">Room<em>Buddy</em></span>
+            <div style="width:28px;height:28px;border-radius:50%;background:#F4EBDC;display:flex;align-items:center;justify-content:center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </div>
+          </div>
+          <div class="phone-search">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A8B0" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span>Search city, area…</span>
+          </div>
+          <div class="phone-cards">
+            <div class="phone-card">
+              <div class="phone-card-icon" style="background:#FBE3D8">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+              </div>
+              <div class="phone-card-text">
+                <div class="phone-card-title">Cozy room in 2BHK</div>
+                <div class="phone-card-sub">Koramangala · AC · WiFi</div>
+              </div>
+              <div class="phone-card-price">₹750</div>
+            </div>
+            <div class="phone-card">
+              <div class="phone-card-icon" style="background:#E4EBED">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="2"><circle cx="12" cy="9" r="3.2"/><path d="M5 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/></svg>
+              </div>
+              <div class="phone-card-text">
+                <div class="phone-card-title">Sunny private room</div>
+                <div class="phone-card-sub">HSR Layout · Kitchen</div>
+              </div>
+              <div class="phone-card-price">₹650</div>
+            </div>
+            <div class="phone-card">
+              <div class="phone-card-icon" style="background:#FBE3D8">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+              </div>
+              <div class="phone-card-text">
+                <div class="phone-card-title">Near metro · Indiranagar</div>
+                <div class="phone-card-sub">Budget stay · 5 min walk</div>
+              </div>
+              <div class="phone-card-price">₹500</div>
+            </div>
+            <div class="phone-card dark">
+              <div class="phone-card-icon" style="background:rgba(255,255,255,.1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E89478" stroke-width="2"><path d="M12 3v3M5 7l2 2M19 7l-2 2"/><circle cx="12" cy="14" r="6"/></svg>
+              </div>
+              <div class="phone-card-text">
+                <div class="phone-card-title">Spacious 3BHK room</div>
+                <div class="phone-card-sub">Whitefield · Parking incl.</div>
+              </div>
+              <div class="phone-card-price" style="color:#E89478">₹900</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
 
-<section class="hw" id="how"><div class="si"><div style="text-align:center"><div class="an"><span class="st">How it works</span></div><h2 class="sh an d1" style="margin:0 auto 12px">Book a room in 3 steps</h2><p class="sd an d2" style="margin:0 auto 48px;text-align:center">No brokerage. No long-term lock-in. No hidden charges.</p></div><div class="hg"><div class="hs2 an"><div class="hn">1</div><h3>Search</h3><p>Enter your city, dates, and budget. Filter by food, AC, gender preference, and more.</p></div><div class="hs2 an d1"><div class="hn">2</div><h3>Book</h3><p>Pick a room you love. See photos, flatmate profiles, and reviews. Pay securely online.</p></div><div class="hs2 an d2"><div class="hn">3</div><h3>Stay</h3><p>Check in, cook a meal, chat with flatmates. Feel at home from day one.</p></div></div></div></section>
+<!-- PERSONAS -->
+<section id="personas">
+  <div class="personas-inner">
+    <div class="personas-label">This is for you if —</div>
+    <div class="personas-grid">
+      <div class="persona-card" data-r>
+        <div class="persona-who">On a work trip</div>
+        <div class="persona-headline">Months away from home, not just days</div>
+        <div class="persona-body">Hotels burn through your daily allowance. RoomBuddy gives you a real room with a kitchen — cook your own meals, settle in, save serious money over a long project stay.</div>
+      </div>
+      <div class="persona-card" data-r>
+        <div class="persona-who">New to the city</div>
+        <div class="persona-headline">Just moved. Need a base while you figure things out</div>
+        <div class="persona-body">Found a job in Bangalore but don't have a flat yet? Stay for a week or a month while you look around. No broker, no six-month lock-in, no 3-month deposit.</div>
+      </div>
+      <div class="persona-card" data-r>
+        <div class="persona-who">Between flats</div>
+        <div class="persona-headline">Gap between leases and nowhere to go</div>
+        <div class="persona-body">Your lease ended, the new place isn't ready. Don't pay hotel prices for 10 days of limbo — find a room in a real home for a fraction of the cost.</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<section class="sec" id="host"><div class="hban an"><div class="hc"><h2>Got a spare room?<br>Turn it into income.</h2><p>Your flatmate's going home for a month? That empty room could earn you serious money. Free to list, zero hassle. We handle payments, verification, and support.</p><a href="#download" class="bw">Start earning →</a></div><div class="he"><div class="am">₹9K – ₹25K</div><div class="lb">per month at 50–70% occupancy</div></div></div></section>
+<!-- TWO WAYS -->
+<section id="two-ways">
+  <div class="section-inner">
+    <div class="two-ways-header" data-r>
+      <div class="section-eyebrow">Two sides of RoomBuddy</div>
+      <h2 class="section-h2">Whichever side you're on,<br>we've got you covered</h2>
+    </div>
+    <div class="two-ways-grid">
+      <div class="way-card guest" data-r>
+        <div class="way-card-blob"></div>
+        <div class="way-card-inner">
+          <div class="way-icon">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-5h5v5"/></svg>
+          </div>
+          <h3 class="way-h3">Book a room,<br>not a hotel</h3>
+          <p class="way-body">A furnished room in a real apartment at up to 60% less than a hotel. See who you'll be living with before you confirm. Kitchen, WiFi, real beds — from ₹500 a night.</p>
+          <a href="#download" class="way-btn">
+            Find your room
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="way-card host" data-r id="host">
+        <div class="way-card-blob"></div>
+        <div class="way-card-inner">
+          <div class="way-icon">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#E89478" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h3 class="way-h3">Flatmate gone home?<br>That room is money.</h3>
+          <p class="way-body">A spare room for even two weeks can cover a month's utility bills. Free to list, zero upfront costs. We handle Aadhaar verification, secure payments and guest support.</p>
+          <a href="#download" class="way-btn">
+            Start earning
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<section class="sec" style="background:var(--sf)"><div class="ssg"><div class="sc2 an"><div class="sn">500+</div><div class="sl">Verified rooms</div></div><div class="sc2 an d1"><div class="sn">50+</div><div class="sl">Cities across India</div></div><div class="sc2 an d2"><div class="sn">₹500</div><div class="sl">Starting price/night</div></div><div class="sc2 an d3"><div class="sn">100%</div><div class="sl">Aadhaar verified</div></div></div></section>
+<!-- WHY -->
+<section id="why">
+  <div class="section-inner">
+    <div class="why-header" data-r>
+      <div class="section-eyebrow">Why RoomBuddy</div>
+      <h2 class="section-h2">Not a hotel. Not a PG.<br>Something better.</h2>
+      <p class="section-sub">A new kind of stay — affordable, flexible and human. Like crashing at a trusted friend's place, but anywhere in India.</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card" data-r>
+        <div class="why-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+        </div>
+        <h3 class="why-h3">Real homes, not hotel boxes</h3>
+        <p class="why-body">A furnished room in a real apartment — queen bed, WiFi, attached bath — at 60% less than any comparable hotel nearby.</p>
+      </div>
+      <div class="why-card" data-r>
+        <div class="why-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0c1.1 0 2-.9 2-2V2M5 2v20M16 2c-1.7 0-3 2-3 5s1.3 5 3 5v8"/></svg>
+        </div>
+        <h3 class="why-h3">Food sorted</h3>
+        <p class="why-body">Full kitchen access to cook your own meals, or a local tiffin from ₹120. No overpriced room service, no hunting for dhabas at midnight.</p>
+      </div>
+      <div class="why-card" data-r>
+        <div class="why-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5M15.5 19c0-1.8.7-3.3 2-4.2"/></svg>
+        </div>
+        <h3 class="why-h3">Know your flatmates first</h3>
+        <p class="why-body">See real profiles — occupation, hobbies, gender — before you book. No surprises at the door. It's the difference between staying somewhere and living somewhere.</p>
+      </div>
+      <div class="why-card" data-r>
+        <div class="why-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.3 3 7.5 7 9 4-1.5 7-4.7 7-9V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.2-3.6"/></svg>
+        </div>
+        <h3 class="why-h3">Verified end to end</h3>
+        <p class="why-body">Every guest and host is Aadhaar-verified. Secure Razorpay payments, in-app chat, and real human support if anything goes wrong.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<section class="sec"><div class="si"><div style="text-align:center"><div class="an"><span class="st">What people say</span></div><h2 class="sh an d1">Loved by guests & hosts</h2></div><div class="tg"><div class="tc an"><div class="ts2">⭐⭐⭐⭐⭐</div><p class="tt">"Saved ₹15,000 compared to a hotel for my 2-week work trip. Kitchen access was a game-changer — cooked my own meals daily."</p><div class="ta"><div class="tv">RS</div><div><div class="tn">Rahul S.</div><div class="tr">Software Engineer, Bengaluru</div></div></div></div><div class="tc an d1"><div class="ts2">⭐⭐⭐⭐⭐</div><p class="tt">"My spare room earns me ₹12K/month now. RoomBuddy handles everything — verification, payments, support."</p><div class="ta"><div class="tv">PM</div><div><div class="tn">Priya M.</div><div class="tr">Host, Mumbai</div></div></div></div><div class="tc an d2"><div class="ts2">⭐⭐⭐⭐⭐</div><p class="tt">"Moved to Hyderabad for an internship. Found a room with amazing flatmates in 10 minutes. Way better than any PG."</p><div class="ta"><div class="tv">AJ</div><div><div class="tn">Ankit J.</div><div class="tr">Intern, Hyderabad</div></div></div></div></div></div></section>
+<!-- HOW -->
+<section id="how">
+  <div class="section-inner">
+    <div class="how-header" data-r>
+      <div class="section-eyebrow">How it works</div>
+      <h2 class="section-h2">Book a room in 3 steps</h2>
+      <p class="section-sub" style="margin:0 auto">No brokerage. No long-term lock-in. No hidden charges. Just a place to stay.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-card" data-r>
+        <div class="how-num">1</div>
+        <div class="how-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+        <h3 class="how-h3">Search</h3>
+        <p class="how-body">Enter your city and dates. Filter by price, food, AC, bathroom type and gender preference. See the actual room photos and flatmate profiles before you do anything.</p>
+      </div>
+      <div class="how-card" data-r>
+        <div class="how-num">2</div>
+        <div class="how-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h3 class="how-h3">Book & pay</h3>
+        <p class="how-body">Pick the room you like. Pay securely via UPI, card or netbanking — no deposit wire transfers, no cash. Your booking is confirmed instantly or within hours.</p>
+      </div>
+      <div class="how-card" data-r>
+        <div class="how-num">3</div>
+        <div class="how-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+        </div>
+        <h3 class="how-h3">Check in & stay</h3>
+        <p class="how-body">Turn up, meet your flatmates, cook a meal. Everything is set up — bed, WiFi, kitchen. Feel right at home from the moment you walk in.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<section class="dl" id="download"><div class="dc"><h2 class="an">Download RoomBuddy</h2><p class="an d1">Available on Android and iOS. Book your next stay in under 2 minutes.</p><div class="sb2 an d2"><a href="#" class="sb3"><span class="si2">▶</span><div class="st2"><div class="ss">GET IT ON</div><div class="sn2">Google Play</div></div></a><a href="#" class="sb3"><span class="si2">🍎</span><div class="st2"><div class="ss">DOWNLOAD ON THE</div><div class="sn2">App Store</div></div></a></div><div class="de an d3">📧 support@roombuddy.co.in</div></div></section>
+<!-- HONEST BAND -->
+<section id="honest">
+  <div class="honest-inner">
+    <div class="honest-left" data-r>
+      <h2>We're early.<br>Here's what that <em>actually means</em>.</h2>
+      <p>We think you deserve honesty. RoomBuddy is a young company. Here's where we are and what we're working on — no inflated stats, no fake promises.</p>
+    </div>
+    <div class="honest-items" data-r>
+      <div class="honest-item">
+        <div class="honest-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E89478" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.3 3 7.5 7 9 4-1.5 7-4.7 7-9V6l-7-3Z"/></svg>
+        </div>
+        <div class="honest-item-text">
+          <div class="honest-item-title">Live in Bangalore, growing fast</div>
+          <div class="honest-item-body">Our first hosts are onboarded and taking bookings. Hyderabad and Pune are next.</div>
+        </div>
+      </div>
+      <div class="honest-item">
+        <div class="honest-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E89478" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <div class="honest-item-text">
+          <div class="honest-item-title">Every host is Aadhaar-verified</div>
+          <div class="honest-item-body">Before a listing goes live, we verify the host's identity manually. No listing goes live before that clears.</div>
+        </div>
+      </div>
+      <div class="honest-item">
+        <div class="honest-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E89478" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        </div>
+        <div class="honest-item-text">
+          <div class="honest-item-title">Real humans answer support</div>
+          <div class="honest-item-body">Something goes wrong? Email us at support@roombuddy.co.in — a real person replies, not a bot.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<footer><div class="fi2"><div class="fgr"><div class="fb"><div class="fl">Room<span>Buddy</span></div><p>Affordable short-term stays in shared homes. Book a room, not a hotel. Available across India.</p></div><div class="fcl"><h4>Company</h4><a href="#">About us</a><a href="#">Careers</a><a href="#">Press</a><a href="#">Blog</a></div><div class="fcl"><h4>Support</h4><a href="#">Help center</a><a href="#">Safety</a><a href="#">Cancellation</a><a href="mailto:support@roombuddy.co.in">Contact us</a></div><div class="fcl"><h4>Legal</h4><a href="#">Terms of service</a><a href="#">Privacy policy</a><a href="#">Refund policy</a></div></div><div class="fbt"><span>© 2026 RoomBuddy Technologies Pvt Ltd</span><div class="fso"><a href="#">📸</a><a href="#">𝕏</a><a href="#">in</a><a href="#">💬</a></div></div></div></footer>
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div class="section-inner">
+    <div class="testi-header" data-r>
+      <div class="section-eyebrow">What people say</div>
+      <h2 class="section-h2">Early guests & hosts</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card" data-r>
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-quote">Saved nearly ₹15,000 versus a hotel for my 2-week project stint. Having a proper kitchen meant I could actually eat well. I'd do this over any hotel now.</p>
+        <div class="testi-person">
+          <div class="testi-avatar" style="background:#FBE3D8;color:#C65B41">RS</div>
+          <div>
+            <div class="testi-name">Rahul S.</div>
+            <div class="testi-role">Software Engineer · on a work trip</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card" data-r>
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-quote">My flatmate moved out and I was worried about covering rent. Listed on RoomBuddy and had a guest within days. Genuinely could not be simpler.</p>
+        <div class="testi-person">
+          <div class="testi-avatar" style="background:#E4EBED;color:#2C4A58">PM</div>
+          <div>
+            <div class="testi-name">Priya M.</div>
+            <div class="testi-role">Host · Koramangala, Bangalore</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card" data-r>
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-quote">Moved to Bangalore for an internship and needed somewhere for 6 weeks while I found a flat. Found a room with great flatmates in 10 minutes. Way better than any PG.</p>
+        <div class="testi-person">
+          <div class="testi-avatar" style="background:#FBE3D8;color:#C65B41">AJ</div>
+          <div>
+            <div class="testi-name">Ankit J.</div>
+            <div class="testi-role">Intern · new to the city</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DOWNLOAD -->
+<section id="download">
+  <div class="download-inner">
+    <div data-r>
+      <h2 class="download-h2">Get RoomBuddy</h2>
+      <p class="download-sub">Android and iOS. Find a room or list yours in under 2 minutes.</p>
+      <div class="store-btns">
+        <a href="#" class="store-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#E89478"><path d="M3.6 2.3 13 12 3.6 21.7c-.4-.2-.6-.6-.6-1.1V3.4c0-.5.2-.9.6-1.1zm10.6 8.3 2.9 2.9-9.1 5.2 6.2-8.1zm0 2.8L8 4.5l9.1 5.2-2.9 2.9zm3.9-1.4 2.7 1.5c.7.4.7 1.2 0 1.6l-2.7 1.5L15 12l3-2z"/></svg>
+          <div class="store-btn-label">
+            <div class="store-btn-small">GET IT ON</div>
+            <div class="store-btn-name">Google Play</div>
+          </div>
+        </a>
+        <a href="#" class="store-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.9zM14.2 5.6c.6-.8 1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 0 2-.5 2.7-1.3z"/></svg>
+          <div class="store-btn-label">
+            <div class="store-btn-small">DOWNLOAD ON THE</div>
+            <div class="store-btn-name">App Store</div>
+          </div>
+        </a>
+      </div>
+      <a href="mailto:support@roombuddy.co.in" class="support-link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        support@roombuddy.co.in
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">
+        <span>Room<em>Buddy</em></span>
+      </div>
+      <p class="footer-desc">Affordable short-term stays in verified shared homes. Book a room, not a hotel — available across India.</p>
+      <div class="social-row">
+        <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" class="social-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.1" fill="#fff" stroke="none"/></svg>
+        </a>
+        <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" class="social-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M14 8.5V7c0-.9.6-1.1 1-1.1h2V2.7h-2.7C11.3 2.7 10 4.5 10 6.6v1.9H8v3.2h2V21h4v-9.3h2.5l.5-3.2H14z"/></svg>
+        </a>
+        <a href="https://x.com" target="_blank" rel="noopener" aria-label="X" class="social-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.2 2.5h3.3l-7.2 8.3 8.5 11.2h-6.6l-5.2-6.8-6 6.8H1.7l7.7-8.8L1.3 2.5h6.8l4.7 6.2 5.4-6.2zm-1.2 17.8h1.8L7.1 4.3H5.2L17 20.3z"/></svg>
+        </a>
+        <a href="https://linkedin.com" target="_blank" rel="noopener" aria-label="LinkedIn" class="social-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M6.9 8.8H3.3V21h3.6V8.8zM5.1 3.2A2.1 2.1 0 1 0 5.1 7.4 2.1 2.1 0 0 0 5.1 3.2zM20.7 21v-6.7c0-3.3-1.8-4.9-4.1-4.9-1.9 0-2.7 1-3.2 1.8V8.8H9.8c.05 1 0 12.2 0 12.2h3.6v-6.8c0-.3 0-.6.1-.8.3-.6.8-1.3 1.8-1.3 1.3 0 1.8 1 1.8 2.4V21h3.6z"/></svg>
+        </a>
+        <a href="https://wa.me/910000000000" target="_blank" rel="noopener" aria-label="WhatsApp" class="social-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-2.9.8.8-2.8-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.4-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c2.6 1 2.6.7 3.1.6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .1-1.2c0-.2-.2-.3-.5-.4z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <a href="mailto:support@roombuddy.co.in">support@roombuddy.co.in</a>
+      <a href="https://roombuddy.co.in/terms/">Terms of service</a>
+      <a href="https://roombuddy.co.in/privacy/">Privacy policy</a>
+    </div>
+    <div class="footer-col">
+      <h4>Stay in the loop</h4>
+      <p style="font-size:13.5px;line-height:1.6;margin-bottom:14px">New rooms, city launches, host tips — straight to your inbox.</p>
+      <div class="newsletter-form">
+        <input type="email" placeholder="Your email" class="newsletter-input">
+        <button class="newsletter-btn">Join</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 RoomBuddy Private Limited · CIN U55101UP2026PTC247772</span>
+    <div class="footer-bottom-links">
+      <a href="https://roombuddy.co.in/terms/">Terms</a>
+      <a href="https://roombuddy.co.in/privacy/">Privacy</a>
+    </div>
+  </div>
+</footer>
 
 <script>
-const o=new IntersectionObserver(e=>{e.forEach(e=>{e.isIntersecting&&e.target.classList.add('v')})},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
-document.querySelectorAll('.an').forEach(e=>o.observe(e));
-window.addEventListener('scroll',()=>{document.getElementById('nav').classList.toggle('sc',window.scrollY>50)});
+  // Scroll reveal
+  (function () {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -36px 0px' });
+
+    document.querySelectorAll('[data-r]').forEach(function (el, i) {
+      var sibs = el.parentElement
+        ? Array.from(el.parentElement.children).filter(function (c) { return c.hasAttribute('data-r'); })
+        : [el];
+      el.style.transitionDelay = (sibs.indexOf(el) * 0.07) + 's';
+      io.observe(el);
+    });
+
+    // Nav shadow on scroll
+    var nav = document.getElementById('nav');
+    window.addEventListener('scroll', function () {
+      nav.style.boxShadow = window.scrollY > 30 ? '0 8px 30px rgba(0,0,0,.25)' : 'none';
+    });
+  })();
 </script>
+
 </body>
 </html>
