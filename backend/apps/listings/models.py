@@ -13,6 +13,7 @@ class Listing(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = "draft"
+        PENDING = "pending"
         LIVE = "live"
         PAUSED = "paused"
         SNOOZED = "snoozed"

@@ -614,12 +614,20 @@ def review_id_verification(user_id: str, action: str, reviewer: str, reason: str
         "id_reviewed_at", "id_reviewed_by", "updated_at",
     ])
 
+    promoted_count = 0
+    if action == "approve":
+        from apps.listings.models import Listing
+        promoted_count = Listing.objects.filter(
+            host_user=user, status=Listing.Status.PENDING,
+        ).update(status=Listing.Status.LIVE, published_at=timezone.now())
+
     return {
         "user_id": str(user.id),
         "phone": user.phone_number,
         "name": profile.display_name,
         "status": profile.id_verification_status,
         "reviewed_by": reviewer,
+        "listings_promoted": promoted_count,
     }
 
 

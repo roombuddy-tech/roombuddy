@@ -24,7 +24,20 @@ class HostListingsListView(APIView):
     @extend_schema(tags=["Host"], responses={200: HostListingsResponseSerializer})
     def get(self, request):
         results = get_host_listings(request.user)
-        return Response({"count": len(results), "results": results})
+        aadhaar_verified = False
+        id_verification_status = "not_submitted"
+        try:
+            profile = request.user.profile
+            aadhaar_verified = profile.id_verification_status == "approved"
+            id_verification_status = profile.id_verification_status
+        except Exception:
+            pass
+        return Response({
+            "count": len(results),
+            "results": results,
+            "aadhaar_verified": aadhaar_verified,
+            "id_verification_status": id_verification_status,
+        })
 
 
 class CreateListingView(APIView):

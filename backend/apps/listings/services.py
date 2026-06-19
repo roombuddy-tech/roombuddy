@@ -419,8 +419,11 @@ def create_listing(user: User, data: dict) -> dict:
             food_meals_available=d.get("food_meals_available", False),
             food_meal_cost=d.get("food_meal_cost"),
             food_meal_description=meal_desc or None,
-            status=Listing.Status.LIVE,
+            status=_listing_status_for_user(user),
         )
+        if listing.status == Listing.Status.LIVE:
+            listing.published_at = datetime.now()
+            listing.save(update_fields=["published_at"])
 
         amenity_names = d.get("amenities", [])
         if amenity_names:
@@ -459,7 +462,11 @@ def create_listing(user: User, data: dict) -> dict:
         "listing_id": str(listing.id),
         "property_id": str(listing.property_id),
         "status": listing.status,
-        "message": "Listing published successfully.",
+        "message": (
+            "Listing published successfully."
+            if listing.status == Listing.Status.LIVE
+            else "Listing created. It will go live once your Aadhaar is verified."
+        ),
     }
 
 
@@ -474,6 +481,15 @@ def _build_meal_description(d: dict) -> str:
     if meal_desc:
         parts.append(meal_desc)
     return "\n".join(parts)
+
+
+def _listing_status_for_user(user: User) -> str:
+    try:
+        if user.profile.id_verification_status == UserProfile.IDVerificationStatus.APPROVED:
+            return Listing.Status.LIVE
+    except UserProfile.DoesNotExist:
+        pass
+    return Listing.Status.PENDING
 
 
 def _parse_time(time_str: str) -> str:
