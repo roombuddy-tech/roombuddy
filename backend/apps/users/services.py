@@ -660,6 +660,7 @@ def review_id_verification(user_id: str, action: str, reviewer: str, reason: str
         "name": profile.display_name,
         "status": profile.id_verification_status,
         "reviewed_by": reviewer,
+        "listings_promoted": promoted_count,
     }
 
 

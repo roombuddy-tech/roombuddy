@@ -5,13 +5,14 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
 import api from '../../services/api';
+import VerificationScreen from '../shared/VerificationScreen';
 
 const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
 const TOTAL_STEPS = 9;
@@ -42,6 +43,7 @@ interface DraftData {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   live: { label: 'Listed', color: '#10B981' },
+  pending: { label: 'Pending', color: '#F59E0B' },
   draft: { label: 'Draft', color: '#F59E0B' },
   paused: { label: 'Paused', color: '#94A3B8' },
   snoozed: { label: 'Snoozed', color: '#94A3B8' },
@@ -82,6 +84,9 @@ export default function ListingsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState<DraftData | null>(null);
+  const [aadhaarVerified, setAadhaarVerified] = useState(true);
+  const [idVerificationStatus, setIdVerificationStatus] = useState('not_submitted');
+  const [showVerification, setShowVerification] = useState(false);
 
   const draftKey = user?.user_id ? getDraftKey(user.user_id) : null;
 
@@ -89,6 +94,8 @@ export default function ListingsScreen() {
     try {
       const res = await api.get(ENDPOINTS.HOST.LISTINGS);
       setListings(res.data.results);
+      setAadhaarVerified(res.data.aadhaar_verified ?? true);
+      setIdVerificationStatus(res.data.id_verification_status ?? 'not_submitted');
     } catch (err) {
       console.log('Listings fetch error:', err);
     } finally {
@@ -162,8 +169,16 @@ export default function ListingsScreen() {
   const draftTitle = draft?.form?.title?.trim() || draft?.form?.apartmentName?.trim() || 'Untitled listing';
   const draftStepsCompleted = draft ? Math.max(0, draft.step) : 0;
 
+  const handleVerificationClose = () => {
+    setShowVerification(false);
+    fetchListings();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <Modal visible={showVerification} animationType="slide">
+        <VerificationScreen visible={showVerification} onClose={handleVerificationClose} />
+      </Modal>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
@@ -211,6 +226,44 @@ export default function ListingsScreen() {
                     <Text style={styles.draftContinueTxt}>Continue</Text>
                     <Ionicons name="arrow-forward" size={14} color="#fff" />
                   </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Aadhaar verification banner */}
+            {!aadhaarVerified && listings.some((l) => l.status === 'pending') && (
+              <View style={styles.verifyBanner}>
+                <View style={styles.verifyBannerIcon}>
+                  <Ionicons
+                    name={idVerificationStatus === 'pending' ? 'hourglass-outline' : idVerificationStatus === 'rejected' ? 'alert-circle' : 'shield-outline'}
+                    size={24}
+                    color={idVerificationStatus === 'rejected' ? '#EF4444' : '#D97706'}
+                  />
+                </View>
+                <View style={styles.verifyBannerContent}>
+                  <Text style={styles.verifyBannerTitle}>
+                    {idVerificationStatus === 'pending'
+                      ? 'Aadhaar under review'
+                      : idVerificationStatus === 'rejected'
+                        ? 'Aadhaar verification failed'
+                        : 'Verify your Aadhaar'}
+                  </Text>
+                  <Text style={styles.verifyBannerText}>
+                    {idVerificationStatus === 'pending'
+                      ? 'Your listings will go live once your Aadhaar is verified (24-48 hrs).'
+                      : idVerificationStatus === 'rejected'
+                        ? 'Please resubmit your Aadhaar to list your properties.'
+                        : 'Upload your Aadhaar to make your listings visible to guests.'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.verifyBannerBtn}
+                  onPress={() => setShowVerification(true)}
+                >
+                  <Text style={styles.verifyBannerBtnTxt}>
+                    {idVerificationStatus === 'pending' ? 'Check status' : idVerificationStatus === 'rejected' ? 'Resubmit' : 'Verify now'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={14} color="#fff" />
                 </TouchableOpacity>
               </View>
             )}
@@ -430,6 +483,41 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
   emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', paddingHorizontal: SPACING.xl },
+
+  // ── Verification banner ──
+  verifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    ...SHADOW.sm,
+  },
+  verifyBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  verifyBannerContent: { flex: 1, marginRight: 12 },
+  verifyBannerTitle: { fontSize: 14, ...FONTS.semibold, color: '#92400E', marginBottom: 2 },
+  verifyBannerText: { fontSize: 12, color: '#92400E', lineHeight: 17 },
+  verifyBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#D97706',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.pill,
+  },
+  verifyBannerBtnTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
 
   // ── Add new listing button (bottom) ──
   addNewBtn: {
