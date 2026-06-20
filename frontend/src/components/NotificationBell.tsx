@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
-import { COLORS, FONTS } from '../constants/theme';
+import { FONTS, ThemeColors } from '../constants/theme';
+import { useThemeColors } from '../context/ThemeContext';
 import { listNotifications } from '../services/notifications';
 
 export default function NotificationBell({ style }: { style?: ViewStyle }) {
   const navigation = useNavigation<any>();
   const [count, setCount] = useState(0);
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   useFocusEffect(
     useCallback(() => {
@@ -32,7 +35,7 @@ export default function NotificationBell({ style }: { style?: ViewStyle }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   badge: {
     position: 'absolute', top: -3, right: -3,
     minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,

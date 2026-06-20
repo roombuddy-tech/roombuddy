@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList } from '../../navigation/types';
 import api from '../../services/api';
 import { startConversation } from '../../services/chat';
@@ -13,7 +14,7 @@ import { startConversation } from '../../services/chat';
 type Nav = NativeStackNavigationProp<HostStackParamList, 'BookingDetail'>;
 type Route = RouteProp<HostStackParamList, 'BookingDetail'>;
 
-const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
+const makeStatusColors = (COLORS: ThemeColors): Record<string, { text: string; bg: string }> => ({
   active: { text: COLORS.success, bg: COLORS.accentSoft },
   accepted: { text: COLORS.success, bg: COLORS.accentSoft },
   pending: { text: COLORS.primaryDark, bg: COLORS.raised },
@@ -22,7 +23,7 @@ const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
   cancelled_by_host: { text: COLORS.danger, bg: COLORS.raised },
   rejected: { text: COLORS.danger, bg: COLORS.raised },
   expired: { text: COLORS.textMut, bg: COLORS.chip },
-};
+});
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -33,7 +34,7 @@ function formatStatus(status: string): string {
   return status.charAt(0).toUpperCase() + status.replace(/_/g, ' ').slice(1);
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value, styles }: { label: string; value: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailLabel}>{label}</Text>
@@ -45,6 +46,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export default function BookingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
+  const STATUS_COLORS = useMemo(() => makeStatusColors(COLORS), [COLORS]);
   const { booking } = route.params;
 
 
@@ -133,15 +137,16 @@ export default function BookingDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stay details</Text>
-          <DetailRow label="Booking code" value={booking.booking_code} />
-          <DetailRow label="Check-in" value={formatDate(booking.check_in_date)} />
-          <DetailRow label="Check-out" value={formatDate(booking.check_out_date)} />
-          <DetailRow label="Nights" value={`${booking.nights} night${booking.nights > 1 ? 's' : ''}`} />
+          <DetailRow styles={styles} label="Booking code" value={booking.booking_code} />
+          <DetailRow styles={styles} label="Check-in" value={formatDate(booking.check_in_date)} />
+          <DetailRow styles={styles} label="Check-out" value={formatDate(booking.check_out_date)} />
+          <DetailRow styles={styles} label="Nights" value={`${booking.nights} night${booking.nights > 1 ? 's' : ''}`} />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings</Text>
           <DetailRow
+            styles={styles}
             label="Guest pays"
             value={`₹${booking.total_guest_pays.toLocaleString('en-IN')}`}
           />
@@ -197,7 +202,7 @@ export default function BookingDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',

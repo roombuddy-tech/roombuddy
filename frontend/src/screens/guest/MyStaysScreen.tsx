@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -17,7 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { startConversation } from '../../services/chat';
 
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import api from '../../services/api';
 
@@ -44,7 +45,7 @@ interface GuestBooking {
   has_reviewed?: boolean;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+const makeStatusConfig = (COLORS: ThemeColors): Record<string, { label: string; color: string; bg: string; icon: string }> => ({
   pending: { label: 'Pending confirmation', color: '#B45309', bg: '#FEF3C7', icon: 'time-outline' },
   accepted: { label: 'Confirmed', color: '#047857', bg: '#D1FAE5', icon: 'checkmark-circle-outline' },
   active: { label: 'Active stay', color: COLORS.primary, bg: COLORS.primaryAlpha, icon: 'home-outline' },
@@ -54,7 +55,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   cancelled_by_host: { label: 'Cancelled by host', color: COLORS.danger, bg: '#FEE2E2', icon: 'close-outline' },
   expired: { label: 'Expired', color: COLORS.textMut, bg: COLORS.surface, icon: 'alert-circle-outline' },
   no_show: { label: 'No show', color: COLORS.textMut, bg: COLORS.surface, icon: 'alert-outline' },
-};
+});
 
 function fmtDateShort(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -62,6 +63,9 @@ function fmtDateShort(d: string) {
 
 export default function MyStaysScreen() {
   const navigation = useNavigation<Nav>();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  const STATUS_CONFIG = useMemo(() => makeStatusConfig(COLORS), [COLORS]);
   const [bookings, setBookings] = useState<GuestBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -283,7 +287,7 @@ export default function MyStaysScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 

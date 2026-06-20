@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import { getMessages, markConversationRead, sendMessage } from '../../services/chat';
 import type { ChatMessage } from '../../types/chat';
 
@@ -31,6 +32,8 @@ export default function ChatScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<Record<string, ChatRouteParams>, string>>();
   const { conversationId, title, subtitle } = route.params;
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +181,7 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },

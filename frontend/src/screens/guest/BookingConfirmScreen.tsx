@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,8 @@ import {
   View,
 } from 'react-native';
 
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { createBooking, getQuote } from '../../services/bookings';
 import { createPaymentOrder } from '../../services/payments';
@@ -26,6 +27,8 @@ type Rt = RouteProp<GuestStackParamList, 'BookingConfirm'>;
 export default function BookingConfirmScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const {
     listingId, listingTitle, checkIn, checkOut, numberOfGuests = 1,
     mealOption: initialMealOption = false,
@@ -242,7 +245,7 @@ function formatDate(iso: string): string {
   });
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg, padding: SPACING.lg },
   errorText: { fontSize: 16, color: COLORS.text, textAlign: 'center', marginTop: SPACING.md, ...FONTS.medium },

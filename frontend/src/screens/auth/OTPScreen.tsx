@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import OTPInput from '../../components/forms/OTPInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
+import { FONTS, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useThemeColors } from '../../context/ThemeContext';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -18,6 +19,8 @@ export default function OTPScreen({ navigation, route }: Props) {
     isSignup?: boolean;
   };
   const { login } = useAuth();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [otpValue, setOtpValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -145,7 +148,7 @@ export default function OTPScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, paddingTop: SPACING.md },
   backBtn: {
     flexDirection: 'row',

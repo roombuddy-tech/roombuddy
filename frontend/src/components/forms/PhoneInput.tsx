@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TextInput, Text, StyleSheet } from 'react-native';
-import { COLORS, RADIUS, FONTS, SPACING } from '../../constants/theme';
+import { RADIUS, FONTS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 interface PhoneInputProps {
   value: string;
@@ -10,6 +11,8 @@ interface PhoneInputProps {
 }
 
 export default function PhoneInput({ value, onChangeText, error, autoFocus }: PhoneInputProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   return (
     <View>
       <Text style={styles.label}>Phone number</Text>
@@ -35,7 +38,7 @@ export default function PhoneInput({ value, onChangeText, error, autoFocus }: Ph
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   label: {
     fontSize: 14,
     color: COLORS.textSec,

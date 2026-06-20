@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
+import { FONTS, SPACING, RADIUS, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 interface HelpSupportScreenProps {
   visible: boolean;
@@ -10,6 +11,9 @@ interface HelpSupportScreenProps {
 }
 
 export default function HelpSupportScreen({ visible, onClose }: HelpSupportScreenProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const handleEmail = () => {
     Linking.openURL('mailto:support@roombuddy.co.in?subject=Help%20Request');
   };
@@ -96,7 +100,7 @@ export default function HelpSupportScreen({ visible, onClose }: HelpSupportScree
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md },
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING } from '../../constants/theme';
+import { SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
@@ -11,6 +12,8 @@ interface ScreenWrapperProps {
 }
 
 export default function ScreenWrapper({ children, scroll = true, padded = true, bg }: ScreenWrapperProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const content = (
     <View style={[styles.inner, padded && styles.padded]}>
       {children}
@@ -39,7 +42,7 @@ export default function ScreenWrapper({ children, scroll = true, padded = true, 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },

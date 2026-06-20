@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
+import { FONTS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import {
   listNotifications,
   markAllNotificationsRead,
@@ -22,6 +23,9 @@ import type { AppNotification } from '../../types/notification';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +86,7 @@ export default function NotificationsScreen() {
   const hasUnread = items.some((n) => !n.read_at);
 
   const renderItem = ({ item }: { item: AppNotification }) => {
-    const v = visualFor(item.event_type);
+    const v = visualFor(item.event_type, COLORS);
     return (
       <TouchableOpacity
         style={[styles.row, !item.read_at && styles.rowUnread]}
@@ -150,7 +154,7 @@ export default function NotificationsScreen() {
   );
 }
 
-function visualFor(eventType: string): { icon: any; color: string; bg: string } {
+function visualFor(eventType: string, COLORS: ThemeColors): { icon: any; color: string; bg: string } {
   const green = '#10B981';
   const greenBg = 'rgba(16,185,129,0.12)';
   const coralBg = 'rgba(255,107,74,0.12)';
@@ -190,7 +194,7 @@ function formatRelative(iso: string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   header: {

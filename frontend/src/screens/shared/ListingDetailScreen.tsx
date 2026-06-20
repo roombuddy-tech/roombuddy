@@ -21,7 +21,8 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Calendar, DateData } from 'react-native-calendars';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import { FONTS, SPACING, RADIUS, SHADOW, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import { CONFIG } from '../../constants/config';
 import type { HostStackParamList } from '../../navigation/types';
 import { getListing, updateBlockedDates, deleteListing, toggleSnooze } from '../../services/listings';
@@ -58,18 +59,20 @@ const AMENITY_ICONS: Record<string, any> = {
   'Door lock on room': 'lock-closed-outline',
 };
 
-function Divider() {
-  return <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.md }} />;
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return <Text style={styles.sectionHeader}>{title}</Text>;
-}
-
 export default function ListingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { preview, item } = route.params ?? {};
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
+  const Divider = () => (
+    <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.md }} />
+  );
+
+  const SectionHeader = ({ title }: { title: string }) => (
+    <Text style={styles.sectionHeader}>{title}</Text>
+  );
 
   const isPreview = !!preview;
   const f = preview;
@@ -709,7 +712,7 @@ export default function ListingDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
 
   previewBanner: {

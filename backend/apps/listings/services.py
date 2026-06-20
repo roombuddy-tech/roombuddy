@@ -8,7 +8,7 @@ from apps.listings.models import Listing, ListingAmenity, ListingBlockedDate, Li
 from apps.listings.serializers import CreateListingRequestSerializer
 from apps.properties.models import Property, PropertyFlatmate
 from apps.rooms.models import Room
-from apps.users.models import User
+from apps.users.models import User, UserProfile
 from apps.properties.models import PropertyPhoto
 import logging
 import math

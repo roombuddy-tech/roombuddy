@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useThemeColors } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -23,6 +24,8 @@ const GENDERS = [
 export default function EditProfileScreen({ visible, onClose }: EditProfileProps) {
   const insets = useSafeAreaInsets();
   const { completeProfile } = useAuth();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -214,7 +217,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },

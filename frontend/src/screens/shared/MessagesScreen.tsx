@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, FONTS, SPACING } from '../../constants/theme';
+import { FONTS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import { listConversations } from '../../services/chat';
 import type { Conversation } from '../../types/chat';
 
@@ -28,6 +29,9 @@ function fmtRelative(iso: string | null): string {
 
 export default function MessagesScreen() {
   const navigation = useNavigation<any>();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const [items, setItems] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,7 +136,7 @@ export default function MessagesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {

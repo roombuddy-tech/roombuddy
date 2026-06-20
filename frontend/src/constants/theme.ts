@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────
 // RoomBuddy design tokens — Terracotta (light) + Luxe Dark
-// Active palette: Luxe Dark. To revert to light, set `COLORS = COLORS_LIGHT`.
+// Both palettes are exported; the active palette is chosen at runtime via
+// ThemeContext (see context/ThemeContext.tsx + hooks/useThemedStyles.ts).
 // ─────────────────────────────────────────────────────────────────────────
 
-const COLORS_LIGHT = {
+export const COLORS_LIGHT = {
   // Brand
   primary: '#B85C38',
   primaryDark: '#8F4426',
@@ -49,7 +50,7 @@ const COLORS_LIGHT = {
   accentAlpha: 'rgba(184,92,56,0.08)',
 } as const;
 
-const COLORS_DARK = {
+export const COLORS_DARK = {
   primary: '#C9A24B',
   primaryDark: '#A9863A',
   primaryDeep: '#7E6126',
@@ -88,8 +89,18 @@ const COLORS_DARK = {
   accentAlpha: 'rgba(201,162,75,0.12)',
 } as const;
 
-// Active palette — swap to COLORS_LIGHT for Terracotta.
-export const COLORS = COLORS_DARK;
+export type ThemeMode = 'light' | 'dark';
+export type ThemeColors = { [K in keyof typeof COLORS_DARK]: string };
+
+export const PALETTES: Record<ThemeMode, ThemeColors> = {
+  light: COLORS_LIGHT,
+  dark: COLORS_DARK,
+};
+
+// Legacy default export — used by code that hasn't been migrated to
+// useThemeColors() yet. Defaults to the dark palette so it's safe to read
+// at module load time. Prefer useThemeColors() in new components.
+export const COLORS: ThemeColors = COLORS_DARK;
 
 // ─────────────────────────────────────────────────────────────────────────
 // Typography — Newsreader (serif, headlines/prices) + Hanken Grotesk (UI)
@@ -112,56 +123,56 @@ export const FONTS = {
   extrabold: { fontFamily: 'HankenGrotesk_700Bold' },
 } as const;
 
-export const TYPOGRAPHY = {
+export const buildTypography = (c: ThemeColors) => ({
   display: {
     ...FONTS.serifLight,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -0.5,
-    color: COLORS.text,
+    color: c.text,
   },
   title: {
     ...FONTS.serif,
     fontSize: 23,
     lineHeight: 30,
     letterSpacing: -0.2,
-    color: COLORS.text,
+    color: c.text,
   },
   headline: {
     ...FONTS.serif,
     fontSize: 17,
     lineHeight: 24,
-    color: COLORS.text,
+    color: c.text,
   },
   price: {
     ...FONTS.serif,
     fontSize: 20,
     lineHeight: 26,
-    color: COLORS.text,
+    color: c.text,
   },
   bodyLg: {
     ...FONTS.regular,
     fontSize: 16,
     lineHeight: 24,
-    color: COLORS.text,
+    color: c.text,
   },
   body: {
     ...FONTS.regular,
     fontSize: 14,
     lineHeight: 21,
-    color: COLORS.text,
+    color: c.text,
   },
   label: {
     ...FONTS.semibold,
     fontSize: 12.5,
     lineHeight: 16,
-    color: COLORS.text,
+    color: c.text,
   },
   caption: {
     ...FONTS.medium,
     fontSize: 12,
     lineHeight: 16,
-    color: COLORS.textSec,
+    color: c.textSec,
   },
   eyebrow: {
     ...FONTS.semibold,
@@ -169,9 +180,11 @@ export const TYPOGRAPHY = {
     lineHeight: 14,
     letterSpacing: 1.3,
     textTransform: 'uppercase' as const,
-    color: COLORS.textSec,
+    color: c.textSec,
   },
-} as const;
+});
+
+export const TYPOGRAPHY = buildTypography(COLORS);
 
 // ─────────────────────────────────────────────────────────────────────────
 // Spacing / radius / shadow
@@ -194,7 +207,7 @@ export const RADIUS = {
   pill: 9999,
 };
 
-export const SHADOW = {
+const SHADOWS_DARK = {
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -217,3 +230,37 @@ export const SHADOW = {
     elevation: 9,
   },
 };
+
+const SHADOWS_LIGHT = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+};
+
+export type ThemeShadows = typeof SHADOWS_DARK;
+
+export const SHADOWS: Record<ThemeMode, ThemeShadows> = {
+  light: SHADOWS_LIGHT,
+  dark: SHADOWS_DARK,
+};
+
+// Legacy default — defaults to dark variant. Prefer useTheme().shadows.
+export const SHADOW: ThemeShadows = SHADOWS_DARK;

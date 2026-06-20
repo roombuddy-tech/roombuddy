@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { getErrorMessage } from '../../utils/errors';
 
@@ -26,6 +27,9 @@ interface PayoutAccount {
 type AddMode = 'none' | 'bank' | 'upi';
 
 export default function PaymentMethodsScreen({ visible, onClose }: PaymentMethodsScreenProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMode, setAddMode] = useState<AddMode>('none');
@@ -292,7 +296,7 @@ export default function PaymentMethodsScreen({ visible, onClose }: PaymentMethod
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md },

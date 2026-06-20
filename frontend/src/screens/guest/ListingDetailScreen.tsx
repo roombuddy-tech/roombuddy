@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,7 +20,8 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
@@ -73,15 +74,6 @@ function initials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 }
 
-function SectionTitle({ label }: { label: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionAccent} />
-      <Text style={styles.sectionTitle}>{label}</Text>
-    </View>
-  );
-}
-
 function StarDisplay({ rating, size = 13 }: { rating: number; size?: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
@@ -92,8 +84,23 @@ function StarDisplay({ rating, size = 13 }: { rating: number; size?: number }) {
   );
 }
 
-function ReviewCard({ review }: { review: ReviewItem }) {
-  return (
+// ─── screen ───────────────────────────────────────────────────────────────────
+
+export default function GuestListingDetailScreen() {
+  const navigation = useNavigation<Nav>();
+  const route = useRoute<Rt>();
+  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut } = route.params;
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
+  const SectionTitle = ({ label }: { label: string }) => (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionTitle}>{label}</Text>
+    </View>
+  );
+
+  const ReviewCard = ({ review }: { review: ReviewItem }) => (
     <View style={styles.reviewCard}>
       <View style={styles.reviewCardTop}>
         <View style={styles.reviewerAvatar}>
@@ -117,14 +124,6 @@ function ReviewCard({ review }: { review: ReviewItem }) {
       ) : null}
     </View>
   );
-}
-
-// ─── screen ───────────────────────────────────────────────────────────────────
-
-export default function GuestListingDetailScreen() {
-  const navigation = useNavigation<Nav>();
-  const route = useRoute<Rt>();
-  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut } = route.params;
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -550,7 +549,7 @@ export default function GuestListingDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg, padding: SPACING.lg },
   errorText: { fontSize: 16, color: COLORS.text, textAlign: 'center', marginTop: SPACING.md, ...FONTS.medium },

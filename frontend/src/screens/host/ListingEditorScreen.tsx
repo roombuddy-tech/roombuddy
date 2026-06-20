@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../../constants/theme';
+import { FONTS, SPACING, RADIUS, ThemeColors, ThemeShadows } from '../../constants/theme';
+import { useTheme, useThemeColors } from '../../context/ThemeContext';
 import { CONFIG } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import type { HostStackParamList } from '../../navigation/types';
@@ -244,6 +245,7 @@ const TIMES: string[] = (() => {
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
 function ProgressBar({ step }: { step: number }) {
+  const COLORS = useThemeColors();
   return (
     <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: SPACING.lg, paddingVertical: 12 }}>
       {Array.from({ length: TOTAL_STEPS }, (_, i) => {
@@ -256,6 +258,8 @@ function ProgressBar({ step }: { step: number }) {
 }
 
 function EditorHeader({ onSaveExit }: { onSaveExit: () => void }) {
+  const COLORS = useThemeColors();
+  const hdrSt = useMemo(() => makeHdrStyles(COLORS), [COLORS]);
   return (
     <View style={hdrSt.row}>
       <Text style={hdrSt.brand}>
@@ -268,7 +272,7 @@ function EditorHeader({ onSaveExit }: { onSaveExit: () => void }) {
   );
 }
 
-const hdrSt = StyleSheet.create({
+const makeHdrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -308,6 +312,8 @@ function BottomNav({
   validate?: () => string | null;
   isValid?: boolean;
 }) {
+  const COLORS = useThemeColors();
+  const bnSt = useMemo(() => makeBnStyles(COLORS), [COLORS]);
   const [touched, setTouched] = useState(false);
 
   const error = touched && validate ? validate() : null;
@@ -347,7 +353,7 @@ function BottomNav({
   );
 }
 
-const bnSt = StyleSheet.create({
+const makeBnStyles = (COLORS: ThemeColors) => StyleSheet.create({
   row: { flexDirection: 'row', gap: SPACING.sm },
   back: {
     flex: 1,
@@ -383,6 +389,8 @@ function Chip({
   onPress: () => void;
   icon?: (color: string) => React.ReactNode;
 }) {
+  const COLORS = useThemeColors();
+  const cpSt = useMemo(() => makeCpStyles(COLORS), [COLORS]);
   const color = selected ? COLORS.primary : COLORS.textSec;
   return (
     <TouchableOpacity
@@ -402,7 +410,7 @@ function Chip({
   );
 }
 
-const cpSt = StyleSheet.create({
+const makeCpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -426,6 +434,8 @@ function AmenityChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const COLORS = useThemeColors();
+  const acSt = useMemo(() => makeAcStyles(COLORS), [COLORS]);
   const iconName = AMENITY_ICONS[label] ?? 'ellipse-outline';
   return (
     <TouchableOpacity
@@ -439,7 +449,7 @@ function AmenityChip({
   );
 }
 
-const acSt = StyleSheet.create({
+const makeAcStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -457,6 +467,7 @@ const acSt = StyleSheet.create({
 });
 
 function OptionalMark() {
+  const COLORS = useThemeColors();
   return <Text style={{ fontSize: 11, color: COLORS.textMut, ...FONTS.regular }}> (optional)</Text>;
 }
 
@@ -477,6 +488,8 @@ function Field({
   keyboardType?: any;
   optional?: boolean;
 }) {
+  const COLORS = useThemeColors();
+  const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   return (
     <View style={{ marginTop: 16 }}>
       {label ? (
@@ -498,7 +511,7 @@ function Field({
   );
 }
 
-const fldSt = StyleSheet.create({
+const makeFldStyles = (COLORS: ThemeColors) => StyleSheet.create({
   label: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 6 },
   input: {
     borderWidth: 1,
@@ -514,6 +527,7 @@ const fldSt = StyleSheet.create({
 });
 
 function SectionLabel({ label, optional }: { label: string; optional?: boolean }) {
+  const COLORS = useThemeColors();
   return (
     <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 16, marginBottom: 8 }}>
       {label}
@@ -533,6 +547,8 @@ function RuleRow({
   onChange: (v: boolean) => void;
   noBorder?: boolean;
 }) {
+  const COLORS = useThemeColors();
+  const rrSt = useMemo(() => makeRrStyles(COLORS), [COLORS]);
   return (
     <View style={[rrSt.row, noBorder && { borderBottomWidth: 0 }]}>
       <Text style={rrSt.label}>{label}</Text>
@@ -547,7 +563,7 @@ function RuleRow({
   );
 }
 
-const rrSt = StyleSheet.create({
+const makeRrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -574,6 +590,9 @@ function TimePicker({
   optional?: boolean;
   placeholder?: string;
 }) {
+  const COLORS = useThemeColors();
+  const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
+  const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
   const [open, setOpen] = useState(false);
 
   return (
@@ -627,7 +646,7 @@ function TimePicker({
   );
 }
 
-const tpSt = StyleSheet.create({
+const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -672,6 +691,8 @@ const tpSt = StyleSheet.create({
 // ─── Step 0: Welcome ──────────────────────────────────────────────────────────
 
 function StepWelcome({ onNext }: { onNext: () => void }) {
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const wlSt = useMemo(() => makeWlStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -709,7 +730,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
   );
 }
 
-const wlSt = StyleSheet.create({
+const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingTop: SPACING.md },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
   title: { fontSize: 28, ...FONTS.bold, color: COLORS.primaryDark, textAlign: 'center', marginBottom: SPACING.sm },
@@ -722,7 +743,7 @@ const wlSt = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.sm,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     ...SHADOW.sm,
   },
   cta: {
@@ -737,6 +758,9 @@ const wlSt = StyleSheet.create({
 // ─── Step 1: Your Property ────────────────────────────────────────────────────
 
 function StepProperty({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const prpSt = useMemo(() => makePrpStyles(COLORS), [COLORS]);
   const isValid =
     !!form.apartmentType &&
     form.floorNumber.trim().length > 0 &&
@@ -865,7 +889,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
   );
 }
 
-const prpSt = StyleSheet.create({
+const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   aptGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -888,6 +912,9 @@ const prpSt = StyleSheet.create({
 // ─── Step 2: Room Details ─────────────────────────────────────────────────────
 
 function StepRoom({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const rdSt = useMemo(() => makeRdStyles(COLORS), [COLORS]);
   const toggleFeature = (f: string) => {
     const cur = form.roomFeatures;
     update({ roomFeatures: cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f] });
@@ -1010,7 +1037,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
   );
 }
 
-const rdSt = StyleSheet.create({
+const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
   typeCard: {
     flex: 1,
     padding: SPACING.md,
@@ -1026,6 +1053,8 @@ const rdSt = StyleSheet.create({
 // ─── Step 3: Title & Description ──────────────────────────────────────────────
 
 function StepTitle({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const LANDMARKS = ['Metro station', 'Bus stop', 'Tech park', 'Mall', 'Hospital', 'Restaurant hub'];
 
   const toggleLandmark = (l: string) => {
@@ -1096,6 +1125,9 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
 
 function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   const { user } = useAuth();
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const fmSt = useMemo(() => makeFmStyles(COLORS), [COLORS]);
   const [modalVisible, setModalVisible] = useState(false);
   const [hostModalOpen, setHostModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1405,7 +1437,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   );
 }
 
-const fmSt = StyleSheet.create({
+const makeFmStyles = (COLORS: ThemeColors) => StyleSheet.create({
   banner: {
     backgroundColor: '#FFF7ED',
     borderRadius: RADIUS.sm,
@@ -1478,6 +1510,9 @@ const fmSt = StyleSheet.create({
 // ─── Step 5: Amenities & Food ─────────────────────────────────────────────────
 
 function StepAmenities({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const amSt = useMemo(() => makeAmStyles(COLORS), [COLORS]);
   const toggleAmenity = (a: string) => {
     const cur = form.amenities;
     update({ amenities: cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a] });
@@ -1571,7 +1606,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   );
 }
 
-const amSt = StyleSheet.create({
+const makeAmStyles = (COLORS: ThemeColors) => StyleSheet.create({
   mealBox: {
     borderWidth: 1.5,
     borderColor: COLORS.border,
@@ -1589,6 +1624,9 @@ const ALL_PHOTO_CATEGORIES = [
 ];
 
 function StepPhotos({ form, update, onNext, onBack }: StepProps) {
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const phSt = useMemo(() => makePhStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const [loading, setLoading] = useState<string | null>(null);
 
   const addPhotos = async (category: string, useCamera: boolean) => {
@@ -1764,7 +1802,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
   );
 }
 
-const phSt = StyleSheet.create({
+const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   tipBox: { backgroundColor: COLORS.raised, borderRadius: RADIUS.sm, padding: SPACING.sm, marginBottom: SPACING.md },
   tipTxt: { fontSize: 12, color: COLORS.primaryDark, lineHeight: 18 },
 
@@ -1773,7 +1811,7 @@ const phSt = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.sm,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     overflow: 'hidden',
     ...SHADOW.sm,
   },
@@ -1824,6 +1862,10 @@ const phSt = StyleSheet.create({
 // ─── Step 7: Set Your Price ───────────────────────────────────────────────────
 
 function StepPrice({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
+  const prSt = useMemo(() => makePrStyles(COLORS), [COLORS]);
   const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
@@ -1947,6 +1989,7 @@ function PriceRow({
   bold?: boolean;
   muted?: boolean;
 }) {
+  const COLORS = useThemeColors();
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
       <Text style={{ fontSize: 14, color: muted ? COLORS.textMut : COLORS.textSec, ...(bold ? FONTS.semibold : FONTS.regular) }}>
@@ -1959,7 +2002,7 @@ function PriceRow({
   );
 }
 
-const prSt = StyleSheet.create({
+const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 8 },
   rupee: { fontSize: 28, ...FONTS.bold, color: COLORS.text },
   rateInput: { fontSize: 52, ...FONTS.bold, color: COLORS.text, minWidth: 120, textAlign: 'center' },
@@ -1979,6 +2022,8 @@ const prSt = StyleSheet.create({
 // ─── Step 8: House Rules ──────────────────────────────────────────────────────
 
 function StepRules({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const isValid = !!form.checkInTime && !!form.checkOutTime;
 
   const validate = (): string | null => {
@@ -2066,6 +2111,9 @@ function StepReview({
   listingId?: string;
   draftKey: string | null;
 }) {
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const rvSt = useMemo(() => makeRvStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   const rate = parseInt(form.nightlyRate, 10) || 0;
@@ -2320,7 +2368,7 @@ function StepReview({
   );
 }
 
-const rvSt = StyleSheet.create({
+const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   previewCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg, ...SHADOW.sm },
   coverPhoto: { width: '100%', height: 140, borderRadius: RADIUS.sm },
   photoPlaceholder: { height: 120, backgroundColor: COLORS.warm, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
@@ -2343,7 +2391,7 @@ const rvSt = StyleSheet.create({
 
 // ─── Shared step styles ───────────────────────────────────────────────────────
 
-const stSt = StyleSheet.create({
+const makeStStyles = (COLORS: ThemeColors) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
   title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
@@ -2452,6 +2500,8 @@ export default function ListingEditorScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList, 'ListingEditor'>>();
   const route = useRoute<RouteProp<HostStackParamList, 'ListingEditor'>>();
   const { user } = useAuth();
+  const COLORS = useThemeColors();
+  const hdrSt = useMemo(() => makeHdrStyles(COLORS), [COLORS]);
   const listingId = route.params?.listingId;
   const resumeDraft = route.params?.resumeDraft;
   const draftKey = user?.user_id ? getDraftKey(user.user_id) : null;

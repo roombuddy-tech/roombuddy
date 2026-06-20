@@ -14,7 +14,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -27,7 +27,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList } from '../../navigation/types';
 import api from '../../services/api';
 import { getErrorMessage } from '../../utils/errors';
@@ -71,6 +72,8 @@ function formatReviewDate(iso: string): string {
 export default function GuestProfileScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const { userId } = route.params;
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -153,11 +156,13 @@ export default function GuestProfileScreen() {
         {/* Quick stats */}
         <View style={styles.statsCard}>
           <StatItem
+            styles={styles}
             value={String(profile.stats.stays_as_guest)}
             label={profile.stats.stays_as_guest === 1 ? 'Stay' : 'Stays'}
           />
           <View style={styles.statDivider} />
           <StatItem
+            styles={styles}
             value={
               profile.stats.average_rating !== null
                 ? profile.stats.average_rating.toFixed(1)
@@ -167,6 +172,7 @@ export default function GuestProfileScreen() {
           />
           <View style={styles.statDivider} />
           <StatItem
+            styles={styles}
             value={String(profile.stats.review_count)}
             label={profile.stats.review_count === 1 ? 'Review' : 'Reviews'}
           />
@@ -179,14 +185,20 @@ export default function GuestProfileScreen() {
             {verifiedCount} of 3 verified
           </Text>
           <VerifyRow
+            styles={styles}
+            COLORS={COLORS}
             label="Phone number"
             verified={profile.verifications.phone_verified}
           />
           <VerifyRow
+            styles={styles}
+            COLORS={COLORS}
             label="Email address"
             verified={profile.verifications.email_verified}
           />
           <VerifyRow
+            styles={styles}
+            COLORS={COLORS}
             label="Government ID"
             verified={profile.verifications.id_verified}
           />
@@ -263,7 +275,7 @@ export default function GuestProfileScreen() {
   );
 }
 
-function StatItem({ value, label }: { value: string; label: string }) {
+function StatItem({ value, label, styles }: { value: string; label: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.statItem}>
       <Text style={styles.statValue}>{value}</Text>
@@ -272,7 +284,7 @@ function StatItem({ value, label }: { value: string; label: string }) {
   );
 }
 
-function VerifyRow({ label, verified }: { label: string; verified: boolean }) {
+function VerifyRow({ label, verified, styles, COLORS }: { label: string; verified: boolean; styles: ReturnType<typeof makeStyles>; COLORS: ThemeColors }) {
   return (
     <View style={styles.verifyRow}>
       <Text style={styles.verifyLabel}>{label}</Text>
@@ -288,7 +300,7 @@ function VerifyRow({ label, verified }: { label: string; verified: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   center: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
@@ -315,7 +327,7 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.md },
 
   heroCard: {
-    backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg,
     alignItems: 'center', marginBottom: SPACING.md, ...SHADOW.sm,
   },
   avatarLarge: {
@@ -333,7 +345,7 @@ const styles = StyleSheet.create({
   memberSince: { fontSize: 12, color: COLORS.textMut, marginTop: 6, ...FONTS.medium },
 
   statsCard: {
-    backgroundColor: COLORS.bg, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     padding: SPACING.md, marginBottom: SPACING.md,
     flexDirection: 'row', alignItems: 'center',
     ...SHADOW.sm,
@@ -344,7 +356,7 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 32, backgroundColor: COLORS.border },
 
   card: {
-    backgroundColor: COLORS.bg, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW.sm,
   },
   cardTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.md },

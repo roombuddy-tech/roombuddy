@@ -15,7 +15,18 @@ import {
 } from '@expo-google-fonts/hanken-grotesk';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import Navigation from './src/navigation';
+
+function ThemedShell() {
+  const { mode } = useTheme();
+  return (
+    <>
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <Navigation />
+    </>
+  );
+}
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -33,10 +44,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <Navigation />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ThemedShell />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

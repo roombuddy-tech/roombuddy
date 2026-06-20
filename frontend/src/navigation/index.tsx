@@ -1,9 +1,10 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { ThemeColors } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useThemeColors } from '../context/ThemeContext';
 import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 import AuthStack from './AuthStack';
 import GuestStack from './GuestStack';
@@ -21,6 +22,8 @@ function ProfileIncompleteStack() {
 
 export default function Navigation() {
   const { isLoading, isAuthenticated, isProfileComplete, userRole } = useAuth();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   if (isLoading) {
     return (
@@ -45,7 +48,7 @@ export default function Navigation() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   loading: {
     flex: 1,
     justifyContent: 'center',

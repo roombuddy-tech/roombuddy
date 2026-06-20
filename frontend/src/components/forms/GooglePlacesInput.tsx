@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { GooglePlacesAutocomplete, GooglePlaceData, GooglePlaceDetail } from 'react-native-google-places-autocomplete';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import { GOOGLE_PLACES_API_KEY } from '../../constants/maps';
 
 export interface PlaceResult {
@@ -28,6 +29,8 @@ function extractComponent(details: GooglePlaceDetail, type: string): string {
 
 export default function GooglePlacesInput({ value, placeholder, onSelect }: Props) {
   const ref = useRef<any>(null);
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   useEffect(() => {
     if (ref.current && value) {
@@ -92,7 +95,7 @@ export default function GooglePlacesInput({ value, placeholder, onSelect }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   wrap: {
     zIndex: 10,
     marginBottom: SPACING.md,
@@ -115,7 +118,7 @@ const styles = StyleSheet.create({
     ...FONTS.medium,
   },
   listView: {
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
@@ -127,6 +130,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   row: {
+    backgroundColor: COLORS.surface,
     paddingVertical: 12,
     paddingHorizontal: SPACING.md,
   },

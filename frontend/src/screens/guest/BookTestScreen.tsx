@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
 
 export default function BookTestScreen() {
   const navigation = useNavigation<Nav>();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [listingId, setListingId] = useState('');
   const [listingTitle, setListingTitle] = useState('Test Listing');
@@ -72,7 +75,7 @@ function getDateInDays(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { padding: SPACING.lg, paddingTop: 80, backgroundColor: COLORS.bg, minHeight: '100%' },
   banner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,

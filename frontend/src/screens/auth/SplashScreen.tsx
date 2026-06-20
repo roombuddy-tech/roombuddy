@@ -1,11 +1,15 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { COLORS, FONTS } from '../../constants/theme';
+import { FONTS, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 type Props = NativeStackScreenProps<any, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const logoScale = useRef(new Animated.Value(0.3)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const taglineOpacity = useRef(new Animated.Value(0)).current;
@@ -99,7 +103,7 @@ export default function SplashScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.primaryDark,

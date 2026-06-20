@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { COLORS, RADIUS, FONTS } from '../../constants/theme';
+import { RADIUS, FONTS, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 type ButtonVariant = 'primary' | 'accent' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -21,6 +22,8 @@ export default function Button({
   title, onPress, variant = 'primary', size = 'md',
   loading = false, disabled = false, full = false, icon, style,
 }: ButtonProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const isDisabled = disabled || loading;
 
   const containerStyles: ViewStyle[] = [
@@ -58,7 +61,7 @@ export default function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',

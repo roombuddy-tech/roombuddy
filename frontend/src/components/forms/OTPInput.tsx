@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
-import { COLORS, RADIUS, FONTS, SPACING } from '../../constants/theme';
+import { RADIUS, FONTS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 interface OTPInputProps {
   length?: number;
@@ -8,6 +9,8 @@ interface OTPInputProps {
 }
 
 export default function OTPInput({ length = 6, onComplete }: OTPInputProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [otp, setOtp] = useState<string[]>(Array(length).fill(''));
   const inputs = useRef<(TextInput | null)[]>([]);
 
@@ -59,7 +62,7 @@ export default function OTPInput({ length = 6, onComplete }: OTPInputProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'center',
