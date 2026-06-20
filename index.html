@@ -51,10 +51,10 @@
     .nav-logo {
       display: flex; align-items: center; gap: 10px; text-decoration: none;
     }
-    .nav-logo img { width: 38px; height: 38px; object-fit: contain; }
+    .nav-logo img { height: 30px; width: auto; object-fit: contain; display: block; }
     .nav-logo span {
-      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 23px;
-      color: #fff; letter-spacing: -.01em;
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 25px;
+      color: #fff; letter-spacing: -.01em; line-height: 1;
     }
     .nav-logo span em { color: var(--coral); font-style: normal; }
     .nav-links { display: flex; align-items: center; gap: 28px; }
@@ -487,9 +487,9 @@
       margin-bottom: 44px;
     }
     .footer-brand { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
-    .footer-brand img { width: 34px; height: 34px; object-fit: contain; }
+    .footer-brand img { height: 44px; width: auto; object-fit: contain; }
     .footer-brand span {
-      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 21px; color: #fff;
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 22px; color: #fff;
     }
     .footer-brand span em { color: #E89478; font-style: normal; }
     .footer-desc { font-size: 13.5px; line-height: 1.65; max-width: 270px; margin-bottom: 20px; }
@@ -942,6 +942,7 @@
   <div class="footer-inner">
     <div>
       <div class="footer-brand">
+        <img src="assets/logo.png" alt="RoomBuddy">
         <span>Room<em>Buddy</em></span>
       </div>
       <p class="footer-desc">Affordable short-term stays in verified shared homes. Book a room, not a hotel — available across India.</p>
