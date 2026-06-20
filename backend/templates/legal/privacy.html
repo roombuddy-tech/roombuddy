@@ -7,283 +7,181 @@
   <meta name="description" content="RoomBuddy Privacy Policy. Learn how we collect, use, and protect your personal information.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #1B4D3E;
-      --primary-light: #E8F0ED;
-      --accent: #FF6B4A;
-      --accent-light: #FFF0ED;
-      --text: #1A1A1A;
-      --text-sec: #555;
-      --text-mut: #888;
-      --bg: #FAFAF8;
-      --white: #fff;
-      --border: #E8E8E4;
-      --radius: 12px;
+      --teal: #2C4A58;
+      --teal-mid: #3D6070;
+      --coral: #D97055;
+      --coral-dark: #C05D3F;
+      --parchment: #F4EBDC;
+      --parchment-light: #FBF5EA;
+      --white: #ffffff;
+      --text: #2C4A58;
+      --text-sec: #5A727E;
+      --text-mut: #8BA0A8;
+      --border: rgba(44,74,88,.10);
+      --r: 16px;
     }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: 'DM Sans', -apple-system, sans-serif;
-      background: var(--bg);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--parchment);
       color: var(--text);
       line-height: 1.7;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
+    ::selection { background: var(--coral); color: #fff; }
 
-    .header {
-      background: var(--primary);
-      position: sticky;
-      top: 0;
-      z-index: 100;
+    .nav {
+      background: rgba(44,74,88,.94);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      position: sticky; top: 0; z-index: 100;
     }
-    .header-inner {
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 18px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .nav-inner {
+      max-width: 1000px; margin: 0 auto;
+      padding: 13px 28px;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .logo {
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 700;
-      font-size: 22px;
-      color: #fff;
-      text-decoration: none;
-      letter-spacing: -0.5px;
+    .nav-logo {
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 22px;
+      color: #fff; text-decoration: none; letter-spacing: -.01em;
     }
-    .logo span { color: var(--accent); }
-    .header-links a {
-      color: rgba(255,255,255,0.7);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      margin-left: 24px;
-      transition: color 0.2s;
+    .nav-logo em { color: var(--coral); font-style: normal; }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-links a {
+      font-size: 14px; font-weight: 600; color: rgba(255,255,255,.65);
+      text-decoration: none; transition: color .2s;
     }
-    .header-links a:hover { color: #fff; }
-    .header-links a.active { color: #fff; border-bottom: 2px solid var(--accent); padding-bottom: 2px; }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a.active { color: #fff; border-bottom: 2px solid var(--coral); padding-bottom: 2px; }
 
     .hero {
-      background: var(--primary);
-      padding: 48px 24px 56px;
-      text-align: center;
+      background: var(--teal);
+      padding: 56px 28px 64px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -120px; right: -120px;
+      width: 400px; height: 400px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(217,112,85,.15), transparent 65%);
+      pointer-events: none;
     }
     .hero h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: clamp(32px, 5vw, 44px);
-      color: #fff;
-      font-weight: 400;
-      margin-bottom: 12px;
-      letter-spacing: -0.5px;
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: clamp(32px, 5vw, 48px);
+      color: #fff; letter-spacing: -.02em; margin-bottom: 10px;
+      position: relative; z-index: 1;
     }
     .hero .updated {
-      font-size: 14px;
-      color: rgba(255,255,255,0.55);
-      font-weight: 500;
+      font-size: 14px; font-weight: 500; color: rgba(255,255,255,.5);
+      position: relative; z-index: 1;
     }
 
     .main {
-      max-width: 820px;
-      margin: 0 auto;
+      max-width: 1000px; margin: 0 auto;
       padding: 0 24px;
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 48px;
-      margin-top: -24px;
+      display: grid; grid-template-columns: 220px 1fr;
+      gap: 32px; margin-top: -20px;
     }
-
     @media (max-width: 768px) {
-      .main {
-        grid-template-columns: 1fr;
-        gap: 0;
-        margin-top: -16px;
-      }
+      .main { grid-template-columns: 1fr; gap: 0; margin-top: -12px; }
     }
 
     .toc {
-      position: sticky;
-      top: 72px;
-      align-self: start;
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
+      position: sticky; top: 66px; align-self: start;
+      background: var(--white); border-radius: var(--r);
+      border: 1px solid var(--border); padding: 20px;
+      box-shadow: 0 2px 16px rgba(44,74,88,.06);
     }
     .toc h3 {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--text-mut);
-      margin-bottom: 14px;
-      font-weight: 600;
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-mut); margin-bottom: 14px;
     }
     .toc a {
-      display: block;
-      font-size: 13px;
-      color: var(--text-sec);
-      text-decoration: none;
-      padding: 6px 0;
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--text-sec); text-decoration: none;
+      padding: 5px 0 5px 12px; margin-left: -12px;
       border-left: 2px solid transparent;
-      padding-left: 12px;
-      margin-left: -12px;
-      transition: all 0.15s;
-      font-weight: 500;
-      line-height: 1.4;
+      transition: all .15s; line-height: 1.4;
     }
-    .toc a:hover {
-      color: var(--primary);
-      border-left-color: var(--primary);
-    }
-
+    .toc a:hover { color: var(--teal); border-left-color: var(--coral); }
     @media (max-width: 768px) {
-      .toc {
-        position: relative;
-        top: 0;
-        margin-bottom: 24px;
-        border-radius: 0 0 var(--radius) var(--radius);
-      }
+      .toc { position: relative; top: 0; margin-bottom: 20px;
+        border-radius: 0 0 var(--r) var(--r); }
     }
 
     .content {
-      background: var(--white);
+      background: var(--white); border-radius: var(--r);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 40px 44px 56px;
-      margin-bottom: 80px;
+      padding: 40px 44px 60px; margin-bottom: 80px;
+      box-shadow: 0 2px 16px rgba(44,74,88,.06);
     }
-
     @media (max-width: 768px) {
-      .content {
-        padding: 28px 20px 40px;
-        border-radius: var(--radius);
-        margin-bottom: 48px;
-      }
+      .content { padding: 28px 20px 40px; margin-bottom: 48px; }
     }
 
     .content h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 24px;
-      font-weight: 400;
-      color: var(--text);
-      margin-top: 48px;
-      margin-bottom: 16px;
-      padding-top: 32px;
-      border-top: 1px solid var(--border);
-      scroll-margin-top: 80px;
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: 22px; color: var(--teal);
+      margin-top: 48px; margin-bottom: 14px;
+      padding-top: 32px; border-top: 1px solid var(--border);
+      scroll-margin-top: 84px; letter-spacing: -.01em;
     }
-    .content h2:first-child {
-      margin-top: 0;
-      padding-top: 0;
-      border-top: none;
-    }
-
-    .content h3 {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-      margin-top: 28px;
-      margin-bottom: 8px;
-    }
-
-    .content p {
-      font-size: 15px;
-      color: var(--text-sec);
-      margin-bottom: 16px;
-      line-height: 1.75;
-    }
-
-    .content ul, .content ol {
-      margin: 0 0 16px 24px;
-      font-size: 15px;
-      color: var(--text-sec);
-    }
-    .content li {
-      margin-bottom: 8px;
-      line-height: 1.65;
-    }
-
-    .content strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .content a {
-      color: var(--primary);
-      text-decoration: underline;
-      text-decoration-color: rgba(27,77,62,0.3);
-      text-underline-offset: 2px;
-      transition: text-decoration-color 0.2s;
-    }
-    .content a:hover {
-      text-decoration-color: var(--primary);
-    }
+    .content h2:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+    .content h3 { font-size: 15px; font-weight: 700; color: var(--teal); margin-top: 26px; margin-bottom: 8px; }
+    .content p { font-size: 15px; color: var(--text-sec); margin-bottom: 14px; line-height: 1.75; }
+    .content ul, .content ol { margin: 0 0 14px 22px; font-size: 15px; color: var(--text-sec); }
+    .content li { margin-bottom: 7px; line-height: 1.65; }
+    .content strong { color: var(--text); font-weight: 700; }
+    .content a { color: var(--coral-dark); font-weight: 500; text-decoration: underline; text-decoration-color: rgba(192,93,63,.3); text-underline-offset: 2px; transition: text-decoration-color .2s; }
+    .content a:hover { text-decoration-color: var(--coral-dark); }
 
     .callout {
-      background: var(--accent-light);
-      border-left: 3px solid var(--accent);
-      padding: 16px 20px;
-      border-radius: 0 var(--radius) var(--radius) 0;
-      margin: 20px 0;
-      font-size: 14px;
-      color: var(--text-sec);
-      line-height: 1.65;
+      background: rgba(217,112,85,.07); border-left: 3px solid var(--coral);
+      padding: 15px 18px; border-radius: 0 var(--r) var(--r) 0;
+      margin: 18px 0; font-size: 14px; color: var(--text-sec); line-height: 1.65;
     }
+    .callout-info { background: rgba(44,74,88,.06); border-left-color: var(--teal); }
 
-    .callout-info {
-      background: var(--primary-light);
-      border-left-color: var(--primary);
-    }
-
+    /* data table */
     .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 16px 0;
-      font-size: 14px;
+      width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;
     }
     .data-table th {
-      background: var(--primary-light);
-      color: var(--primary);
-      text-align: left;
-      padding: 12px 16px;
-      font-weight: 600;
+      background: rgba(44,74,88,.06); color: var(--teal);
+      text-align: left; padding: 11px 16px; font-weight: 700;
       border-bottom: 2px solid var(--border);
     }
     .data-table td {
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-sec);
-      vertical-align: top;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      color: var(--text-sec); vertical-align: top;
     }
     .data-table tr:last-child td { border-bottom: none; }
 
     .footer {
-      text-align: center;
-      padding: 32px 24px 48px;
-      font-size: 13px;
-      color: var(--text-mut);
+      text-align: center; padding: 28px 24px 44px;
+      font-size: 13px; color: var(--text-mut);
     }
-    .footer a {
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 500;
-    }
+    .footer a { color: var(--coral-dark); text-decoration: none; font-weight: 600; }
+    .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
-  <header class="header">
-    <div class="header-inner">
-      <a href="https://roombuddy.co.in" class="logo">Room<span>Buddy</span></a>
-      <nav class="header-links">
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="https://roombuddy.co.in" class="nav-logo">Room<em>Buddy</em></a>
+      <div class="nav-links">
         <a href="/terms">Terms</a>
         <a href="/privacy" class="active">Privacy</a>
-      </nav>
+      </div>
     </div>
-  </header>
+  </nav>
 
   <section class="hero">
     <h1>Privacy Policy</h1>
@@ -307,7 +205,6 @@
       <a href="#children">Children's Privacy</a>
       <a href="#international">International Transfers</a>
       <a href="#changes">Changes to This Policy</a>
-      <a href="#grievance">Grievance Officer</a>
       <a href="#contact">Contact Us</a>
     </aside>
 
@@ -323,42 +220,19 @@
       <p>For payment-related data, our payment partner Razorpay acts as an independent controller for information processed through their payment infrastructure, subject to their own privacy policy.</p>
 
       <h2 id="collect">3. Information We Collect</h2>
-
       <h3>3.1 Information You Provide</h3>
       <p>We collect information you provide directly when using the Platform:</p>
-
       <table class="data-table">
         <thead>
-          <tr>
-            <th>Category</th>
-            <th>Examples</th>
-          </tr>
+          <tr><th>Category</th><th>Examples</th></tr>
         </thead>
         <tbody>
-          <tr>
-            <td><strong>Account information</strong></td>
-            <td>Phone number, first and last name, email address, city, gender, profile photo</td>
-          </tr>
-          <tr>
-            <td><strong>Identity verification</strong></td>
-            <td>Aadhaar number (for KYC verification), email verification data</td>
-          </tr>
-          <tr>
-            <td><strong>Listing information</strong></td>
-            <td>Property details, room descriptions, photos, pricing, house rules, amenities, location</td>
-          </tr>
-          <tr>
-            <td><strong>Booking information</strong></td>
-            <td>Check-in/check-out dates, number of guests, meal preferences, special requests</td>
-          </tr>
-          <tr>
-            <td><strong>Communications</strong></td>
-            <td>Messages between Hosts and Guests, support requests, feedback</td>
-          </tr>
-          <tr>
-            <td><strong>Reviews and ratings</strong></td>
-            <td>Reviews you write about Hosts or Guests, star ratings</td>
-          </tr>
+          <tr><td><strong>Account information</strong></td><td>Phone number, first and last name, email address, city, gender, profile photo</td></tr>
+          <tr><td><strong>Identity verification</strong></td><td>Aadhaar number (for KYC verification), email verification data</td></tr>
+          <tr><td><strong>Listing information</strong></td><td>Property details, room descriptions, photos, pricing, house rules, amenities, location</td></tr>
+          <tr><td><strong>Booking information</strong></td><td>Check-in/check-out dates, number of guests, meal preferences, special requests</td></tr>
+          <tr><td><strong>Communications</strong></td><td>Messages between Hosts and Guests, support requests, feedback</td></tr>
+          <tr><td><strong>Reviews and ratings</strong></td><td>Reviews you write about Hosts or Guests, star ratings</td></tr>
         </tbody>
       </table>
 
@@ -380,7 +254,6 @@
       </ul>
 
       <h2 id="use">4. How We Use Your Information</h2>
-
       <h3>4.1 Providing the Platform</h3>
       <p>We use your information to:</p>
       <ul>
@@ -404,20 +277,10 @@
       </ul>
 
       <h3>4.3 Improving the Platform</h3>
-      <p>We use your information to:</p>
-      <ul>
-        <li>Analyze usage patterns to improve features and user experience.</li>
-        <li>Conduct research and development on new features.</li>
-        <li>Fix bugs and resolve technical issues.</li>
-        <li>Measure the effectiveness of our services.</li>
-      </ul>
+      <p>We use your information to analyze usage patterns, conduct R&D, fix bugs, and measure the effectiveness of our services.</p>
 
       <h3>4.4 Communications</h3>
-      <p>We use your information to:</p>
-      <ul>
-        <li>Send service-related notices that are necessary for Platform operation (non-marketing).</li>
-        <li>Send promotional communications about new features, offers, or updates, where you have opted in or where permitted by applicable law. You can opt out at any time through notification preferences in the app.</li>
-      </ul>
+      <p>We use your information to send service-related notices necessary for Platform operation, and promotional communications where you have opted in. You can opt out at any time through notification preferences in the app.</p>
 
       <h3>4.5 Legal Obligations</h3>
       <p>We use your information to comply with applicable laws, regulations, legal processes, or governmental requests, including tax reporting obligations and responses to law enforcement.</p>
@@ -426,9 +289,9 @@
       <p>We do not sell your personal information. We share your information only in the following circumstances:</p>
 
       <h3>5.1 Between Members</h3>
-      <p>When a booking is confirmed, we share limited information between the Host and Guest to facilitate the stay. This includes:</p>
+      <p>When a booking is confirmed, we share limited information between the Host and Guest:</p>
       <ul>
-        <li><strong>Shared with the Host:</strong> Guest's first name, profile photo, and booking details (dates, number of guests).</li>
+        <li><strong>Shared with the Host:</strong> Guest's first name, profile photo, and booking details.</li>
         <li><strong>Shared with the Guest:</strong> Host's first name, profile photo, property address (after booking), and contact information for check-in coordination.</li>
       </ul>
 
@@ -438,116 +301,72 @@
         <li><strong>Razorpay</strong> — payment processing and payout services.</li>
         <li><strong>MSG91</strong> — OTP delivery and transactional SMS.</li>
         <li><strong>Amazon Web Services (AWS)</strong> — cloud infrastructure, storage, and hosting.</li>
-        <li><strong>Email service provider (Amazon SES)</strong> — transactional and verification emails.</li>
+        <li><strong>Amazon SES</strong> — transactional and verification emails.</li>
         <li><strong>Sentry</strong> — error tracking and monitoring (anonymized data only).</li>
       </ul>
-      <p>These service providers are contractually obligated to protect your information and may only use it to perform the services we have engaged them to provide.</p>
 
       <h3>5.3 Legal Requirements</h3>
-      <p>We may disclose your information if required to do so by law, or in response to valid requests by public authorities (such as a court order, tax authority, or law enforcement), including to meet national security or law enforcement requirements.</p>
+      <p>We may disclose your information if required by law or in response to valid requests by public authorities (such as a court order, tax authority, or law enforcement).</p>
 
-      <h3>5.4 Safety and Protection</h3>
-      <p>We may disclose your information where we believe it is necessary to investigate, prevent, or take action regarding illegal activities, suspected fraud, situations involving potential threats to the safety of any person, or violations of our Terms of Service.</p>
-
-      <h3>5.5 Business Transfers</h3>
-      <p>In the event of a merger, acquisition, reorganization, or sale of assets, your personal information may be transferred to the acquiring entity. We will notify you of any such change and the choices you may have regarding your information.</p>
+      <h3>5.4 Business Transfers</h3>
+      <p>In the event of a merger, acquisition, or sale of assets, your personal information may be transferred to the acquiring entity. We will notify you of any such change and the choices you may have.</p>
 
       <h2 id="payments">6. Payment Information</h2>
-      <p>All payments on the Platform are processed by our payment partner, Razorpay. When you make a payment:</p>
-      <ul>
-        <li>Your payment card details are collected and processed directly by Razorpay. RoomBuddy does not receive or store your full card number, CVV, or other sensitive payment credentials.</li>
-        <li>We receive only transaction confirmation data (amount, status, payment ID, and last four digits of the card, if applicable) necessary to maintain booking records.</li>
-        <li>Razorpay's handling of your payment information is subject to their own <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</li>
-      </ul>
-      <p>Razorpay is PCI-DSS compliant, ensuring your payment data is handled with the highest security standards.</p>
+      <p>All payments are processed by Razorpay. RoomBuddy does not receive or store your full card number, CVV, or other sensitive payment credentials. We receive only transaction confirmation data necessary to maintain booking records. Razorpay is PCI-DSS compliant. Their handling of your data is subject to their own <a href="https://razorpay.com/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</p>
 
       <h2 id="cookies">7. Cookies & Tracking</h2>
-      <p>The RoomBuddy mobile app does not use browser cookies. However, we may use the following technologies:</p>
-      <ul>
-        <li><strong>Local storage</strong> — we store authentication tokens and user preferences securely on your device using encrypted local storage (AsyncStorage with secure key management).</li>
-        <li><strong>Analytics</strong> — we may collect anonymous, aggregated usage data to understand how the Platform is used and to improve our services. This data cannot be used to identify individual users.</li>
-        <li><strong>Push notifications</strong> — with your permission, we send push notifications for booking updates, messages, and promotional content. You can manage notification preferences in the app settings or your device settings.</li>
-      </ul>
-      <p>If we launch a web-based platform in the future, we will update this section with details about cookie usage and provide appropriate consent mechanisms.</p>
+      <p>The RoomBuddy mobile app does not use browser cookies. We use encrypted local storage for authentication tokens and user preferences, and may collect anonymous aggregated analytics to improve the Platform. Push notifications are sent with your permission and can be managed in the app settings.</p>
 
       <h2 id="retention">8. Data Retention</h2>
-      <p>We retain your personal information for as long as your account is active or as needed to provide you services. Specific retention periods are as follows:</p>
       <ul>
-        <li><strong>Account data</strong> — retained for the lifetime of your account plus 180 days after deletion to allow for account recovery and to resolve pending disputes.</li>
-        <li><strong>Booking records</strong> — retained for 7 years to comply with Indian tax and accounting regulations.</li>
-        <li><strong>Payment transaction records</strong> — retained for 7 years as required under the Income Tax Act, 1961 and GST regulations.</li>
-        <li><strong>Identity verification data (Aadhaar)</strong> — we store only the verification status (verified/not verified), not the Aadhaar number itself. Verification is performed through our KYC partner and the raw data is not retained by RoomBuddy.</li>
+        <li><strong>Account data</strong> — retained for the lifetime of your account plus 180 days after deletion.</li>
+        <li><strong>Booking records</strong> — retained for 7 years to comply with Indian tax regulations.</li>
+        <li><strong>Payment transaction records</strong> — retained for 7 years as required under the Income Tax Act and GST regulations.</li>
+        <li><strong>Identity verification data (Aadhaar)</strong> — we store only the verification status, not the Aadhaar number itself.</li>
         <li><strong>OTP records</strong> — automatically deleted within 24 hours of generation.</li>
         <li><strong>Communication logs</strong> — retained for 1 year after the relevant booking is completed.</li>
-        <li><strong>Usage and analytics data</strong> — retained in anonymized/aggregated form indefinitely for analytical purposes.</li>
+        <li><strong>Usage and analytics data</strong> — retained in anonymized/aggregated form indefinitely.</li>
       </ul>
-      <p>When your personal information is no longer required, we securely delete or anonymize it so that it can no longer be associated with you.</p>
 
       <h2 id="security">9. Data Security</h2>
-      <p>We implement industry-standard technical and organizational measures to protect your personal information, including:</p>
+      <p>We implement industry-standard technical and organizational measures to protect your information, including:</p>
       <ul>
-        <li><strong>Encryption in transit</strong> — all data transmitted between the app and our servers is encrypted using TLS 1.2 or higher (HTTPS).</li>
-        <li><strong>Encryption at rest</strong> — sensitive data stored on our servers is encrypted using AES-256 encryption.</li>
-        <li><strong>Authentication security</strong> — passwords are never stored in plain text. JWT tokens are used for session management with short-lived access tokens and secure refresh token rotation.</li>
-        <li><strong>Infrastructure security</strong> — our servers are hosted on AWS (ap-south-1, Mumbai region) with VPC isolation, security groups, and regular security patches.</li>
-        <li><strong>Access controls</strong> — access to personal data is restricted to authorized personnel on a need-to-know basis.</li>
-        <li><strong>OTP security</strong> — OTPs are hashed before storage and are valid for a limited time with attempt limits to prevent brute-force attacks.</li>
+        <li><strong>Encryption in transit</strong> — TLS 1.2 or higher (HTTPS) for all data transmission.</li>
+        <li><strong>Encryption at rest</strong> — AES-256 encryption for sensitive stored data.</li>
+        <li><strong>Authentication security</strong> — JWT tokens with short-lived access tokens and secure refresh token rotation.</li>
+        <li><strong>Infrastructure security</strong> — AWS (ap-south-1, Mumbai) with VPC isolation and security groups.</li>
+        <li><strong>Access controls</strong> — restricted to authorized personnel on a need-to-know basis.</li>
       </ul>
-
       <div class="callout callout-info">
-        <strong>Note:</strong> While we take all reasonable measures to protect your information, no method of transmission over the Internet or electronic storage is 100% secure. We cannot guarantee absolute security. If you become aware of any security breach, please contact us immediately.
+        <strong>Note:</strong> While we take all reasonable measures to protect your information, no method of transmission over the Internet is 100% secure. If you become aware of any security breach, please contact us immediately.
       </div>
 
       <h2 id="rights">10. Your Rights</h2>
-      <p>Under applicable Indian data protection laws, including the DPDP Act, 2023, you have the following rights regarding your personal information:</p>
+      <p>Under applicable Indian data protection laws, including the DPDP Act, 2023, you have the following rights:</p>
       <ul>
-        <li><strong>Right to access</strong> — you may request a summary of the personal information we hold about you and the processing activities carried out with it.</li>
-        <li><strong>Right to correction</strong> — you may request correction of inaccurate or incomplete personal information. You can update most information directly through the app's Edit Profile section.</li>
-        <li><strong>Right to erasure</strong> — you may request deletion of your personal information, subject to our legal retention obligations. You can initiate account deletion through the app or by contacting support.</li>
-        <li><strong>Right to withdraw consent</strong> — where processing is based on your consent, you may withdraw consent at any time. Withdrawal does not affect the lawfulness of processing prior to withdrawal.</li>
-        <li><strong>Right to grievance redressal</strong> — you may raise concerns with our Grievance Officer (see section 14 below) or file a complaint with the Data Protection Board of India.</li>
-        <li><strong>Right to nominate</strong> — you may nominate another individual to exercise your rights in the event of your death or incapacity, as provided under the DPDP Act.</li>
+        <li><strong>Right to access</strong> — request a summary of the personal information we hold about you.</li>
+        <li><strong>Right to correction</strong> — request correction of inaccurate or incomplete information. Most can be updated via Edit Profile in the app.</li>
+        <li><strong>Right to erasure</strong> — request deletion of your personal information, subject to our legal retention obligations.</li>
+        <li><strong>Right to withdraw consent</strong> — where processing is based on your consent, you may withdraw it at any time.</li>
+        <li><strong>Right to grievance redressal</strong> — raise concerns with our Grievance Officer or file a complaint with the Data Protection Board of India.</li>
+        <li><strong>Right to nominate</strong> — nominate another individual to exercise your rights in the event of your death or incapacity.</li>
       </ul>
-      <p>To exercise any of these rights, contact us at <a href="mailto:privacy@roombuddy.co.in">privacy@roombuddy.co.in</a> or through the in-app support feature. We will respond to your request within 30 days.</p>
+      <p>To exercise any of these rights, contact us at <a href="mailto:support@roombuddy.co.in">support@roombuddy.co.in</a>. We will respond within 30 days.</p>
 
       <h2 id="children">11. Children's Privacy</h2>
-      <p>The Platform is not intended for individuals under the age of 18. We do not knowingly collect personal information from children. If you are a parent or guardian and believe your child has provided personal information to us, please contact us at <a href="mailto:privacy@roombuddy.co.in">privacy@roombuddy.co.in</a>, and we will take steps to delete such information promptly.</p>
-      <p>If processing personal data of children becomes necessary in the future, we will obtain verifiable parental consent as required under the DPDP Act, 2023.</p>
+      <p>The Platform is not intended for individuals under the age of 18. We do not knowingly collect personal information from children. If you believe your child has provided information to us, contact <a href="mailto:support@roombuddy.co.in">support@roombuddy.co.in</a> and we will delete it promptly.</p>
 
       <h2 id="international">12. International Data Transfers</h2>
-      <p>Your personal information is primarily stored and processed in India on servers hosted by Amazon Web Services (AWS) in the Mumbai (ap-south-1) region.</p>
-      <p>In limited circumstances, your data may be accessed by service providers located outside India (for example, for global services like error monitoring or email delivery). In such cases:</p>
-      <ul>
-        <li>We ensure that the recipient provides a level of data protection comparable to Indian data protection standards.</li>
-        <li>We use contractual safeguards (such as data processing agreements) to protect your information.</li>
-        <li>We comply with any conditions or restrictions imposed by the Central Government of India regarding cross-border data transfers under the DPDP Act.</li>
-      </ul>
+      <p>Your personal information is primarily stored and processed in India on AWS servers in the Mumbai (ap-south-1) region. In limited circumstances, your data may be accessed by service providers outside India, where we ensure comparable data protection standards and use contractual safeguards.</p>
 
       <h2 id="changes">13. Changes to This Policy</h2>
-      <p>We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or for other operational reasons. When we make material changes:</p>
-      <ul>
-        <li>We will notify you via email, in-app notification, or a prominent notice on the Platform at least 30 days before the changes take effect.</li>
-        <li>We will update the "Last updated" date at the top of this policy.</li>
-        <li>For changes that materially affect how we process your personal information, we will seek your consent where required by applicable law.</li>
-      </ul>
-      <p>Your continued use of the Platform after the effective date of any changes constitutes your acceptance of the revised Privacy Policy.</p>
+      <p>We may update this Privacy Policy from time to time. When we make material changes, we will notify you via email, in-app notification, or a prominent notice at least 30 days before changes take effect, and update the "Last updated" date above. Your continued use of the Platform after the effective date constitutes acceptance of the revised policy.</p>
 
-      <h2 id="grievance">14. Grievance Officer</h2>
-      <p>In accordance with the Information Technology Act, 2000 and the DPDP Act, 2023, the details of the Grievance Officer are as follows:</p>
-      <div class="callout callout-info">
-        <strong>Grievance Officer</strong><br>
-        Name: [To be designated]<br>
-        Email: <a href="mailto:grievance@roombuddy.co.in">grievance@roombuddy.co.in</a><br>
-        Address: [Registered office address]<br><br>
-        The Grievance Officer shall address your concerns within 15 days of receiving a complaint.
-      </div>
 
       <h2 id="contact">15. Contact Us</h2>
-      <p>If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:</p>
+      <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please contact us:</p>
       <ul>
         <li><strong>General inquiries:</strong> <a href="mailto:support@roombuddy.co.in">support@roombuddy.co.in</a></li>
-        <li><strong>Privacy-specific:</strong> <a href="mailto:privacy@roombuddy.co.in">privacy@roombuddy.co.in</a></li>
-        <li><strong>Grievance redressal:</strong> <a href="mailto:grievance@roombuddy.co.in">grievance@roombuddy.co.in</a></li>
         <li><strong>Website:</strong> <a href="https://roombuddy.co.in">roombuddy.co.in</a></li>
       </ul>
 
@@ -555,7 +374,7 @@
   </div>
 
   <footer class="footer">
-    <p>&copy; 2026 RoomBuddy. All rights reserved. &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a></p>
+    <p>&copy; 2026 RoomBuddy Private Limited &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a></p>
   </footer>
 
 </body>
