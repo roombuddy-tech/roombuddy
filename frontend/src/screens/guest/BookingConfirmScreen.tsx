@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -24,11 +25,42 @@ import { getErrorMessage } from '../../utils/errors';
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'BookingConfirm'>;
 type Rt = RouteProp<GuestStackParamList, 'BookingConfirm'>;
 
+// ─── Cancellation policy config ──────────────────────────────────────────────
+
+type PolicyKey = 'flexible';
+
+const POLICY_META: Record<PolicyKey, {
+  label: string;
+  tagline: string;
+  color: string;
+  tiers: { window: string; refund: string; highlight: boolean }[];
+}> = {
+  flexible: {
+    label: 'Flexible',
+    tagline: 'Easy cancellations for last-minute changes.',
+    color: '#059669',
+    tiers: [
+      { window: '2+ days before check-in', refund: '100% refund', highlight: true },
+      { window: 'Less than 2 days before check-in', refund: '50% refund', highlight: false },
+    ],
+  },
+};
+
+const POLICY_NOTES = [
+  'The platform service fee is non-refundable on guest cancellations.',
+  'Security deposit is included in the refundable amount.',
+  'Refunds are processed within 5–10 business days to your original payment method.',
+  'In extraordinary circumstances (natural disasters, government orders), RoomBuddy may override this policy.',
+];
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function BookingConfirmScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const {
     listingId, listingTitle, checkIn, checkOut, numberOfGuests = 1,
     mealOption: initialMealOption = false,
@@ -43,6 +75,7 @@ export default function BookingConfirmScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [withMeals, setWithMeals] = useState(initialMealOption);
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
 
   const fetchQuote = async (mealOpt: boolean) => {
     setLoading(true);
@@ -56,47 +89,26 @@ export default function BookingConfirmScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchQuote(withMeals);
-  }, [listingId, checkIn, checkOut]);
+  useEffect(() => { fetchQuote(withMeals); }, [listingId, checkIn, checkOut]);
 
-  const toggleMeals = (val: boolean) => {
-    setWithMeals(val);
-    fetchQuote(val);
-  };
+  const toggleMeals = (val: boolean) => { setWithMeals(val); fetchQuote(val); };
 
   async function handleConfirmAndPay() {
     if (!quote) return;
     setSubmitting(true);
     try {
-      const booking = await createBooking({
-        listingId,
-        checkIn,
-        checkOut,
-        numberOfGuests,
-        mealOption: withMeals,
-      });
-
+      const booking = await createBooking({ listingId, checkIn, checkOut, numberOfGuests, mealOption: withMeals });
       const order = await createPaymentOrder(booking.booking_id);
-
-      navigation.replace('RazorpayCheckout', {
-        bookingId: booking.booking_id,
-        bookingCode: booking.booking_code,
-        order,
-      });
+      navigation.replace('RazorpayCheckout', { bookingId: booking.booking_id, bookingCode: booking.booking_code, order });
     } catch (e: any) {
-      Alert.alert('Booking failed', getErrorMessage(e, 'Could not start booking'))
+      Alert.alert('Booking failed', getErrorMessage(e, 'Could not start booking'));
     } finally {
       setSubmitting(false);
     }
   }
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
   }
 
   if (error || !quote) {
@@ -111,8 +123,12 @@ export default function BookingConfirmScreen() {
     );
   }
 
+const policyKey: PolicyKey = 'flexible';
+const policyMeta =  POLICY_META.flexible;
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={COLORS.text} />
@@ -122,6 +138,8 @@ export default function BookingConfirmScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
+
+        {/* Stay details */}
         <View style={styles.card}>
           <Text style={styles.listingTitle} numberOfLines={2}>{listingTitle}</Text>
           <View style={styles.row}>
@@ -136,7 +154,7 @@ export default function BookingConfirmScreen() {
             <Text style={styles.label}>Guests</Text>
             <Text style={styles.value}>{numberOfGuests}</Text>
           </View>
-          <View style={styles.row}>
+          <View style={[styles.row, { marginBottom: 0 }]}>
             <Text style={styles.label}>Nights</Text>
             <Text style={styles.value}>{quote.nights}</Text>
           </View>
@@ -148,13 +166,9 @@ export default function BookingConfirmScreen() {
             <View style={styles.mealHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Home cooked meals</Text>
-                {quote.meal_types && (
-                  <Text style={styles.mealTypes}>Includes: {quote.meal_types}</Text>
-                )}
+                {quote.meal_types && <Text style={styles.mealTypes}>Includes: {quote.meal_types}</Text>}
                 {quote.meal_cost_per_day !== null && (
-                  <Text style={styles.mealCost}>
-                    ₹{quote.meal_cost_per_day.toLocaleString('en-IN')}/day
-                  </Text>
+                  <Text style={styles.mealCost}>₹{quote.meal_cost_per_day.toLocaleString('en-IN')}/day</Text>
                 )}
               </View>
               <Switch
@@ -165,18 +179,15 @@ export default function BookingConfirmScreen() {
                 ios_backgroundColor={COLORS.border}
               />
             </View>
-            {mealDescription ? (
-              <Text style={styles.mealDesc}>{mealDescription}</Text>
-            ) : null}
+            {mealDescription ? <Text style={styles.mealDesc}>{mealDescription}</Text> : null}
           </View>
         )}
 
+        {/* Price details */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Price details</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>
-              ₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights
-            </Text>
+            <Text style={styles.priceLabel}>₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights</Text>
             <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.priceRow}>
@@ -208,14 +219,27 @@ export default function BookingConfirmScreen() {
           </View>
         </View>
 
-        <View style={[styles.card, { flexDirection: 'row', alignItems: 'flex-start' }]}>
-          <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
-          <Text style={styles.policyText}>
-            Cancellation policies vary by listing. You'll see the exact refund amount when you cancel.
-          </Text>
-        </View>
+        {/* Cancellation policy row — tappable */}
+        <TouchableOpacity
+          style={styles.policyRow}
+          onPress={() => setPolicyModalVisible(true)}
+          activeOpacity={0.75}
+        >
+          <View style={[styles.policyBadge, { backgroundColor: policyMeta.color + '18' }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={policyMeta.color} />
+            <Text style={[styles.policyBadgeText, { color: policyMeta.color }]}>
+              {policyMeta.label} cancellation
+            </Text>
+          </View>
+          <View style={styles.policyRowRight}>
+            <Text style={styles.policyRowHint}>See refund details</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSec} />
+          </View>
+        </TouchableOpacity>
+
       </ScrollView>
 
+      {/* Pay button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.payBtn, submitting && styles.payBtnDisabled]}
@@ -234,16 +258,135 @@ export default function BookingConfirmScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Cancellation policy modal */}
+      <CancellationPolicyModal
+        visible={policyModalVisible}
+        onClose={() => setPolicyModalVisible(false)}
+        policyKey={policyKey}
+        COLORS={COLORS}
+        styles={styles}
+      />
     </View>
   );
 }
 
+// ─── Cancellation Policy Modal ───────────────────────────────────────────────
+
+function CancellationPolicyModal({
+  visible,
+  onClose,
+  policyKey,
+  COLORS,
+  styles,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  policyKey: PolicyKey;
+  COLORS: ThemeColors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const meta = POLICY_META[policyKey];
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalSheet}>
+          {/* Handle */}
+          <View style={styles.modalHandle} />
+
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.modalTitle}>Cancellation policy</Text>
+              <Text style={styles.modalSubtitle}>{meta.tagline}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
+              <Ionicons name="close" size={22} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Policy badge */}
+          <View style={[styles.modalPolicyBadge, { backgroundColor: meta.color + '15', borderColor: meta.color + '30' }]}>
+            <Ionicons name="shield-checkmark" size={20} color={meta.color} />
+            <Text style={[styles.modalPolicyLabel, { color: meta.color }]}>{meta.label}</Text>
+          </View>
+
+          {/* Refund tiers */}
+          <Text style={styles.modalSectionLabel}>Refund schedule</Text>
+          <View style={styles.tiersContainer}>
+            {meta.tiers.map((tier, idx) => (
+              <View key={idx} style={styles.tierRow}>
+                {/* Timeline dot + line */}
+                <View style={styles.tierTimeline}>
+                  <View style={[
+                    styles.tierDot,
+                    { backgroundColor: tier.highlight ? meta.color : COLORS.border }
+                  ]} />
+                  {idx < meta.tiers.length - 1 && <View style={styles.tierLine} />}
+                </View>
+                {/* Content */}
+                <View style={styles.tierContent}>
+                  <Text style={styles.tierWindow}>{tier.window}</Text>
+                  <View style={[
+                    styles.tierRefundBadge,
+                    {
+                      backgroundColor: tier.refund === 'No refund'
+                        ? '#FEE2E2'
+                        : tier.highlight ? '#D1FAE5' : '#FEF3C7'
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.tierRefundText,
+                      {
+                        color: tier.refund === 'No refund'
+                          ? '#DC2626'
+                          : tier.highlight ? '#065F46' : '#92400E'
+                      }
+                    ]}>
+                      {tier.refund}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Notes */}
+          <Text style={styles.modalSectionLabel}>Important notes</Text>
+          <View style={styles.notesContainer}>
+            {POLICY_NOTES.map((note, idx) => (
+              <View key={idx} style={styles.noteRow}>
+                <Ionicons name="information-circle-outline" size={15} color={COLORS.textSec} style={{ marginTop: 1 }} />
+                <Text style={styles.noteText}>{note}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Got it button */}
+          <TouchableOpacity style={[styles.modalGotItBtn, { backgroundColor: COLORS.primary }]} onPress={onClose}>
+            <Text style={styles.modalGotItText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', {
+  return new Date(iso).toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
   });
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
@@ -251,6 +394,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   errorText: { fontSize: 16, color: COLORS.text, textAlign: 'center', marginTop: SPACING.md, ...FONTS.medium },
   retryBtn: { marginTop: SPACING.lg, paddingVertical: 12, paddingHorizontal: 24, backgroundColor: COLORS.primary, borderRadius: RADIUS.md },
   retryText: { color: '#fff', ...FONTS.semibold },
+
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.md, paddingTop: 60, paddingBottom: SPACING.md,
@@ -258,6 +402,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, ...FONTS.semibold, color: COLORS.text },
+
   scroll: { padding: SPACING.md, paddingBottom: 120 },
   card: { backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md },
   listingTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
@@ -275,7 +420,27 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 4 },
   totalLabel: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
   totalValue: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
-  policyText: { flex: 1, fontSize: 13, color: COLORS.textSec, marginLeft: SPACING.sm, lineHeight: 18 },
+
+  // Policy row (tappable card)
+  policyRow: {
+    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  policyBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill,
+  },
+  policyBadgeText: { fontSize: 13, ...FONTS.semibold },
+  policyRowRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  policyRowHint: { fontSize: 13, color: COLORS.textSec },
+
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     padding: SPACING.md, backgroundColor: COLORS.bg,
@@ -288,4 +453,66 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   payBtnDisabled: { backgroundColor: COLORS.primaryLight },
   payBtnText: { color: '#fff', fontSize: 16, ...FONTS.bold },
+
+  // Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.bg,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: SPACING.lg, paddingBottom: 40,
+    maxHeight: '90%',
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center', marginBottom: SPACING.md,
+  },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  modalTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text },
+  modalSubtitle: { fontSize: 13, color: COLORS.textSec, marginTop: 3, maxWidth: 260 },
+  modalCloseBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center',
+  },
+  modalPolicyBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: SPACING.sm, borderRadius: RADIUS.md,
+    borderWidth: 1, marginBottom: SPACING.lg,
+  },
+  modalPolicyLabel: { fontSize: 15, ...FONTS.bold },
+
+  modalSectionLabel: {
+    fontSize: 12, ...FONTS.semibold, color: COLORS.textSec,
+    textTransform: 'uppercase', letterSpacing: 0.6,
+    marginBottom: SPACING.sm,
+  },
+
+  // Tiers
+  tiersContainer: { marginBottom: SPACING.lg },
+  tierRow: { flexDirection: 'row', gap: 12, marginBottom: 0 },
+  tierTimeline: { alignItems: 'center', width: 16, paddingTop: 4 },
+  tierDot: { width: 12, height: 12, borderRadius: 6 },
+  tierLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4, minHeight: 24 },
+  tierContent: { flex: 1, paddingBottom: SPACING.md },
+  tierWindow: { fontSize: 14, color: COLORS.text, ...FONTS.medium, marginBottom: 6 },
+  tierRefundBadge: {
+    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill,
+  },
+  tierRefundText: { fontSize: 13, ...FONTS.semibold },
+
+  // Notes
+  notesContainer: { marginBottom: SPACING.lg, gap: 8 },
+  noteRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  noteText: { fontSize: 13, color: COLORS.textSec, flex: 1, lineHeight: 19 },
+
+  modalGotItBtn: {
+    paddingVertical: 15, borderRadius: RADIUS.md,
+    alignItems: 'center',
+  },
+  modalGotItText: { color: '#fff', fontSize: 16, ...FONTS.bold },
 });

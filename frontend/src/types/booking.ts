@@ -18,6 +18,7 @@ export interface BookingQuote {
     meal_total: number | null;
     meal_option: boolean;
     meal_types: string | null;
+    cancellation_policy: 'flexible' | 'moderate' | 'strict';
   }
   
   export interface Booking {

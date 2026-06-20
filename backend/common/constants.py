@@ -39,7 +39,7 @@ REFUND_SCHEDULES = {
         (0, Decimal("0.00")),   # 0% otherwise
     ],
 }
-DEFAULT_CANCELLATION_POLICY = "moderate"
+DEFAULT_CANCELLATION_POLICY = "flexible"
 
 
 # ── Webhook handling ─────────────────────────────────────────
