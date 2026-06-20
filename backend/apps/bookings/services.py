@@ -92,8 +92,8 @@ def _validate_dates(check_in: date, check_out: date, *, allow_past: bool = False
 
 def _get_cancellation_policy(listing: Listing) -> str:
     """Return the listing's cancellation policy or default."""
-    if hasattr(listing, "house_rules") and listing.house_rules:
-        return listing.house_rules.cancellation_policy
+    # if hasattr(listing, "house_rules") and listing.house_rules:
+    #     return listing.house_rules.cancellation_policy
     return DEFAULT_CANCELLATION_POLICY
 
 
@@ -184,6 +184,7 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
         "meal_total": float(meal_total) if meal_total else None,
         "meal_option": meal_option,
         "meal_types": meal_types,
+        "cancellation_policy": _get_cancellation_policy(listing),
     }
 
 
