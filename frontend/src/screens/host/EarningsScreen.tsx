@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 interface EarningsData {
@@ -78,6 +79,8 @@ interface PayoutsResponse {
 }
 
 export default function EarningsScreen() {
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const [data, setData] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -354,7 +357,7 @@ export default function EarningsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   scrollContent: { paddingBottom: SPACING.xl },
@@ -377,7 +380,7 @@ const styles = StyleSheet.create({
   payoutSummaryRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.md },
   payoutSummaryCard: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderLeftWidth: 3,
@@ -392,7 +395,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
@@ -433,7 +436,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
@@ -486,7 +489,7 @@ const styles = StyleSheet.create({
 
   // Payout card
   payoutCard: {
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,

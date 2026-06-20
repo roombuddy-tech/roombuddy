@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { getErrorMessage } from '../../utils/errors';
 import EditProfileScreen from './EditProfileScreen';
@@ -39,6 +40,8 @@ type SubScreen = 'none' | 'edit_profile' | 'verification' | 'payment' | 'help' |
 
 export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
   const { logout } = useAuth();
+  const { mode, colors: COLORS, toggle } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeScreen, setActiveScreen] = useState<SubScreen>('none');
@@ -238,6 +241,20 @@ const handlePickPhoto = async () => {
                 <Ionicons name="chevron-forward" size={18} color={COLORS.textMut} />
               </TouchableOpacity>
 
+              <View style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: COLORS.border }]}>
+                <View style={styles.menuLeft}>
+                  <Ionicons name={mode === 'dark' ? 'moon-outline' : 'sunny-outline'} size={22} color={COLORS.primary} />
+                  <Text style={styles.menuLabel}>Dark mode</Text>
+                </View>
+                <Switch
+                  value={mode === 'dark'}
+                  onValueChange={toggle}
+                  trackColor={{ false: COLORS.border, true: COLORS.primary }}
+                  thumbColor={COLORS.surface}
+                  ios_backgroundColor={COLORS.border}
+                />
+              </View>
+
               <TouchableOpacity style={styles.menuItem} onPress={() => setActiveScreen('help')}>
                 <View style={styles.menuLeft}>
                   <Ionicons name="help-circle-outline" size={22} color={COLORS.accent} />
@@ -271,7 +288,7 @@ const handlePickPhoto = async () => {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   closeBtn: { alignSelf: 'flex-end', padding: SPACING.sm, marginTop: SPACING.sm },

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { submitReview } from '../../services/reviews';
 
@@ -32,8 +33,14 @@ const SUB_CATEGORIES = [
   { key: 'food_rating', label: 'Food & Kitchen' },
 ] as const;
 
-function StarRow({ rating, onRate }: { rating: number; onRate: (n: number) => void }) {
-  return (
+export default function WriteReviewScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<RouteProps>();
+  const { bookingId, listingTitle, hostName } = route.params;
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
+  const StarRow = ({ rating, onRate }: { rating: number; onRate: (n: number) => void }) => (
     <View style={styles.stars}>
       {[1, 2, 3, 4, 5].map((n) => (
         <TouchableOpacity key={n} onPress={() => onRate(n)} activeOpacity={0.7}>
@@ -46,10 +53,8 @@ function StarRow({ rating, onRate }: { rating: number; onRate: (n: number) => vo
       ))}
     </View>
   );
-}
 
-function SubStarRow({ rating, onRate }: { rating: number; onRate: (n: number) => void }) {
-  return (
+  const SubStarRow = ({ rating, onRate }: { rating: number; onRate: (n: number) => void }) => (
     <View style={styles.subStars}>
       {[1, 2, 3, 4, 5].map((n) => (
         <TouchableOpacity key={n} onPress={() => onRate(n)} activeOpacity={0.7}>
@@ -62,12 +67,6 @@ function SubStarRow({ rating, onRate }: { rating: number; onRate: (n: number) =>
       ))}
     </View>
   );
-}
-
-export default function WriteReviewScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<RouteProps>();
-  const { bookingId, listingTitle, hostName } = route.params;
 
   const [overall, setOverall] = useState(0);
   const [subs, setSubs] = useState<Record<string, number>>({});
@@ -179,7 +178,7 @@ export default function WriteReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

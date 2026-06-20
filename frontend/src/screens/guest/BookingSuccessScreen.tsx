@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'BookingSuccess'>;
@@ -14,6 +15,8 @@ export default function BookingSuccessScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { bookingCode } = route.params;
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   function goHome() {
     navigation.dispatch(
@@ -52,7 +55,7 @@ export default function BookingSuccessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingTop: 80 },
   content: { flex: 1, alignItems: 'center', paddingHorizontal: SPACING.lg },
   checkCircle: {

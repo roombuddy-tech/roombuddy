@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { COLORS, FONTS } from '../constants/theme';
+import { FONTS, ThemeColors } from '../constants/theme';
+import { useThemeColors } from '../context/ThemeContext';
 import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import BookingsScreen from '../screens/host/BookingsScreen';
 import DashboardScreen from '../screens/host/DashboardScreen';
@@ -15,6 +16,8 @@ const Tab = createBottomTabNavigator<HostTabParamList>();
 
 export default function HostTabs() {
   const unreadMessages = useUnreadMessages();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   return (
     <Tab.Navigator
       screenOptions={{
@@ -111,7 +114,7 @@ export default function HostTabs() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   tabBar: {
     backgroundColor: COLORS.bg,
     borderTopWidth: 0.5,

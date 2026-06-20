@@ -1,14 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import NotificationBell from '../../components/NotificationBell';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList } from '../../navigation/types';
 import ProfileMenu from '../../screens/shared/ProfileMenu';
 import api from '../../services/api';
@@ -37,6 +38,8 @@ interface DashboardData {
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { switchRole, user } = useAuth();
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const [showProfile, setShowProfile] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -232,7 +235,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
@@ -247,7 +250,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11, paddingVertical: 7,
   },
   switchBtnTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.semibold },
-  bellBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
+  bellBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center' },
   greeting: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 4 },
   name: { fontSize: 32, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5, marginBottom: SPACING.lg },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },
@@ -256,7 +259,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 26, ...FONTS.serif, marginBottom: 2 },
   statSub: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
   sectionTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
-  activityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, gap: 12 },
+  activityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, gap: 12 },
   activityIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   activityContent: { flex: 1 },
   activityTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },

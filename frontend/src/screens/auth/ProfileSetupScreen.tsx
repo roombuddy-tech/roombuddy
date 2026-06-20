@@ -1,12 +1,13 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useThemeColors } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
@@ -22,6 +23,8 @@ const GENDERS = [
 
 export default function ProfileSetupScreen({ navigation }: Props) {
   const { completeProfile } = useAuth();
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -334,7 +337,7 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { paddingTop: SPACING.md, paddingBottom: SPACING.xl },
   topBar: {
     flexDirection: 'row',

@@ -2,11 +2,12 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
 import api from '../../services/api';
 
@@ -31,7 +32,7 @@ interface BookingItem {
 
 const FILTERS = ['All', 'Active', 'Upcoming', 'Completed'];
 
-const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
+const makeStatusColors = (COLORS: ThemeColors): Record<string, { text: string; bg: string }> => ({
   active: { text: COLORS.success, bg: COLORS.accentSoft },
   accepted: { text: COLORS.success, bg: COLORS.accentSoft },
   pending: { text: COLORS.primaryDark, bg: COLORS.raised },
@@ -42,7 +43,7 @@ const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
   rejected: { text: COLORS.danger, bg: COLORS.raised },
   expired: { text: COLORS.textMut, bg: COLORS.chip },
   no_show: { text: COLORS.danger, bg: COLORS.raised },
-};
+});
 
 function formatDateRange(checkIn: string, checkOut: string): string {
   const start = new Date(checkIn);
@@ -63,6 +64,9 @@ function formatStatus(status: string): string {
 
 export default function BookingsScreen() {
   const navigation = useNavigation<NavProp>();
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
+  const STATUS_COLORS = useMemo(() => makeStatusColors(COLORS), [COLORS]);
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -170,7 +174,7 @@ export default function BookingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   scrollContent: { paddingBottom: SPACING.xl },
 
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center' },
 
-  bookingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.sm },
+  bookingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.sm },
   guestAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   guestInitials: { fontSize: 16, ...FONTS.bold, color: COLORS.primary },
   bookingDetails: { flex: 1 },

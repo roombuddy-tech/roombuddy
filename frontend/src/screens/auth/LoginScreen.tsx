@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import PhoneInput from '../../components/forms/PhoneInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 import { isValidIndianPhone } from '../../utils/validators';
@@ -13,6 +14,9 @@ import { isValidIndianPhone } from '../../utils/validators';
 type Props = NativeStackScreenProps<any, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -138,7 +142,7 @@ export default function LoginScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: SPACING.xl,

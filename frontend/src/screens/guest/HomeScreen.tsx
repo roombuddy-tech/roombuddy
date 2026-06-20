@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -19,8 +19,9 @@ import NotificationBell from '../../components/NotificationBell';
 
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import SearchResultsMap from '../../components/maps/SearchResultsMap';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import type { GuestStackParamList, GuestTabParamList } from '../../navigation/types';
 import { searchListings } from '../../services/search';
 import type { GuestListingCard } from '../../types/listing';
@@ -68,6 +69,8 @@ export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<GuestTabParamList, 'Home'>>();
   const { user, switchRole } = useAuth();
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
   const [showProfile, setShowProfile] = useState(false);
@@ -557,7 +560,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
 
   // ── Top bar ──
@@ -577,7 +580,7 @@ const styles = StyleSheet.create({
   switchBtnTxt: { fontSize: 12, color: COLORS.accent, ...FONTS.semibold },
   bellBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center',
   },
   avatarBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -596,7 +599,7 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', gap: SPACING.md },
   dateBox: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
   },
@@ -637,7 +640,7 @@ const styles = StyleSheet.create({
   },
 
   editPanel: {
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
     padding: SPACING.lg, marginBottom: SPACING.md,
     ...SHADOW.sm,
@@ -650,8 +653,8 @@ const styles = StyleSheet.create({
 
   searchPill: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border,
-    borderRadius: 40, padding: 12, gap: 12, ...SHADOW.md, marginBottom: SPACING.xl,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 40, padding: 12, gap: 12, ...SHADOW.sm, marginBottom: SPACING.xl,
   },
   pillIcon: {
     width: 40, height: 40, borderRadius: 20,
@@ -693,7 +696,7 @@ const styles = StyleSheet.create({
 
   // ── Cards ──
   card: {
-    backgroundColor: COLORS.bg, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: COLORS.border,
     marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm,
   },

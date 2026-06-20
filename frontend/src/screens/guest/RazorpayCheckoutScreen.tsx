@@ -7,7 +7,8 @@ import {
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { verifyPayment } from '../../services/payments';
 
@@ -18,6 +19,8 @@ export default function RazorpayCheckoutScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { bookingId, bookingCode, order } = route.params;
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [verifying, setVerifying] = useState(false);
 
@@ -161,7 +164,7 @@ function buildCheckoutHtml(order: any, bookingCode: string): string {
 </html>`;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

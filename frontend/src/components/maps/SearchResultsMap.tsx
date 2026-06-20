@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 import { DEFAULT_REGION } from '../../constants/maps';
 import type { GuestListingCard } from '../../types/listing';
 
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export default function SearchResultsMap({ listings, onListingPress }: Props) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const mappable = useMemo(
@@ -100,7 +103,7 @@ export default function SearchResultsMap({ listings, onListingPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, position: 'relative' },
   map: { flex: 1 },
 

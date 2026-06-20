@@ -4,12 +4,13 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
 import api from '../../services/api';
 import VerificationScreen from '../shared/VerificationScreen';
@@ -41,7 +42,7 @@ interface DraftData {
   form: { title?: string; apartmentName?: string };
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+const makeStatusConfig = (COLORS: ThemeColors): Record<string, { label: string; color: string }> => ({
   live: { label: 'Listed', color: COLORS.success },
   hidden: { label: 'Hidden', color: COLORS.primary },
   pending: { label: 'Pending', color: COLORS.primary },
@@ -49,9 +50,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   paused: { label: 'Paused', color: COLORS.textMut },
   snoozed: { label: 'Snoozed', color: COLORS.textMut },
   delisted: { label: 'Delisted', color: COLORS.danger },
-};
+});
 
-function ListingThumbnail({ uri }: { uri: string | null }) {
+function ListingThumbnail({ uri, styles, COLORS }: { uri: string | null; styles: ReturnType<typeof makeStyles>; COLORS: ThemeColors }) {
   const [failed, setFailed] = React.useState(false);
   if (uri && !failed) {
     return (
@@ -70,7 +71,7 @@ function ListingThumbnail({ uri }: { uri: string | null }) {
   );
 }
 
-function DraftProgressBar({ completed, total }: { completed: number; total: number }) {
+function DraftProgressBar({ completed, total, styles }: { completed: number; total: number; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.draftProgressTrack}>
       <View style={[styles.draftProgressFill, { width: `${(completed / total) * 100}%` }]} />
@@ -81,6 +82,9 @@ function DraftProgressBar({ completed, total }: { completed: number; total: numb
 export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
   const { user } = useAuth();
+  const { colors: COLORS, shadows: SHADOW } = useTheme();
+  const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
+  const STATUS_CONFIG = useMemo(() => makeStatusConfig(COLORS), [COLORS]);
   const [listings, setListings] = useState<ListingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -220,7 +224,7 @@ export default function ListingsScreen() {
                     <Text style={styles.draftProgress}>
                       {draftStepsCompleted} of {TOTAL_STEPS} steps completed
                     </Text>
-                    <DraftProgressBar completed={draftStepsCompleted} total={TOTAL_STEPS} />
+                    <DraftProgressBar completed={draftStepsCompleted} total={TOTAL_STEPS} styles={styles} />
                   </View>
 
                   <View style={styles.draftContinueBtn}>
@@ -288,7 +292,7 @@ export default function ListingsScreen() {
                       onPress={() => handleCardPress(item)}
                     >
                       <View style={styles.photoContainer}>
-                        <ListingThumbnail uri={item.cover_photo_url} />
+                        <ListingThumbnail uri={item.cover_photo_url} styles={styles} COLORS={COLORS} />
                       </View>
 
                       <View style={styles.detailsContainer}>
@@ -367,7 +371,7 @@ export default function ListingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   scrollContent: { paddingBottom: SPACING.xl },
 
@@ -437,7 +441,7 @@ const styles = StyleSheet.create({
 
   listingCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,

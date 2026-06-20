@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { COLORS, FONTS, RADIUS, SPACING } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useThemeColors } from '../../context/ThemeContext';
 
 interface TermsPrivacyScreenProps {
   visible: boolean;
@@ -15,6 +16,8 @@ type ActiveTab = 'terms' | 'privacy';
 export default function TermsPrivacyScreen({ visible, onClose }: TermsPrivacyScreenProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('terms');
   const [loading, setLoading] = useState(true);
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const url = activeTab === 'terms'
     ? 'https://roombuddy.co.in/terms/'
@@ -68,7 +71,7 @@ export default function TermsPrivacyScreen({ visible, onClose }: TermsPrivacyScr
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',
