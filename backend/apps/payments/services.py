@@ -30,6 +30,9 @@ from common.error_codes import ErrorCode
 from common.redis_utils import idempotency_seen
 from third_party import razorpay as rzp
 from apps.properties.models import PropertyPhoto
+from third_party.pdf_bill import generate_booking_invoice
+from apps.notifications.providers.ses_email import SESEmailProvider
+from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -580,14 +583,8 @@ def _notify_payment_succeeded(booking, payment) -> None:
     idem = f"payment_succeeded:{payment.id}"
     guest = booking.guest_user
     host = booking.host_user
-
-    if guest:
-        dispatch(
-            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
-            recipients=[guest],
-            context={**base, "recipient_name": _user_first_name(guest), "recipient_role": "guest"},
-            idempotency_event_id=idem,
-        )
+ 
+    # ── Notify host (standard email, no attachment) ───────────────────────
     if host:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
@@ -595,9 +592,21 @@ def _notify_payment_succeeded(booking, payment) -> None:
             context={**base, "recipient_name": _user_first_name(host), "recipient_role": "host"},
             idempotency_event_id=idem,
         )
-
-    # If payment auto-accepted the booking, notify guest of acceptance too
-    if booking.status == Booking.Status.ACCEPTED and guest:
+ 
+    # ── Notify guest: standard channels (in-app, SMS) ────────────────────
+    if guest:
+        dispatch(
+            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
+            recipients=[guest],
+            context={**base, "recipient_name": _user_first_name(guest), "recipient_role": "guest"},
+            idempotency_event_id=idem,
+        )
+ 
+        # ── Send invoice email separately with PDF attachment ─────────────
+        _send_invoice_email(booking, guest, base)
+ 
+    # ── Instant booking: also notify guest of acceptance ─────────────────
+    if booking.status == booking.Status.ACCEPTED and guest:
         dispatch(
             event_type=EventType.BOOKING_HOST_ACCEPTED,
             recipients=[guest],
@@ -628,4 +637,79 @@ def _notify_refund_completed(booking, refund) -> None:
             recipients=[guest],
             context={**base, "recipient_name": _user_first_name(guest)},
             idempotency_event_id=f"refund_completed:{refund.id}",
+        )
+
+def _send_invoice_email(booking, guest, context: dict) -> None:
+    """Generate PDF invoice and email it to the guest with HTML template + PDF attachment."""
+
+    guest_email = getattr(guest, "email", None)
+    if not guest_email:
+        logger.warning(
+            "_send_invoice_email: guest %s has no email, skipping", guest.id
+        )
+        return
+
+    # Generate PDF
+    try:
+        pdf_bytes = generate_booking_invoice(booking)
+    except Exception:
+        logger.exception(
+            "_send_invoice_email: PDF generation failed for booking %s",
+            booking.booking_code,
+        )
+        return
+
+    if not pdf_bytes:
+        logger.warning(
+            "_send_invoice_email: empty PDF for booking %s", booking.booking_code
+        )
+        return
+
+    # Build template context — reuse existing context + invoice-specific fields
+    policy = booking.cancellation_policy or "flexible"
+    policy_text = {
+        "flexible": "100% refund if cancelled 2+ days before check-in; 50% refund thereafter.",
+        "moderate": "100% refund if cancelled 7+ days before; 50% refund 2–6 days before; no refund within 2 days.",
+        "strict":   "50% refund if cancelled 7+ days before check-in; no refund thereafter.",
+    }.get(policy, "")
+
+    template_context = {
+        **context,
+        "recipient_name": _user_first_name(guest),
+        "platform_fee": f"{booking.platform_fee:,.0f}",
+        "security_deposit": f"{float(booking.security_deposit or 0):,.0f}",
+        "meal_total": f"{float(booking.meal_total or 0):,.0f}" if booking.meal_option_selected else "0",
+        "meal_cost_per_day": f"{float(booking.meal_cost_per_day or 0):,.0f}",
+        "cancellation_policy_text": policy_text,
+        "current_year": "2026",
+    }
+
+    # Render HTML body from template
+    body = render_to_string("emails/booking_invoice_email.html", template_context)
+    subject = f"Your booking invoice — {booking.booking_code}"
+    filename = f"RoomBuddy_Invoice_{booking.booking_code}.pdf"
+
+    try:
+        provider = SESEmailProvider()
+        result = provider.send_with_attachment(
+            recipient=guest_email,
+            subject=subject,
+            body=body,
+            attachment_bytes=pdf_bytes,
+            attachment_filename=filename,
+        )
+        if result.success:
+            logger.info(
+                "_send_invoice_email: invoice sent to %s for booking %s",
+                guest_email, booking.booking_code,
+            )
+        else:
+            logger.error(
+                "_send_invoice_email: SES failed for %s — %s",
+                booking.booking_code, result.error,
+            )
+    except Exception:
+        logger.exception(
+            "_send_invoice_email: unexpected error for booking %s",
+            booking.booking_code,
         )
