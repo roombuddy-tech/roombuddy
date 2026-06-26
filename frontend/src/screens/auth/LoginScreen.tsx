@@ -67,12 +67,6 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        {/* Brand */}
-        <View style={styles.header}>
-          <Text style={styles.brand}>
-            Room<Text style={styles.brandAccent}>Buddy</Text>
-          </Text>
-        </View>
 
         {/* Main */}
         <View style={styles.main}>

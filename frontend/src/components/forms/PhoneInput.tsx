@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, TextInput, Text, StyleSheet } from 'react-native';
-import { RADIUS, FONTS, SPACING, ThemeColors } from '../../constants/theme';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
 
 interface PhoneInputProps {
@@ -15,7 +15,6 @@ export default function PhoneInput({ value, onChangeText, error, autoFocus }: Ph
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   return (
     <View>
-      <Text style={styles.label}>Phone number</Text>
       <View style={[styles.container, error ? styles.containerError : null]}>
         <View style={styles.prefix}>
           <Text style={styles.flag}>🇮🇳</Text>

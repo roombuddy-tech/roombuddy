@@ -90,13 +90,6 @@ export default function OTPScreen({ navigation, route }: Props) {
           <Text style={styles.backText}>Change number</Text>
         </TouchableOpacity>
 
-        {/* Brand */}
-        <View style={styles.brandRow}>
-          <Text style={styles.brand}>
-            Room<Text style={styles.brandAccent}>Buddy</Text>
-          </Text>
-        </View>
-
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Verify your number</Text>
