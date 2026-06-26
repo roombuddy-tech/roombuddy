@@ -2,8 +2,8 @@ require("dotenv").config();
 
 module.exports = {
   expo: {
-    name: "frontend",
-    slug: "frontend",
+    name: "RoomBuddy",
+    slug: "roombuddy",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -15,6 +15,7 @@ module.exports = {
       backgroundColor: "#0E0F12",
     },
     ios: {
+      bundleIdentifier: "in.co.roombuddy.app",
       supportsTablet: true,
       infoPlist: {
         NSPhotoLibraryUsageDescription:
@@ -25,6 +26,7 @@ module.exports = {
       },
     },
     android: {
+      package: "in.co.roombuddy.app",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#0E0F12",
