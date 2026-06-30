@@ -590,7 +590,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   avatarTxt: { color: '#fff', fontSize: 14, ...FONTS.bold },
 
   // ── Search form ──
-  pageTitle: { fontSize: 30, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5, marginBottom: SPACING.lg, marginTop: SPACING.sm },
+  pageTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5, marginBottom: SPACING.lg, marginTop: SPACING.sm },
 
   fieldLabel: {
     fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 4,
