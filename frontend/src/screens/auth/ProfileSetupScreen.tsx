@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useMemo, useState } from 'react';
 import { Alert, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
 import { ENDPOINTS } from '../../constants/endpoints';
@@ -12,6 +13,7 @@ import api from '../../services/api';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
 import { isValidEmail } from '../../utils/validators';
+
 
 type Props = NativeStackScreenProps<any, 'ProfileSetup'>;
 
@@ -282,14 +284,12 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         </View>
 
         {/* City */}
-        <View style={styles.field}>
+        <View style={[styles.field, { zIndex: 10 }]}>
           <Text style={styles.label}>City</Text>
-          <TextInput
-            style={styles.input}
+          <GooglePlacesInput
             value={city}
-            onChangeText={setCity}
-            placeholder="Enter your city"
-            placeholderTextColor={COLORS.textMut}
+            placeholder="Search your city..."
+            onSelect={(place) => setCity(place.city || place.description)}
           />
         </View>
 

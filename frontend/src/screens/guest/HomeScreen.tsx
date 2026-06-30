@@ -569,8 +569,8 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     marginBottom: SPACING.md,
   },
-  brand: { fontSize: 24, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5 },
-  brandAccent: { ...FONTS.serifItalic, color: COLORS.primary },
+  brand: { fontSize: 24, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
+  brandAccent: { color: COLORS.accent },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   switchBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,

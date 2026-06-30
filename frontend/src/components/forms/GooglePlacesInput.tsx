@@ -1,9 +1,9 @@
-import React, { useRef, useEffect, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { GooglePlacesAutocomplete, GooglePlaceData, GooglePlaceDetail } from 'react-native-google-places-autocomplete';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { GOOGLE_PLACES_API_KEY } from '../../constants/maps';
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
-import { GOOGLE_PLACES_API_KEY } from '../../constants/maps';
 
 export interface PlaceResult {
   description: string;
