@@ -68,6 +68,12 @@ class Booking(models.Model):
         "users.User", on_delete=models.RESTRICT, related_name="bookings_as_host",
     )
 
+    # ── Guest details snapshot (captured at booking time) ────────────────
+    guest_name = models.CharField(max_length=200, blank=True, default="")
+    guest_email = models.EmailField(blank=True, default="")
+    guest_phone = models.CharField(max_length=20, blank=True, default="")
+    guest_gender = models.CharField(max_length=20, blank=True, default="")
+
     # Dates
     check_in_date = models.DateField()
     check_out_date = models.DateField()

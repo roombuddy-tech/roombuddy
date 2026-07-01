@@ -59,6 +59,26 @@ const AMENITY_ICONS: Record<string, string> = {
   'Door lock on room': 'lock-closed-outline',
 };
 
+const AMENITY_CATEGORIES: Record<string, { label: string; icon: string }> = {
+  Essentials: { label: 'Essentials', icon: 'flash-outline' },
+  'Kitchen & Food': { label: 'Kitchen & Food', icon: 'restaurant-outline' },
+  Comfort: { label: 'Comfort', icon: 'bed-outline' },
+  Safety: { label: 'Safety', icon: 'shield-checkmark-outline' },
+};
+
+const HOUSE_RULE_CONFIG: Array<{ key: string; label: string; icon: string }> = [
+  { key: 'no_smoking', label: 'No smoking', icon: 'close-circle-outline' },
+  { key: 'no_loud_music', label: 'No loud music late at night', icon: 'volume-mute-outline' },
+  { key: 'no_pets', label: 'No pets', icon: 'paw-outline' },
+  { key: 'no_alcohol', label: 'No alcohol in common areas', icon: 'wine-outline' },
+  { key: 'no_parties', label: 'No parties or events', icon: 'people-circle-outline' },
+  { key: 'shoes_off', label: 'Shoes off at the entrance', icon: 'footsteps-outline' },
+  { key: 'kitchen_clean', label: 'Keep the kitchen clean after use', icon: 'cafe-outline' },
+  { key: 'lock_door', label: 'Lock the door when leaving', icon: 'lock-closed-outline' },
+];
+
+
+
 const BREAKDOWN_LABELS: Record<string, string> = {
   cleanliness: 'Cleanliness',
   accuracy: 'Accuracy',
@@ -83,6 +103,21 @@ function StarDisplay({ rating, size = 13 }: { rating: number; size?: number }) {
     </View>
   );
 }
+
+function parseNearbyFromDescription(description: string): { cleanDesc: string; nearbyLine: string | null } {
+  const lines = description.split('\n');
+  let nearbyLine: string | null = null;
+  const cleanLines: string[] = [];
+  for (const line of lines) {
+    if (line.trim().startsWith('Nearby:')) {
+      nearbyLine = line.trim();
+    } else {
+      cleanLines.push(line);
+    }
+  }
+  return { cleanDesc: cleanLines.join('\n').trim(), nearbyLine };
+}
+
 
 // ─── screen ───────────────────────────────────────────────────────────────────
 
@@ -201,11 +236,28 @@ export default function GuestListingDetailScreen() {
       mealCostPerDay: listing.food.meal_cost,
       mealTypes: listing.food.meal_types,
       mealDescription: listing.food.meal_description,
+      genderPreference: listing.property.gender_preference,
     });
   };
 
   const today = new Date().toISOString().slice(0, 10);
   const hasReviews = reviewsData && reviewsData.total > 0;
+
+  const { cleanDesc, nearbyLine } = parseNearbyFromDescription(listing.description || '');
+
+  // Group amenities by category
+  const amenityGroups = listing.amenities.reduce<Record<string, string[]>>((acc, a) => {
+    const cat = a.category || 'Other';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(a.display_name);
+    return acc;
+  }, {});
+
+  // Active house rules
+  const activeRules = HOUSE_RULE_CONFIG.filter(
+    (r) => listing.house_rules[r.key as keyof typeof listing.house_rules] === true
+  );
+  
   const breakdownEntries = reviewsData
     ? (Object.entries(reviewsData.breakdown).filter(([, v]) => v != null) as [string, number][])
     : [];
@@ -266,10 +318,10 @@ export default function GuestListingDetailScreen() {
           </View>
 
           {/* ── About ── */}
-          {listing.description ? (
+          {cleanDesc ? (
             <View style={styles.section}>
               <SectionTitle label="About this room" />
-              <Text style={styles.description}>{listing.description.replace(/\n{2,}/g, '\n').trim()}</Text>
+              <Text style={styles.description}>{cleanDesc.replace(/\n{2,}/g, '\n').trim()}</Text>
             </View>
           ) : null}
 
@@ -299,6 +351,7 @@ export default function GuestListingDetailScreen() {
                     <Text style={styles.flatmateName}>{fm.name}{fm.age ? `, ${fm.age}` : ''}</Text>
                     {fm.occupation ? <Text style={styles.flatmateDetail}>{fm.occupation}</Text> : null}
                     {fm.hobbies ? <Text style={styles.flatmateDetail}>{fm.hobbies}</Text> : null}
+                    {fm.hometown ? <Text style={styles.flatmateDetail}>From {fm.hometown}</Text> : null}
                   </View>
                 </View>
               ))}
@@ -319,7 +372,10 @@ export default function GuestListingDetailScreen() {
                 {listing.food.meals_available && listing.food.meal_cost !== null && (
                   <View style={styles.foodChip}>
                     <Ionicons name="fast-food-outline" size={14} color={COLORS.primary} />
-                    <Text style={styles.foodChipText}>Tiffin at Rs.{listing.food.meal_cost}/meal</Text>
+                    <Text style={styles.foodChipText}>
+                      Home meals · ₹{listing.food.meal_cost}/day
+                      {listing.food.meal_types ? ` · ${listing.food.meal_types}` : ''}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -327,18 +383,30 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* ── Amenities ── */}
+          {/* ── Amenities (grouped by category) ── */}
           {listing.amenities.length > 0 && (
             <View style={styles.section}>
-              <SectionTitle label="Amenities" />
-              <View style={styles.amenityGrid}>
-                {listing.amenities.map((a) => (
-                  <View key={a.display_name} style={styles.amenityRow}>
-                    <Ionicons name={(AMENITY_ICONS[a.display_name] ?? 'checkmark-outline') as any} size={18} color={COLORS.primary} />
-                    <Text style={styles.amenityText}>{a.display_name}</Text>
+              {Object.entries(amenityGroups).map(([category, items]) => {
+                const catMeta = AMENITY_CATEGORIES[category];
+                return (
+                  <View key={category} style={{ marginBottom: SPACING.md }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
+                      <Ionicons name={(catMeta?.icon ?? 'list-outline') as any} size={16} color={COLORS.primary} />
+                      <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>
+                        {catMeta?.label ?? category}
+                      </Text>
+                    </View>
+                    <View style={styles.amenityGrid}>
+                      {items.map((name) => (
+                        <View key={name} style={styles.amenityRow}>
+                          <Ionicons name={(AMENITY_ICONS[name] ?? 'checkmark-outline') as any} size={18} color={COLORS.primary} />
+                          <Text style={styles.amenityText}>{name}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
-                ))}
-              </View>
+                );
+              })}
             </View>
           )}
 
@@ -349,7 +417,6 @@ export default function GuestListingDetailScreen() {
               <View style={styles.spaceCard}>
                 <View style={styles.spaceCardIconWrap}><Ionicons name="home-outline" size={20} color={COLORS.primary} /></View>
                 <Text style={styles.spaceCardLabel}>{listing.property.apartment_type}</Text>
-                {listing.property.floor_number > 0 && <Text style={styles.spaceCardSub}>Floor {listing.property.floor_number}</Text>}
               </View>
               <View style={styles.spaceCard}>
                 <View style={styles.spaceCardIconWrap}>
@@ -370,13 +437,29 @@ export default function GuestListingDetailScreen() {
               )}
             </View>
             {listing.room.room_features.length > 0 && (
-              <View style={styles.featureRow}>
-                {listing.room.room_features.map((f) => (
-                  <View key={f} style={styles.featureChip}><Text style={styles.featureChipText}>{f}</Text></View>
-                ))}
-              </View>
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
+                  <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>What this room has</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  {listing.room.room_features.map((f) => (
+                    <View key={f} style={styles.featureChip}><Text style={styles.featureChipText}>{f}</Text></View>
+                  ))}
+                </View>
+              </>
             )}
           </View>
+
+          {nearbyLine && (
+            <View style={styles.section}>
+              <SectionTitle label="Nearby" />
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}>
+                <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
+                <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
+              </View>
+            </View>
+          )}
 
           {/* ── Map ── */}
           {listing.property.latitude && listing.property.longitude && (
@@ -391,7 +474,27 @@ export default function GuestListingDetailScreen() {
                   <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(13,115,119,0.12)" strokeColor="rgba(13,115,119,0.3)" strokeWidth={1} />
                 </MapView>
               </View>
-              <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
+                <Text style={styles.locationDisclaimer}>
+                  {listing.property.apartment_name ? `Near ${listing.property.apartment_name} · ` : ''}Exact location shared after booking
+                </Text>
+              </View>
+          )}
+
+          {/* ── House Rules ── */}
+          {activeRules.length > 0 && (
+            <View style={styles.section}>
+              <SectionTitle label="House rules" />
+              {activeRules.map((rule) => (
+                <View key={rule.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+                  <Ionicons name={rule.icon as any} size={18} color={COLORS.danger} />
+                  <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium }}>{rule.label}</Text>
+                </View>
+              ))}
+              {listing.house_rules.custom_rules ? (
+                <View style={{ marginTop: SPACING.sm, backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, padding: SPACING.md }}>
+                  <Text style={{ fontSize: 13, color: COLORS.textSec, lineHeight: 20 }}>{listing.house_rules.custom_rules}</Text>
+                </View>
+              ) : null}
             </View>
           )}
 
@@ -426,14 +529,10 @@ export default function GuestListingDetailScreen() {
                 <Text style={styles.stayInfoLabel}>Min stay</Text>
                 <Text style={styles.stayInfoValue}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
               </View>
-              <View style={styles.stayInfoItem}>
-                <Text style={styles.stayInfoLabel}>Max stay</Text>
-                <Text style={styles.stayInfoValue}>{listing.max_nights} night{listing.max_nights !== 1 ? 's' : ''}</Text>
-              </View>
               {listing.security_deposit > 0 && (
                 <View style={styles.stayInfoItem}>
                   <Text style={styles.stayInfoLabel}>Deposit</Text>
-                  <Text style={styles.stayInfoValue}>Rs.{listing.security_deposit.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.stayInfoValue}>₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
                 </View>
               )}
             </View>
@@ -502,19 +601,22 @@ export default function GuestListingDetailScreen() {
                 </View>
                 <Text style={styles.rulesIntro}>Please review the house rules before booking</Text>
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
-                  {listing.house_rules.no_smoking && (
-                    <View style={styles.modalRuleRow}><Ionicons name="close-circle" size={20} color={COLORS.danger} /><Text style={styles.modalRuleText}>No smoking</Text></View>
-                  )}
-                  {listing.house_rules.no_pets && (
-                    <View style={styles.modalRuleRow}><Ionicons name="paw" size={20} color={COLORS.danger} /><Text style={styles.modalRuleText}>No pets</Text></View>
-                  )}
-                  {listing.house_rules.no_alcohol && (
-                    <View style={styles.modalRuleRow}><Ionicons name="wine" size={20} color={COLORS.danger} /><Text style={styles.modalRuleText}>No alcohol in common areas</Text></View>
-                  )}
-                  {listing.house_rules.custom_rules && (
-                    <View style={styles.modalCustomRules}><Ionicons name="document-text-outline" size={16} color={COLORS.textSec} style={{ marginBottom: 4 }} /><Text style={styles.modalCustomRulesText}>{listing.house_rules.custom_rules}</Text></View>
-                  )}
-                  {!listing.house_rules.no_smoking && !listing.house_rules.no_pets && !listing.house_rules.no_alcohol && !listing.house_rules.custom_rules && (
+                  {activeRules.length > 0 ? (
+                    <>
+                      {activeRules.map((rule) => (
+                        <View key={rule.key} style={styles.modalRuleRow}>
+                          <Ionicons name={rule.icon as any} size={20} color={COLORS.danger} />
+                          <Text style={styles.modalRuleText}>{rule.label}</Text>
+                        </View>
+                      ))}
+                      {listing.house_rules.custom_rules && (
+                        <View style={styles.modalCustomRules}>
+                          <Ionicons name="document-text-outline" size={16} color={COLORS.textSec} style={{ marginBottom: 4 }} />
+                          <Text style={styles.modalCustomRulesText}>{listing.house_rules.custom_rules}</Text>
+                        </View>
+                      )}
+                    </>
+                  ) : (
                     <Text style={styles.noRulesText}>No specific house rules</Text>
                   )}
                 </ScrollView>

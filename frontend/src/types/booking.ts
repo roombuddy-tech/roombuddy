@@ -5,7 +5,9 @@ export interface BookingQuote {
     guest_nightly_price: number;
     subtotal: number;
     gst_amount: number;
+    gst_pct: number;
     platform_fee: number;
+    platform_fee_pct: number;
     host_platform_fee: number;
     security_deposit: number;
     total_guest_pays: number;

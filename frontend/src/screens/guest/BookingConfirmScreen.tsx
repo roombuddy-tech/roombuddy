@@ -14,9 +14,12 @@ import {
   View,
 } from 'react-native';
 
+import { ENDPOINTS } from '../../constants/endpoints';
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
+import api from '../../services/api';
 import { createBooking, getQuote } from '../../services/bookings';
 import { createPaymentOrder } from '../../services/payments';
 import type { BookingQuote } from '../../types/booking';
@@ -76,6 +79,29 @@ export default function BookingConfirmScreen() {
   const [error, setError] = useState<string | null>(null);
   const [withMeals, setWithMeals] = useState(initialMealOption);
   const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const { user } = useAuth();
+  const { genderPreference } = route.params;
+
+  const [guestProfile, setGuestProfile] = useState<{
+    first_name: string;
+    last_name: string;
+    gender: string;
+  } | null>(null);
+
+  useEffect(() => {
+    api.get(ENDPOINTS.USER.PROFILE).then((res) => setGuestProfile(res.data)).catch(() => {});
+  }, []);
+
+  // Gender validation
+  const genderMismatch = (() => {
+    if (!genderPreference || genderPreference === 'any' || !guestProfile) return false;
+    if (genderPreference === 'female_only' && guestProfile.gender !== 'female') return true;
+    if (genderPreference === 'male_only' && guestProfile.gender !== 'male') return true;
+    return false;
+  })();
+
+  const genderLabel = genderPreference === 'female_only' ? 'Female guests only'
+    : genderPreference === 'male_only' ? 'Male guests only' : '';
 
   const fetchQuote = async (mealOpt: boolean) => {
     setLoading(true);
@@ -160,6 +186,44 @@ const policyMeta =  POLICY_META.flexible;
           </View>
         </View>
 
+        {/* Guest details */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Guest details</Text>
+          {guestProfile ? (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Name</Text>
+                <Text style={styles.value}>{guestProfile.first_name} {guestProfile.last_name}</Text>
+              </View>
+              <View style={[styles.row, { marginBottom: 0 }]}>
+                <Text style={styles.label}>Gender</Text>
+                <Text style={styles.value}>{guestProfile.gender.charAt(0).toUpperCase() + guestProfile.gender.slice(1)}</Text>
+              </View>
+            </>
+          ) : (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          )}
+        </View>
+
+        {/* Gender mismatch warning */}
+        {genderMismatch && (
+          <View style={{
+            backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+            borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md,
+            flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+          }}>
+            <Ionicons name="alert-circle" size={22} color="#DC2626" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, ...FONTS.semibold, color: '#DC2626', marginBottom: 4 }}>
+                Gender restriction
+              </Text>
+              <Text style={{ fontSize: 13, color: '#991B1B', lineHeight: 19 }}>
+                This property is listed for {genderLabel.toLowerCase()}. Your profile gender ({guestProfile?.gender}) does not match. You cannot book this listing.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Meal option */}
         {quote.meals_available && (
           <View style={styles.card}>
@@ -191,11 +255,11 @@ const policyMeta =  POLICY_META.flexible;
             <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>GST</Text>
+            <Text style={styles.priceLabel}>GST ({quote.gst_pct}%)</Text>
             <Text style={styles.priceValue}>₹{quote.gst_amount.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Service fee</Text>
+            <Text style={styles.priceLabel}>Service fee ({quote.platform_fee_pct}%)</Text>
             <Text style={styles.priceValue}>₹{quote.platform_fee.toLocaleString('en-IN')}</Text>
           </View>
           {withMeals && quote.meal_total !== null && quote.meal_total > 0 && (
@@ -242,9 +306,9 @@ const policyMeta =  POLICY_META.flexible;
       {/* Pay button */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.payBtn, submitting && styles.payBtnDisabled]}
+          style={[styles.payBtn, (submitting || genderMismatch) && styles.payBtnDisabled]}
           onPress={handleConfirmAndPay}
-          disabled={submitting}
+          disabled={submitting || genderMismatch}
         >
           {submitting ? (
             <ActivityIndicator color="#fff" />

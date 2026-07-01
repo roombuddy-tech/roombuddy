@@ -32,6 +32,7 @@ export interface ListingFlatmate {
   gender: string;
   occupation: string;
   hobbies: string;
+  hometown: string;
 }
 
 export interface GuestListingDetail {
@@ -74,8 +75,13 @@ export interface GuestListingDetail {
   };
   house_rules: {
     no_smoking: boolean;
+    no_loud_music: boolean;
     no_pets: boolean;
     no_alcohol: boolean;
+    no_parties: boolean;
+    shoes_off: boolean;
+    kitchen_clean: boolean;
+    lock_door: boolean;
     custom_rules: string | null;
   };
   check_in_from: string;

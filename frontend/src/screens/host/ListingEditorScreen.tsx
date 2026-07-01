@@ -1,35 +1,35 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  Switch,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  Alert,
-  ActionSheetIOS,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RouteProp } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { FONTS, SPACING, RADIUS, ThemeColors, ThemeShadows } from '../../constants/theme';
-import { useTheme, useThemeColors } from '../../context/ThemeContext';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActionSheetIOS,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { CONFIG } from '../../constants/config';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, useThemeColors } from '../../context/ThemeContext';
 import type { HostStackParamList } from '../../navigation/types';
 import { createListing, getListing, updateListing } from '../../services/listings';
 import { uploadAllPropertyPhotos } from '../../services/properties';
-import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 
 const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
 
@@ -820,14 +820,6 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           keyboardType="number-pad"
         />
         <Field
-          label="Total floors in building"
-          placeholder="e.g. 5"
-          value={form.totalFloors}
-          onChange={(v) => update({ totalFloors: v.replace(/[^0-9]/g, '') })}
-          keyboardType="number-pad"
-          optional
-        />
-        <Field
           label="Society / Apartment name"
           placeholder="e.g. Prestige Shantiniketan"
           value={form.apartmentName}
@@ -1107,13 +1099,15 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
           ))}
         </View>
 
-        <Field
-          label="Distance to nearest landmark"
-          placeholder="e.g. 5 min walk from Koramangala bus stop"
-          value={form.distanceToLandmark}
-          onChange={(v) => update({ distanceToLandmark: v })}
-          optional
-        />
+        {form.nearbyLandmarks.length > 0 && (
+          <Field
+            label="Distance to nearest landmark (in minutes walk)"
+            placeholder="e.g. 5"
+            value={form.distanceToLandmark}
+            onChange={(v) => update({ distanceToLandmark: v.replace(/[^0-9]/g, '') })}
+            keyboardType="number-pad"
+          />
+        )}
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
@@ -1201,7 +1195,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={stSt.title}>Your flatmates</Text>
+      <Text style={stSt.title}>Your Flatmates</Text>
       <Text style={[stSt.sub, { marginBottom: SPACING.md }]}>Let guests know who they'll be sharing the space with.</Text>
 
       {/* Host card — tappable to add occupation/hobbies/gender */}
@@ -2565,7 +2559,25 @@ export default function ListingEditorScreen() {
   );
 
   const saveExit = useCallback(async () => {
-    if (!listingId && step > 0 && draftKey) {
+    // For existing listings — save changes to the API
+    if (listingId) {
+      try {
+        await updateListing(listingId, form);
+        Alert.alert('Saved', 'Your changes have been saved.', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+        return;
+      } catch {
+        Alert.alert('Error', 'Could not save changes. Go back without saving?', [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
+    }
+
+    // For new listings — save draft locally
+    if (draftKey && step > 0) {
       try {
         await AsyncStorage.setItem(draftKey, JSON.stringify({ step, form }));
       } catch {}

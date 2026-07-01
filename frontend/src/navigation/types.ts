@@ -57,6 +57,7 @@ export type GuestStackParamList = {
     mealCostPerDay?: number | null;
     mealTypes?: string | null;
     mealDescription?: string | null;
+    genderPreference?: string;
   };
   RazorpayCheckout: {
     bookingId: string;

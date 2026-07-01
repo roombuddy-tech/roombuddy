@@ -375,7 +375,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   scrollContent: { paddingBottom: SPACING.xl },
 
-  pageTitle: { fontSize: 30, ...FONTS.serifLight, color: COLORS.text, letterSpacing: -0.5, marginTop: SPACING.md, marginBottom: SPACING.lg },
+  pageTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5, marginTop: SPACING.md, marginBottom: SPACING.lg },
 
   loadingArea: { paddingVertical: 60, alignItems: 'center' },
 

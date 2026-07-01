@@ -24,6 +24,7 @@ class NotificationStatus(models.TextChoices):
 
 class EventType(models.TextChoices):
     """All recognized notification events. Add new ones here as needed."""
+    BOOKING_NEW = "booking.new", "New booking received"
     BOOKING_PAYMENT_SUCCEEDED = "booking.payment_succeeded", "Booking payment succeeded"
     BOOKING_PAYMENT_FAILED = "booking.payment_failed", "Booking payment failed"
     BOOKING_HOST_ACCEPTED = "booking.host_accepted", "Host accepted booking"

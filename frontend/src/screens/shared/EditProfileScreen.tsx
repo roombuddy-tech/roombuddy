@@ -3,12 +3,15 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { useThemeColors } from '../../context/ThemeContext';
+import { useTheme, useThemeColors } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { getErrorMessage } from '../../utils/errors';
+
+
 
 interface EditProfileProps {
   visible: boolean;
@@ -25,6 +28,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
   const insets = useSafeAreaInsets();
   const { completeProfile } = useAuth();
   const COLORS = useThemeColors();
+  const { mode } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -160,8 +164,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Mobile number</Text>
-            <View style={[styles.input, { backgroundColor: '#F5F5F5', flexDirection: 'row', alignItems: 'center' }]}>
-              <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
+            <View style={[styles.input, { backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center' }]}>              <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
               <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>{phone || 'Not available'}</Text>
             </View>
           </View>
@@ -187,7 +190,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
                   maximumDate={maxDate}
                   minimumDate={minDate}
                   onChange={onDateChange}
-                  themeVariant="light"
+                  themeVariant={mode}
                 />
                 {Platform.OS === 'ios' && (
                   <TouchableOpacity style={styles.doneBtn} onPress={() => setShowDatePicker(false)}>
@@ -207,9 +210,13 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
               ))}
             </View>
           </View>
-          <View style={styles.field}>
+          <View style={[styles.field, { zIndex: 10 }]}>
             <Text style={styles.label}>City</Text>
-            <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={COLORS.textMut} />
+            <GooglePlacesInput
+              value={city}
+              placeholder="Search your city..."
+              onSelect={(place) => setCity(place.city || place.description)}
+            />
           </View>
         </ScrollView>
       )}

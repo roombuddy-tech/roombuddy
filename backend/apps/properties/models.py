@@ -95,6 +95,7 @@ class PropertyFlatmate(models.Model):
     gender = models.CharField(max_length=20, null=True, blank=True)
     occupation = models.CharField(max_length=150, null=True, blank=True)
     hobbies = models.TextField(null=True, blank=True)
+    hometown = models.CharField(max_length=100, null=True, blank=True)
     is_visible = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
