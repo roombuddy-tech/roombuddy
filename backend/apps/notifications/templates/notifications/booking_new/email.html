@@ -1,0 +1,9 @@
+{% extends "notifications/_includes/base_email.html" %}
+{% block content %}
+<tr><td style="padding:16px 24px;">
+  <h2 style="margin:0 0 8px;">New booking request!</h2>
+  <p style="color:#555;">Hi {{ recipient_name }}, you have a new booking from <strong>{{ guest_name }}</strong>.</p>
+  {% include "notifications/_includes/reservation_details.html" %}
+  <p style="color:#555;margin-top:16px;">Please review and respond within 24 hours.</p>
+</td></tr>
+{% endblock %}

@@ -255,11 +255,11 @@ const policyMeta =  POLICY_META.flexible;
             <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>GST</Text>
+            <Text style={styles.priceLabel}>GST ({quote.gst_pct}%)</Text>
             <Text style={styles.priceValue}>₹{quote.gst_amount.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Service fee</Text>
+            <Text style={styles.priceLabel}>Service fee ({quote.platform_fee_pct}%)</Text>
             <Text style={styles.priceValue}>₹{quote.platform_fee.toLocaleString('en-IN')}</Text>
           </View>
           {withMeals && quote.meal_total !== null && quote.meal_total > 0 && (

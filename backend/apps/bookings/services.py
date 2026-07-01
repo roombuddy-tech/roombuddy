@@ -171,7 +171,9 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
         "guest_nightly_price": float(guest_nightly),
         "subtotal": float(subtotal),
         "gst_amount": float(gst_amount),
+        "gst_pct": float(settings.GST_PCT),
         "platform_fee": float(platform_fee),
+        "platform_fee_pct": float(settings.GUEST_PLATFORM_FEE_PCT),
         "host_platform_fee": float(host_platform_fee),
         "security_deposit": float(security_deposit),
         "total_guest_pays": float(total_guest_pays),
@@ -212,6 +214,8 @@ def create_booking(
 
     quote = quote_booking(listing_id, check_in, check_out, meal_option=meal_option)
     listing = Listing.objects.select_related("house_rules").get(id=listing_id)
+    nights = (check_out - check_in).days
+
 
     if listing.host_user_id == user.id:
         raise PermissionDenied({
@@ -318,6 +322,36 @@ def create_booking(
             )
 
         logger.info(f"Booking {booking.booking_code} created for guest {user.id}")
+
+        # ── Notify host of new booking ────────────────────────────────────
+        try:
+            guest_profile = getattr(user, "profile", None)
+            guest_display = ""
+            if guest_profile:
+                first = getattr(guest_profile, "first_name", "") or ""
+                last = getattr(guest_profile, "last_name", "") or ""
+                guest_display = f"{first} {last}".strip()
+            guest_display = guest_display or user.mobile_number or "A guest"
+
+            dispatch(
+                event_type=EventType.BOOKING_NEW,
+                recipients=[listing.host_user],
+                context={
+                    "recipient_name": _user_first_name(listing.host_user),
+                    "guest_name": guest_display,
+                    "booking_reference": booking.booking_code,
+                    "property_name": listing.title,
+                    "check_in": check_in.strftime("%a, %d %b %Y"),
+                    "check_out": check_out.strftime("%a, %d %b %Y"),
+                    "nights": nights,
+                    "amount": str(int(float(quote["total_guest_pays"]))),
+                    "booking_url": f"/bookings/{booking.id}",
+                },
+                idempotency_event_id=f"booking_new:{booking.id}",
+            )
+        except Exception:
+            logger.exception("Failed to notify host of new booking %s", booking.booking_code)
+
         return booking
 
 
