@@ -371,7 +371,10 @@ export default function GuestListingDetailScreen() {
                 {listing.food.meals_available && listing.food.meal_cost !== null && (
                   <View style={styles.foodChip}>
                     <Ionicons name="fast-food-outline" size={14} color={COLORS.primary} />
-                    <Text style={styles.foodChipText}>Tiffin at Rs.{listing.food.meal_cost}/meal</Text>
+                    <Text style={styles.foodChipText}>
+                      Home meals · ₹{listing.food.meal_cost}/day
+                      {listing.food.meal_types ? ` · ${listing.food.meal_types}` : ''}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -470,8 +473,10 @@ export default function GuestListingDetailScreen() {
                   <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(13,115,119,0.12)" strokeColor="rgba(13,115,119,0.3)" strokeWidth={1} />
                 </MapView>
               </View>
-              <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
-            </View>
+                <Text style={styles.locationDisclaimer}>
+                  {listing.property.apartment_name ? `Near ${listing.property.apartment_name} · ` : ''}Exact location shared after booking
+                </Text>
+              </View>
           )}
 
           {/* ── House Rules ── */}
@@ -523,14 +528,10 @@ export default function GuestListingDetailScreen() {
                 <Text style={styles.stayInfoLabel}>Min stay</Text>
                 <Text style={styles.stayInfoValue}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
               </View>
-              <View style={styles.stayInfoItem}>
-                <Text style={styles.stayInfoLabel}>Max stay</Text>
-                <Text style={styles.stayInfoValue}>{listing.max_nights} night{listing.max_nights !== 1 ? 's' : ''}</Text>
-              </View>
               {listing.security_deposit > 0 && (
                 <View style={styles.stayInfoItem}>
                   <Text style={styles.stayInfoLabel}>Deposit</Text>
-                  <Text style={styles.stayInfoValue}>Rs.{listing.security_deposit.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.stayInfoValue}>₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
                 </View>
               )}
             </View>

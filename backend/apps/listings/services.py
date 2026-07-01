@@ -765,14 +765,10 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         "security_deposit": float(listing.security_deposit),
         "property": {
             "apartment_type": prop.apartment_type,
-            "floor_number": prop.floor_number,
             "apartment_name": prop.apartment_name,
-            "address_line1": prop.address_line1 or "",
             "city_name": prop.city_name,
-            "gender_preference": prop.gender_preference,
             "latitude": float(prop.latitude) if prop.latitude else None,
             "longitude": float(prop.longitude) if prop.longitude else None,
-            "formatted_address": prop.formatted_address or "",
         },
         "room": {
             "room_type": room.room_type,
