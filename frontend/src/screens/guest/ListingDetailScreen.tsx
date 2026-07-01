@@ -236,6 +236,7 @@ export default function GuestListingDetailScreen() {
       mealCostPerDay: listing.food.meal_cost,
       mealTypes: listing.food.meal_types,
       mealDescription: listing.food.meal_description,
+      genderPreference: listing.property.gender_preference,
     });
   };
 

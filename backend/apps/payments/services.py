@@ -675,7 +675,7 @@ def _send_invoice_email(booking, guest, context: dict) -> None:
 
     template_context = {
         **context,
-        "recipient_name": _user_first_name(guest),
+        "recipient_name": booking.guest_name.split()[0] if booking.guest_name else _user_first_name(guest),
         "platform_fee": f"{booking.platform_fee:,.0f}",
         "security_deposit": f"{float(booking.security_deposit or 0):,.0f}",
         "meal_total": f"{float(booking.meal_total or 0):,.0f}" if booking.meal_option_selected else "0",

@@ -219,6 +219,28 @@ def create_booking(
             "code": ErrorCode.SELF_BOOKING,
         })
 
+    # ── Gender preference validation ──────────────────────────────────────
+    gender_pref = listing.property.gender_preference
+    if gender_pref and gender_pref != "any":
+        try:
+            guest_gender = user.profile.gender
+        except Exception:
+            guest_gender = None
+
+        allowed = {
+            "male_only": ["male"],
+            "female_only": ["female"],
+        }
+        allowed_genders = allowed.get(gender_pref, [])
+
+        if guest_gender not in allowed_genders:
+            pref_label = "female guests only" if gender_pref == "female_only" else "male guests only"
+            raise ValidationError({
+                "error": f"This property is listed for {pref_label}. Your profile gender does not match.",
+                "code": ErrorCode.GENDER_MISMATCH,
+            })
+    
+
     lock_key = f"book:{listing_id}:{check_in.isoformat()}:{check_out.isoformat()}"
 
     with distributed_lock(lock_key) as acquired:
@@ -239,11 +261,28 @@ def create_booking(
         )
 
         with transaction.atomic():
+
+            guest_profile = getattr(user, "profile", None)
+            guest_name = ""
+            guest_gender = ""
+            guest_email = getattr(user, "email", "") or ""
+            guest_phone = getattr(user, "mobile_number", "") or ""
+            if guest_profile:
+                first = getattr(guest_profile, "first_name", "") or ""
+                last = getattr(guest_profile, "last_name", "") or ""
+                guest_name = f"{first} {last}".strip()
+                guest_gender = getattr(guest_profile, "gender", "") or ""
+            
+
             booking = Booking.objects.create(
                 booking_code=_generate_booking_code(),
                 listing=listing,
                 guest_user=user,
                 host_user=listing.host_user,
+                guest_name=guest_name,
+                guest_email=guest_email,
+                guest_phone=guest_phone,
+                guest_gender=guest_gender,
                 check_in_date=check_in,
                 check_out_date=check_out,
                 number_of_guests=number_of_guests,

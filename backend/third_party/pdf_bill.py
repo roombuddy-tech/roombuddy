@@ -76,8 +76,8 @@ def generate_booking_invoice(booking) -> bytes:
         except Exception:
             return "–"
 
-    guest_name  = _name(booking.guest_user)
-    guest_email = _email(booking.guest_user)
+    guest_name  = booking.guest_name or "–"
+    guest_email = booking.guest_email or "–"
     host_name   = _name(booking.host_user)
 
     listing   = booking.listing

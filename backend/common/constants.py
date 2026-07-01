@@ -61,3 +61,5 @@ class StatusChangeReason:
     CANCELLED_BY_GUEST = "Cancelled by guest"
     CANCELLED_BY_HOST = "Cancelled by host"
     CANCELLED_BY_SYSTEM = "Cancelled by system"
+
+GENDER_MISMATCH = "gender_mismatch"
