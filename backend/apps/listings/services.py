@@ -793,12 +793,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
             "meal_description": meal_desc,
             "meal_types": meal_types_str,
         },
-        "house_rules": {
-            "no_smoking": rules.no_smoking if rules else True,
-            "no_pets": rules.no_pets if rules else True,
-            "no_alcohol": rules.no_alcohol if rules else False,
-            "custom_rules": rules.custom_rules if rules else None,
-        },
+        "house_rules": _parse_all_house_rules(rules),
         "check_in_from": _format_time(rules.check_in_from) if rules else "",
         "check_out_by": _format_time(rules.check_out_by) if rules else "",
         "average_rating": float(listing.average_rating) if listing.average_rating else None,
@@ -812,6 +807,42 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         ],
     }
 
+def _parse_all_house_rules(rules) -> dict:
+    """Parse all 8 house rules including extras stored in custom_rules."""
+    if not rules:
+        return {
+            "no_smoking": True, "no_loud_music": False, "no_pets": True,
+            "no_alcohol": False, "no_parties": False, "shoes_off": False,
+            "kitchen_clean": False, "lock_door": False, "custom_rules": None,
+        }
+
+    no_parties = shoes_off = kitchen_clean = lock_door = False
+    remaining = []
+    if rules.custom_rules:
+        for line in rules.custom_rules.split("\n"):
+            stripped = line.strip()
+            if stripped == "No parties or events":
+                no_parties = True
+            elif stripped == "Please remove shoes at the entrance":
+                shoes_off = True
+            elif stripped == "Please keep the kitchen clean after use":
+                kitchen_clean = True
+            elif stripped == "Please lock the main door when leaving":
+                lock_door = True
+            elif stripped:
+                remaining.append(stripped)
+
+    return {
+        "no_smoking": rules.no_smoking,
+        "no_loud_music": True,
+        "no_pets": rules.no_pets,
+        "no_alcohol": rules.no_alcohol,
+        "no_parties": no_parties,
+        "shoes_off": shoes_off,
+        "kitchen_clean": kitchen_clean,
+        "lock_door": lock_door,
+        "custom_rules": "\n".join(remaining) if remaining else None,
+    }
 
 def _listing_to_guest_card(listing: Listing) -> dict:
     amenity_names = [
