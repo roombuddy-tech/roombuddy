@@ -11,6 +11,7 @@ from apps.bookings.models import Booking
 from apps.reviews.models import Review
 from apps.users.models import PayoutAccount
 from apps.listings.models import Listing
+from backend.config import settings
 from third_party.storage import get_photo_url
 from third_party.email import send_verification_email
 from third_party.storage import upload_image, delete_image, StorageError
@@ -101,6 +102,19 @@ def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") 
             status_code=403,
         )
 
+    # ── Reviewer bypass: skip real OTP for demo account ───────────────────
+    if (phone_number == settings.REVIEW_PHONE_NUMBER
+            and country_code == settings.REVIEW_COUNTRY_CODE):
+        logger.info("send_otp: reviewer account — skipping real OTP")
+        OTPCode.objects.create(
+            user=user,
+            phone=full_phone,
+            otp_hash=OTPCode.hash_otp(settings.REVIEW_STATIC_OTP),
+            expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES),
+        )
+        return {"message": "OTP sent successfully", "phone": full_phone}
+
+
     if OTP_PROVIDER == "console":
         # Console mode: generate locally, store hash, send to console
         otp_code = generate_otp(length=6)
@@ -156,7 +170,14 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
         logger.warning("verify_otp_and_login: no account for %s%s", country_code, phone_number)
         raise AuthServiceError("No account found for this phone number.", "USER_NOT_FOUND", 404)
 
-    if OTP_PROVIDER == "console":
+
+    if (phone_number == settings.REVIEW_PHONE_NUMBER
+        and country_code == settings.REVIEW_COUNTRY_CODE
+        and otp_code == settings.REVIEW_STATIC_OTP):
+        logger.info("verify_otp: reviewer account — static OTP accepted")
+        OTPCode.objects.filter(phone=full_phone, is_consumed=False).update(is_consumed=True)
+
+    elif OTP_PROVIDER == "console":
         # Local hash verification
         otp_record = (
             OTPCode.objects.filter(phone=full_phone, is_consumed=False)
