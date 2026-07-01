@@ -415,7 +415,7 @@ def _notify_booking_cancelled(booking, cancelled_by: str) -> None:
 # Maps a public filter value to the list of booking statuses it includes.
 _HOST_BOOKING_FILTERS: dict[str, tuple[str, ...]] = {
     Booking.HostBookingFilter.ACTIVE: (
-        Booking.Status.ACTIVE, Booking.Status.ACCEPTED,
+        Booking.Status.ACTIVE,
     ),
     Booking.HostBookingFilter.UPCOMING: (
         Booking.Status.PENDING, Booking.Status.ACCEPTED,
