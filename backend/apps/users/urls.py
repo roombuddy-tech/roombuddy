@@ -20,6 +20,7 @@ from apps.users.views import (
     AddBankAccountView,
     AddUPIView,
     DeletePayoutAccountView,
+    DeleteAccountView,
     SetPrimaryPayoutView,
     UploadProfilePhotoView,
 )
@@ -40,6 +41,7 @@ urlpatterns = [
     path("profile/email/verify-link/", VerifyEmailWebView.as_view(), name="verify-email-web"),
     path("profile/verification-status/", VerificationStatusView.as_view(), name="verification-status"),
     path("profile/id-verification/submit/", SubmitIDVerificationView.as_view(), name="submit-id-verification"),
+    path("profile/delete-account/", DeleteAccountView.as_view(), name="delete-account"),
 
     # Public profile (host viewing guest, guest viewing host)
     path("<uuid:user_id>/public-profile/", PublicProfileView.as_view(), name="public-profile"),

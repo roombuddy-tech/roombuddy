@@ -15,11 +15,12 @@ from drf_spectacular.views import (
 )
 from django.conf import settings
 from django.conf.urls.static import static
-from common.legal_views import TermsOfServiceView, PrivacyPolicyView
+from common.legal_views import TermsOfServiceView, PrivacyPolicyView, DeleteAccountView
 
 urlpatterns = [
     path("terms/", TermsOfServiceView.as_view(), name="terms"),
     path("privacy/", PrivacyPolicyView.as_view(), name="privacy"),
+    path("delete-account/", DeleteAccountView.as_view(), name="delete-account"),
     path("admin/", admin.site.urls),
     path("api/users/", include("apps.users.urls")),
     path("api/properties/", include("apps.properties.urls")),

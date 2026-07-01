@@ -1047,3 +1047,49 @@ def _has_active_booking_relationship(viewer: User, viewed: User) -> bool:
         | models.Q(guest_user=viewed, host_user=viewer),
         status__in=contact_safe_statuses,
     ).exists()
+
+def delete_user_account(user: User) -> None:
+    """
+    Soft-delete a user account per Apple/Google requirements.
+    - Sets status to DELETED
+    - Anonymizes PII on the profile
+    - Revokes all active sessions
+    - Cancels any pending/accepted bookings
+    """
+    from apps.bookings.models import Booking
+
+    logger.info("delete_user_account user_id=%s", user.id)
+
+    # Cancel any active/pending bookings
+    active_bookings = Booking.objects.filter(
+        guest_user=user,
+        status__in=["pending", "accepted"],
+    )
+    for b in active_bookings:
+        b.status = Booking.Status.CANCELLED_BY_GUEST
+        b.save(update_fields=["status"])
+
+    # Anonymize profile
+    try:
+        profile = user.profile
+        profile.first_name = "Deleted"
+        profile.last_name = "User"
+        profile.city = ""
+        profile.date_of_birth = None
+        profile.bio = ""
+        profile.save()
+    except Exception:
+        pass
+
+    # Revoke all sessions
+    from apps.users.models import UserSession
+    UserSession.objects.filter(user=user).update(
+        revoked_at=timezone.now()
+    )
+
+    # Mark user as deleted
+    user.status = User.Status.DELETED
+    user.email = ""
+    user.save(update_fields=["status", "email"])
+
+    logger.info("delete_user_account completed for user_id=%s", user.id)

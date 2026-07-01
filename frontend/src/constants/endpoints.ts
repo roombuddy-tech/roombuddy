@@ -16,6 +16,7 @@ export const ENDPOINTS = {
     PAYOUT_ACCOUNTS: '/api/users/profile/payout-accounts/',
     ADD_BANK: '/api/users/profile/payout-accounts/add-bank/',
     ADD_UPI: '/api/users/profile/payout-accounts/add-upi/',
+    DELETE_ACCOUNT: '/api/users/profile/delete-account/',
   },
   HOST: {
     DASHBOARD: '/api/users/host/dashboard/',
