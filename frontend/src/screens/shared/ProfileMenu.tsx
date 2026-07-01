@@ -99,6 +99,29 @@ const handlePickPhoto = async () => {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete account',
+      'This will permanently delete your account and all associated data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(ENDPOINTS.USER.DELETE_ACCOUNT);
+              Alert.alert('Account deleted', 'Your account has been deleted.');
+              logout();
+            } catch {
+              Alert.alert('Error', 'Could not delete account. Please contact support.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const uploadPhoto = async (uri: string) => {
     const formData = new FormData();
     formData.append('image', {
@@ -272,6 +295,10 @@ const handlePickPhoto = async () => {
               </TouchableOpacity>
             </View>
 
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount}>
+              <Text style={styles.deleteText}>Delete my account</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>
@@ -313,4 +340,6 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   menuLabel: { fontSize: 16, color: COLORS.text, ...FONTS.medium },
   logoutBtn: { alignItems: 'center', paddingVertical: SPACING.md, backgroundColor: '#FFF0F0', borderRadius: RADIUS.md, marginTop: SPACING.sm },
   logoutText: { fontSize: 16, color: COLORS.danger, ...FONTS.semibold },
+  deleteBtn: { alignItems: 'center', paddingVertical: SPACING.md, borderRadius: RADIUS.md, marginTop: SPACING.sm },
+  deleteText: { fontSize: 14, color: COLORS.danger, ...FONTS.medium, textDecorationLine: 'underline' },
 });

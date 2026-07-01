@@ -431,3 +431,16 @@ class ReviewIDVerificationView(APIView):
             return Response(result, status=status.HTTP_200_OK)
         except AuthServiceError as e:
             return _error_response(e)
+        
+class DeleteAccountView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Profile"], responses={200: None})
+    def delete(self, request):
+        from apps.users.services import delete_user_account
+        delete_user_account(request.user)
+        return Response(
+            {"message": "Your account has been deleted. We're sorry to see you go."},
+            status=status.HTTP_200_OK,
+        )
