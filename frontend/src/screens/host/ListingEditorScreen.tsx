@@ -1101,7 +1101,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
 
         {form.nearbyLandmarks.length > 0 && (
           <Field
-            label="Distance to nearest landmark (in minutes walk)"
+            label="Walking time to nearest landmark (minutes)"
             placeholder="e.g. 5"
             value={form.distanceToLandmark}
             onChange={(v) => update({ distanceToLandmark: v.replace(/[^0-9]/g, '') })}

@@ -164,7 +164,8 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Mobile number</Text>
-            <View style={[styles.input, { backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center' }]}>              <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
+            <View style={[styles.input, { backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center' }]}>
+              <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
               <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>{phone || 'Not available'}</Text>
             </View>
           </View>
