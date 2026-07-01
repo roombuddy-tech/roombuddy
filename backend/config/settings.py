@@ -171,7 +171,7 @@ else:
     MEDIA_ROOT = BASE_DIR / "media"
 
 # Base URL used to build absolute URLs for local media files served in dev
-SITE_URL = os.environ.get("SITE_URL", "http://192.168.1.20:8000")
+SITE_URL = os.environ.get("SITE_URL", "http://192.168.7.4:8000")
 
 # ── Email ────────────────────────────────────────────────────
 # Console for dev, SMTP (SES) for prod
@@ -319,3 +319,8 @@ if SENTRY_DSN and not DEBUG:
         send_default_pii=False,
         environment=os.environ.get("ENVIRONMENT", "production"),
     )
+
+# ── Apple / Google reviewer demo account ──────────────────────────────────────
+REVIEW_PHONE_NUMBER = os.environ.get("REVIEW_PHONE_NUMBER", "9999999999")
+REVIEW_COUNTRY_CODE = os.environ.get("REVIEW_COUNTRY_CODE", "+91")
+REVIEW_STATIC_OTP = os.environ.get("REVIEW_STATIC_OTP", "123456")
