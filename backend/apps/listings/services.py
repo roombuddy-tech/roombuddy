@@ -219,6 +219,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
                 gender=fm.get("gender", "") or None,
                 occupation=fm.get("occupation", ""),
                 hobbies=fm.get("hobbies", ""),
+                hometown=fm.get("hometown", ""),
             )
 
         room = listing.room
@@ -409,6 +410,7 @@ def create_listing(user: User, data: dict) -> dict:
                 gender=fm.get("gender", "") or None,
                 occupation=fm.get("occupation", ""),
                 hobbies=fm.get("hobbies", ""),
+                hometown=fm.get("hometown", ""),
             )
 
         room_data = d["room"]
@@ -726,6 +728,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
                 "gender": fm.gender or "",
                 "occupation": fm.occupation or "",
                 "hobbies": fm.hobbies or "",
+                "hometown": fm.hometown or "",
             })
 
     # Host name
