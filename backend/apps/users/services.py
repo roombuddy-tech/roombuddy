@@ -11,7 +11,7 @@ from apps.bookings.models import Booking
 from apps.reviews.models import Review
 from apps.users.models import PayoutAccount
 from apps.listings.models import Listing
-from backend.config import settings
+from django.conf import settings
 from third_party.storage import get_photo_url
 from third_party.email import send_verification_email
 from third_party.storage import upload_image, delete_image, StorageError
