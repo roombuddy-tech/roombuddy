@@ -12,6 +12,7 @@ import { getErrorMessage } from '../../utils/errors';
 interface VerificationScreenProps {
   visible: boolean;
   onClose: () => void;
+  onVerified?: () => void;
 }
 
 interface VerificationStatus {
@@ -24,7 +25,7 @@ interface VerificationStatus {
   id_rejection_reason: string | null;
 }
 
-export default function VerificationScreen({ visible, onClose }: VerificationScreenProps) {
+export default function VerificationScreen({ visible, onClose, onVerified }: VerificationScreenProps) {
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [status, setStatus] = useState<VerificationStatus | null>(null);
@@ -50,8 +51,12 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
     setLoading(true);
     try {
       const res = await api.get(ENDPOINTS.USER.VERIFICATION_STATUS);
+      const prevStatus = status?.id_verification_status;
       setStatus(res.data);
       if (res.data.email) setEmailInput(res.data.email);
+      if (prevStatus !== 'approved' && res.data.id_verification_status === 'approved') {
+        onVerified?.();
+      }
     } catch (err) {
       console.log('Verification status error:', err);
     } finally {

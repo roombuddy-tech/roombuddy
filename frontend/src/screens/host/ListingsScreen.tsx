@@ -182,7 +182,7 @@ export default function ListingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Modal visible={showVerification} animationType="slide">
-        <VerificationScreen visible={showVerification} onClose={handleVerificationClose} />
+        <VerificationScreen visible={showVerification} onClose={handleVerificationClose} onVerified={fetchListings} />
       </Modal>
       <ScrollView
         showsVerticalScrollIndicator={false}
