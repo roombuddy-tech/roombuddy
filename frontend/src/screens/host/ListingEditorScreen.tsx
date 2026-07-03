@@ -1714,7 +1714,6 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
             <View key={cat.key} style={[phSt.categoryCard, hasPhotos && phSt.categoryCardFilled]}>
               {/* Row header */}
               <View style={phSt.categoryHeader}>
-                <Text style={phSt.categoryIcon}>{cat.icon}</Text>
                 <Text style={phSt.categoryName}>{cat.label}</Text>
                 {cat.required && !hasPhotos && (
                   <View style={phSt.requiredBadge}>
@@ -1736,7 +1735,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                 >
                   {isLoading
                     ? <ActivityIndicator size="small" color={COLORS.primary} />
-                    : <Ionicons name={hasPhotos ? 'add' : 'camera-outline'} size={18} color={COLORS.primary} />
+                    : <Ionicons name="add" size={18} color="#fff" />
                   }
                 </TouchableOpacity>
               </View>
@@ -1800,12 +1799,11 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     marginBottom: SPACING.sm,
     backgroundColor: COLORS.surface,
     overflow: 'hidden',
-    ...SHADOW.sm,
   },
   categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
   categoryIcon: { fontSize: 18 },
-  categoryName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  categoryName: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
   requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.border },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentSoft },
@@ -1814,9 +1812,7 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     width: 34,
     height: 34,
     borderRadius: 17,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryAlpha,
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1837,10 +1833,8 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     marginBottom: SPACING.md,
     paddingVertical: 16,
     borderRadius: RADIUS.sm,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
-    backgroundColor: COLORS.surface,
+    borderWidth: 0,
+    backgroundColor: COLORS.warm,
   },
   emptyPromptTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
 
@@ -1883,7 +1877,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>Set Your Price</Text>
         <Text style={stSt.sub}>Set your nightly rate. We'll show you what guests pay and what you earn.</Text>
 
-        <Text style={fldSt.label}>Your nightly rate</Text>
+        <Text style={[fldSt.label, { textAlign: 'center', marginBottom: SPACING.sm }]}>Your nightly rate</Text>
         <View style={prSt.rateRow}>
           <Text style={prSt.rupee}>₹</Text>
           <TextInput
@@ -1926,8 +1920,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
             </View>
 
-            <View style={prSt.breakdownBox}>
-              <Text style={prSt.breakdownTitle}>You earn</Text>
+            <View style={prSt.earningsBox}>
+              <Text style={prSt.earningTitle}>You earn</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
               <PriceRow label={`RoomBuddy fee (${CONFIG.HOST_PLATFORM_FEE_PCT * 100}% on room)`} value={`−₹${hostFee}`} muted />
@@ -1990,20 +1984,22 @@ function PriceRow({
 }
 
 const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 8 },
-  rupee: { fontSize: 28, ...FONTS.bold, color: COLORS.text },
-  rateInput: { fontSize: 52, ...FONTS.bold, color: COLORS.text, minWidth: 120, textAlign: 'center' },
-  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 8 },
+  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 4, backgroundColor: COLORS.chip, borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  rupee: { fontSize: 36, ...FONTS.bold, color: COLORS.text },
+  rateInput: { fontSize: 52, ...FONTS.extrabold, color: COLORS.text, minWidth: 100, textAlign: 'center' },
+  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 10 },
   breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
+  earningsBox: { backgroundColor: 'rgba(34,197,94,0.07)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
+  earningTitle: { fontSize: 13, ...FONTS.semibold, color: '#16A34A', marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
   tooltipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm, paddingHorizontal: 2 },
   tooltipText: { flex: 1, fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
   minStayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border },
-  minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.border },
+  minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   minStayTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  minStayTxtSel: { color: COLORS.primary, ...FONTS.semibold },
+  minStayTxtSel: { color: '#fff', ...FONTS.semibold },
 });
 
 // ─── Step 8: House Rules ──────────────────────────────────────────────────────
@@ -2030,7 +2026,7 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>House Rules</Text>
         <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
-        <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
+        <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
           Common rules
         </Text>
 
@@ -2277,27 +2273,27 @@ function StepReview({
             <Ionicons name="home-outline" size={36} color={COLORS.textMut} />
           </View>
         )}
-
-        <Text style={rvSt.previewTitle} numberOfLines={2}>
-          {form.title || 'Your listing title'}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          {rate > 0 && (
-            <Text style={rvSt.price}>
-              ₹{rate.toLocaleString('en-IN')}
-              <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
-            </Text>
-          )}
-          {!isEditMode && (
-            <View style={rvSt.newBadge}>
-              <Text style={rvSt.newTxt}>✨ New listing</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={rvSt.tapHint}>
-          <Ionicons name="eye-outline" size={13} color={COLORS.primary} />
-          <Text style={rvSt.tapHintTxt}>Tap to see guest view</Text>
+        <View style={{ padding: SPACING.md }}>
+          <Text style={rvSt.previewTitle} numberOfLines={2}>
+            {form.title || 'Your listing title'}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            {rate > 0 && (
+              <Text style={rvSt.price}>
+                ₹{rate.toLocaleString('en-IN')}
+                <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
+              </Text>
+            )}
+            {!isEditMode && (
+              <View style={rvSt.newBadge}>
+                <Text style={rvSt.newTxt}>✨ New listing</Text>
+              </View>
+            )}
+          </View>
+          <View style={rvSt.tapHint}>
+            <Ionicons name="eye-outline" size={13} color={COLORS.primary} />
+            <Text style={rvSt.tapHintTxt}>Tap to see guest view</Text>
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -2346,9 +2342,9 @@ function StepReview({
 }
 
 const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  previewCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg, ...SHADOW.sm },
-  coverPhoto: { width: '100%', height: 140, borderRadius: RADIUS.sm },
-  photoPlaceholder: { height: 120, backgroundColor: COLORS.warm, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
+  previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.sm },
+  coverPhoto: { width: '100%', height: 150, borderRadius: 0 },
+  photoPlaceholder: { height: 150, backgroundColor: COLORS.warm, borderRadius: 0, justifyContent: 'center', alignItems: 'center' },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   tagTxt: { fontSize: 11, ...FONTS.medium, color: COLORS.textSec },
   previewTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 6 },
@@ -2357,12 +2353,12 @@ const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.accent },
   tapHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, justifyContent: 'center' },
   tapHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
-  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
-  summaryLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 2 },
-  summaryValue: { fontSize: 14, color: COLORS.text },
-  editBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
-  editTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  publishBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 16, alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.sm },
+  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
+  summaryLabel: { fontSize: 11, ...FONTS.semibold, color: COLORS.textMut, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  summaryValue: { fontSize: 14, ...FONTS.medium, color: COLORS.text },
+  editBtn: { paddingLeft: SPACING.sm },
+  editTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.primary },
+  publishBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 16, alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.sm },
   backBtn: { alignItems: 'center', paddingVertical: SPACING.sm, marginBottom: SPACING.lg },
 });
 
