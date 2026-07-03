@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -320,8 +320,15 @@ export default function ListingDetailScreen() {
         <View style={styles.body}>
           {isPreview && f ? (
             <>
-              {/* Title */}
+              {/* ── Title & location ── */}
               <Text style={styles.title}>{title}</Text>
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={14} color={COLORS.textSec} />
+                <Text style={styles.locationTxt}>
+                  {[f.locality, f.city, f.state].filter(Boolean).join(', ')}
+                  {f.pincode ? ` – ${f.pincode}` : ''}
+                </Text>
+              </View>
               <Text style={styles.subtitle}>{previewSubtitle}</Text>
 
               {/* Badges */}
@@ -332,113 +339,33 @@ export default function ListingDetailScreen() {
                 </View>
               </View>
 
-              {/* Description */}
+              {/* ── About this room ── */}
               {f.description ? (
                 <>
                   <Divider />
-                  <Text style={styles.sectionHeader}>About this room</Text>
+                  <SectionHeader title="About this room" />
                   <Text style={styles.description}>
                     {f.description.replace(/\n{2,}/g, '\n').trim()}
                   </Text>
                 </>
               ) : null}
 
-              {/* Flatmates */}
-              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
-                <>
-                  <Divider />
-                  <Text style={styles.sectionHeader}>{'👥 Meet your flatmates'}</Text>
-                  {(f.hostOccupation || f.hostHobbies) && (
-                    <View style={styles.flatmateCard}>
-                      <View style={styles.flatmateAvatar}>
-                        <Text style={styles.flatmateInitials}>H</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={styles.flatmateName}>Host</Text>
-                          <View style={styles.hostBadge}>
-                            <Text style={styles.hostBadgeTxt}>Host</Text>
-                          </View>
-                        </View>
-                        {f.hostOccupation ? <Text style={styles.flatmateDetail}>{f.hostOccupation}</Text> : null}
-                        {f.hostHobbies ? <Text style={styles.flatmateDetail}>{f.hostHobbies}</Text> : null}
-                      </View>
-                    </View>
-                  )}
-                  {(f.flatmates as any[]).map((fm: any, idx: number) => (
-                    <View key={fm.id ?? idx} style={[styles.flatmateCard, idx === f.flatmates.length - 1 && { borderBottomWidth: 0 }]}>
-                      <View style={styles.flatmateAvatar}>
-                        <Text style={styles.flatmateInitials}>{initials(fm.name)}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.flatmateName}>
-                          {fm.name}{fm.age ? `, ${fm.age}` : ''}
-                        </Text>
-                        {fm.occupation ? <Text style={styles.flatmateDetail}>{fm.occupation}</Text> : null}
-                        {fm.hobbies ? <Text style={styles.flatmateDetail}>{fm.hobbies}</Text> : null}
-                      </View>
-                    </View>
-                  ))}
-                </>
-              )}
-
-              {/* Food options */}
-              {(f.kitchenAccess || f.homeCooked) && (
-                <>
-                  <Divider />
-                  <Text style={styles.sectionHeader}>{'🍳 Food options'}</Text>
-                  <View style={styles.foodChipRow}>
-                    {f.kitchenAccess && (
-                      <View style={styles.foodChip}>
-                        <Text style={styles.foodChipText}>Kitchen access</Text>
-                      </View>
-                    )}
-                    {f.homeCooked && f.mealCost && (
-                      <View style={styles.foodChip}>
-                        <Text style={styles.foodChipText}>Tiffin ₹{f.mealCost}/meal</Text>
-                      </View>
-                    )}
-                    {(f.amenities as string[])?.includes('Utensils provided') && (
-                      <View style={styles.foodChip}>
-                        <Text style={styles.foodChipText}>Utensils provided</Text>
-                      </View>
-                    )}
-                  </View>
-                  {f.mealDescription ? <Text style={styles.foodDesc}>{f.mealDescription}</Text> : null}
-                </>
-              )}
-
-              {/* Amenities */}
-              {f.amenities && f.amenities.length > 0 && (
-                <>
-                  <Divider />
-                  <Text style={styles.sectionHeader}>{'✨ Amenities'}</Text>
-                  <View style={styles.amenitiesGrid}>
-                    {(f.amenities as string[]).map((a: string) => (
-                      <View key={a} style={styles.amenityRow}>
-                        <Ionicons
-                          name={(AMENITY_ICONS[a] ?? 'checkmark-outline') as any}
-                          size={18}
-                          color={COLORS.primary}
-                        />
-                        <Text style={styles.amenityTxt}>{a}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </>
-              )}
-
-              {/* The space */}
+              {/* ── The space ── */}
               {(f.apartmentType || f.roomType) && (
                 <>
                   <Divider />
-                  <Text style={styles.sectionHeader}>The space</Text>
+                  <SectionHeader title="The space" />
+                  {f.apartmentName ? (
+                    <View style={styles.apartmentNameRow}>
+                      <Ionicons name="business-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.apartmentNameTxt}>{f.apartmentName}</Text>
+                    </View>
+                  ) : null}
                   <View style={styles.spaceGrid}>
                     {f.apartmentType ? (
                       <View style={styles.spaceCard}>
                         <Ionicons name="home-outline" size={22} color={COLORS.primary} />
                         <Text style={styles.spaceCardLabel}>{aptLabel[f.apartmentType] || f.apartmentType}</Text>
-                        {f.floorNumber ? <Text style={styles.spaceCardSub}>Floor {f.floorNumber}</Text> : null}
                       </View>
                     ) : null}
                     {f.roomType ? (
@@ -461,24 +388,178 @@ export default function ListingDetailScreen() {
                       </View>
                     ) : null}
                   </View>
-
                   {f.roomFeatures && f.roomFeatures.length > 0 && (
-                    <View style={styles.featureRow}>
-                      {f.roomFeatures.map((feat: string) => (
-                        <View key={feat} style={styles.featureChip}>
-                          <Text style={styles.featureChipTxt}>{feat}</Text>
-                        </View>
-                      ))}
-                    </View>
+                    <>
+                      <Text style={styles.subSectionLabel}>Room has</Text>
+                      <View style={styles.featureRow}>
+                        {f.roomFeatures.map((feat: string) => (
+                          <View key={feat} style={styles.featureChip}>
+                            <Ionicons name="checkmark-outline" size={13} color={COLORS.primary} />
+                            <Text style={styles.featureChipTxt}>{feat}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
                   )}
                 </>
               )}
 
-              {/* Approximate location map */}
+              {/* ── Nearby landmarks ── */}
+              {f.nearbyLandmarks && f.nearbyLandmarks.length > 0 && (
+                <>
+                  <Divider />
+                  <SectionHeader title="Nearby landmarks" />
+                  {f.nearbyLandmarks.map((lm: string, i: number) => (
+                    <View key={i} style={styles.landmarkRow}>
+                      <Ionicons name="navigate-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.landmarkTxt}>{lm}</Text>
+                      {i === 0 && f.distanceToLandmark ? (
+                        <Text style={styles.landmarkDist}>{f.distanceToLandmark}</Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* ── Meet your flatmates ── */}
+              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
+                <>
+                  <Divider />
+                  <SectionHeader title="👥 Meet your flatmates" />
+                  {(f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
+                    <View style={styles.flatmateCard}>
+                      <View style={styles.flatmateAvatar}>
+                        <Text style={styles.flatmateInitials}>H</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.flatmateName}>
+                            Host{f.hostAge ? `, ${f.hostAge}` : ''}
+                          </Text>
+                          <View style={styles.hostBadge}>
+                            <Text style={styles.hostBadgeTxt}>Host</Text>
+                          </View>
+                        </View>
+                        {f.hostGender ? <Text style={styles.flatmateDetail}>{f.hostGender.charAt(0).toUpperCase() + f.hostGender.slice(1)}</Text> : null}
+                        {f.hostOccupation ? <Text style={styles.flatmateDetail}>{f.hostOccupation}</Text> : null}
+                        {f.hostHobbies ? <Text style={styles.flatmateDetail}>Hobbies: {f.hostHobbies}</Text> : null}
+                      </View>
+                    </View>
+                  )}
+                  {(f.flatmates as any[]).map((fm: any, idx: number) => (
+                    <View key={fm.id ?? idx} style={[styles.flatmateCard, idx === f.flatmates.length - 1 && { borderBottomWidth: 0 }]}>
+                      <View style={styles.flatmateAvatar}>
+                        <Text style={styles.flatmateInitials}>{initials(fm.name)}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.flatmateName}>
+                          {fm.name}{fm.age ? `, ${fm.age}` : ''}
+                        </Text>
+                        {fm.gender ? <Text style={styles.flatmateDetail}>{fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}</Text> : null}
+                        {fm.occupation ? <Text style={styles.flatmateDetail}>{fm.occupation}</Text> : null}
+                        {fm.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {fm.hobbies}</Text> : null}
+                        {fm.hometown ? <Text style={styles.flatmateDetail}>From {fm.hometown}</Text> : null}
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* ── Food options ── */}
+              {(f.kitchenAccess || f.homeCooked) && (
+                <>
+                  <Divider />
+                  <SectionHeader title="🍳 Food options" />
+                  <View style={styles.foodOptionGrid}>
+                    {f.kitchenAccess && (
+                      <View style={styles.foodOptionCard}>
+                        <Ionicons name="restaurant-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.foodOptionLabel}>Kitchen access</Text>
+                      </View>
+                    )}
+                    {f.homeCooked && (f.mealTypes as string[]).includes('breakfast') && (
+                      <View style={styles.foodOptionCard}>
+                        <Ionicons name="sunny-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.foodOptionLabel}>Breakfast</Text>
+                      </View>
+                    )}
+                    {f.homeCooked && (f.mealTypes as string[]).includes('lunch') && (
+                      <View style={styles.foodOptionCard}>
+                        <Ionicons name="partly-sunny-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.foodOptionLabel}>Lunch</Text>
+                      </View>
+                    )}
+                    {f.homeCooked && (f.mealTypes as string[]).includes('dinner') && (
+                      <View style={styles.foodOptionCard}>
+                        <Ionicons name="moon-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.foodOptionLabel}>Dinner</Text>
+                      </View>
+                    )}
+                  </View>
+                  {f.homeCooked && f.mealCost ? (
+                    <View style={styles.mealCostRow}>
+                      <Ionicons name="pricetag-outline" size={14} color={COLORS.textSec} />
+                      <Text style={styles.mealCostTxt}>Meal cost: ₹{f.mealCost}/day</Text>
+                    </View>
+                  ) : null}
+                  {f.mealDescription ? <Text style={styles.foodDesc}>{f.mealDescription}</Text> : null}
+                </>
+              )}
+
+              {/* ── Amenities (grouped) ── */}
+              {f.amenities && f.amenities.length > 0 && (() => {
+                const ams = f.amenities as string[];
+                const groups: Array<{ label: string; icon: string; items: string[] }> = [
+                  {
+                    label: 'Essentials',
+                    icon: 'flash-outline',
+                    items: ['WiFi', 'AC', 'Geyser / Hot water', 'Power backup', 'Washing machine', 'Iron', 'Hair dryer'].filter(a => ams.includes(a)),
+                  },
+                  {
+                    label: 'Kitchen & Food',
+                    icon: 'restaurant-outline',
+                    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'].filter(a => ams.includes(a)),
+                  },
+                  {
+                    label: 'Comfort',
+                    icon: 'happy-outline',
+                    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'].filter(a => ams.includes(a)),
+                  },
+                  {
+                    label: 'Safety',
+                    icon: 'shield-checkmark-outline',
+                    items: ['CCTV (common areas)', 'Security guard', 'Fire extinguisher', 'First aid kit', 'Door lock on room'].filter(a => ams.includes(a)),
+                  },
+                ].filter(g => g.items.length > 0);
+                return (
+                  <>
+                    <Divider />
+                    <SectionHeader title="✨ What's included" />
+                    {groups.map((group) => (
+                      <View key={group.label} style={styles.amenityGroup}>
+                        <View style={styles.amenityGroupHeader}>
+                          <Ionicons name={group.icon as any} size={16} color={COLORS.primary} />
+                          <Text style={styles.amenityGroupLabel}>{group.label}</Text>
+                        </View>
+                        <View style={styles.amenityGroupGrid}>
+                          {group.items.map((a) => (
+                            <View key={a} style={styles.amenityRow}>
+                              <Ionicons name={(AMENITY_ICONS[a] ?? 'checkmark-outline') as any} size={16} color={COLORS.primary} />
+                              <Text style={styles.amenityTxt}>{a}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ))}
+                  </>
+                );
+              })()}
+
+              {/* ── Location map (exact pin) ── */}
               {f.latitude && f.longitude && (
                 <>
                   <Divider />
-                  <Text style={styles.sectionHeader}>Approximate location</Text>
+                  <SectionHeader title="Location" />
                   <View style={styles.miniMapWrap}>
                     <MapView
                       style={styles.miniMap}
@@ -486,57 +567,79 @@ export default function ListingDetailScreen() {
                       initialRegion={{
                         latitude: f.latitude,
                         longitude: f.longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
+                        latitudeDelta: 0.005,
+                        longitudeDelta: 0.005,
                       }}
                       scrollEnabled={false}
                       zoomEnabled={false}
                       rotateEnabled={false}
                       pitchEnabled={false}
                     >
-                      <Circle
-                        center={{ latitude: f.latitude, longitude: f.longitude }}
-                        radius={300}
-                        fillColor="rgba(13,115,119,0.12)"
-                        strokeColor="rgba(13,115,119,0.3)"
-                        strokeWidth={1}
-                      />
+                      <Marker coordinate={{ latitude: f.latitude, longitude: f.longitude }} />
                     </MapView>
                   </View>
-                  <Text style={styles.locationDisclaimer}>Exact location shared after booking</Text>
+                  {f.formattedAddress ? (
+                    <View style={styles.addressRow}>
+                      <Ionicons name="location-outline" size={14} color={COLORS.textSec} />
+                      <Text style={styles.addressTxt}>{f.formattedAddress}</Text>
+                    </View>
+                  ) : null}
                 </>
               )}
 
-              {/* Check-in / Check-out */}
-              {(f.checkInTime || f.checkOutTime) && (
+              {/* ── House rules ── */}
+              {(f.noSmoking || f.noLoudMusic || f.noPets || f.noParties || f.shoesOff || f.kitchenClean || f.noAlcohol || f.lockDoor || f.customRules) && (
                 <>
                   <Divider />
-                  <Text style={styles.sectionHeader}>Check-in / Check-out</Text>
-                  <View style={styles.checkinRow}>
-                    {f.checkInTime ? (
-                      <View style={styles.checkinCard}>
-                        <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.checkinLabel}>Check-in from</Text>
-                        <Text style={styles.checkinTime}>{f.checkInTime}</Text>
+                  <SectionHeader title="🏠 House rules" />
+                  <View style={styles.rulesGrid}>
+                    {[
+                      { flag: f.noSmoking, label: 'No smoking', icon: 'ban-outline' },
+                      { flag: f.noLoudMusic, label: 'No loud music', icon: 'musical-notes-outline' },
+                      { flag: f.noPets, label: 'No pets', icon: 'paw-outline' },
+                      { flag: f.noParties, label: 'No parties', icon: 'people-outline' },
+                      { flag: f.shoesOff, label: 'Shoes off at door', icon: 'footsteps-outline' },
+                      { flag: f.kitchenClean, label: 'Keep kitchen clean', icon: 'sparkles-outline' },
+                      { flag: f.noAlcohol, label: 'No alcohol', icon: 'wine-outline' },
+                      { flag: f.lockDoor, label: 'Lock door at night', icon: 'lock-closed-outline' },
+                    ].filter(r => r.flag).map((rule) => (
+                      <View key={rule.label} style={styles.ruleItem}>
+                        <Ionicons name={rule.icon as any} size={16} color={COLORS.primary} />
+                        <Text style={styles.ruleItemTxt}>{rule.label}</Text>
                       </View>
-                    ) : null}
-                    {f.checkOutTime ? (
-                      <View style={styles.checkinCard}>
-                        <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.checkinLabel}>Check-out by</Text>
-                        <Text style={styles.checkinTime}>{f.checkOutTime}</Text>
-                      </View>
-                    ) : null}
+                    ))}
                   </View>
+                  {f.customRules ? (
+                    <View style={styles.customRuleBox}>
+                      <Text style={styles.customRuleLabel}>Additional rules</Text>
+                      <Text style={styles.customRuleTxt}>{f.customRules}</Text>
+                    </View>
+                  ) : null}
                 </>
               )}
 
-              {/* Stay info */}
+              {/* ── Check-in / Check-out & stay info ── */}
               <Divider />
-              <View style={styles.stayInfoRow}>
-                <View style={styles.stayInfoItem}>
-                  <Text style={styles.stayInfoLabel}>Min stay</Text>
-                  <Text style={styles.stayInfoValue}>{previewMinNights} night{previewMinNights !== 1 ? 's' : ''}</Text>
+              <SectionHeader title="Stay details" />
+              <View style={styles.checkinRow}>
+                {f.checkInTime ? (
+                  <View style={styles.checkinCard}>
+                    <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.checkinLabel}>Check-in from</Text>
+                    <Text style={styles.checkinTime}>{f.checkInTime}</Text>
+                  </View>
+                ) : null}
+                {f.checkOutTime ? (
+                  <View style={styles.checkinCard}>
+                    <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.checkinLabel}>Check-out by</Text>
+                    <Text style={styles.checkinTime}>{f.checkOutTime}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.checkinCard}>
+                  <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.checkinLabel}>Min stay</Text>
+                  <Text style={styles.checkinTime}>{previewMinNights} night{previewMinNights !== 1 ? 's' : ''}</Text>
                 </View>
               </View>
             </>
@@ -791,15 +894,6 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   spaceCardLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
   spaceCardSub: { fontSize: 12, color: COLORS.textSec },
   featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: SPACING.sm },
-  featureChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  featureChipTxt: { fontSize: 12, color: COLORS.textSec },
 
   amenitiesGrid: { gap: 4 },
   amenityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
@@ -944,4 +1038,83 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   stayInfoItem: { flex: 1, alignItems: 'center' },
   stayInfoLabel: { fontSize: 12, color: COLORS.textSec, marginBottom: 4 },
   stayInfoValue: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+
+  apartmentNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.raised,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
+  },
+  apartmentNameTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+
+  subSectionLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: SPACING.sm, marginTop: SPACING.sm },
+  featureChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  featureChipTxt: { fontSize: 12, color: COLORS.textSec },
+
+  landmarkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  landmarkTxt: { flex: 1, fontSize: 14, color: COLORS.text },
+  landmarkDist: { fontSize: 12, color: COLORS.textSec, ...FONTS.medium },
+
+  foodOptionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.sm },
+  foodOptionCard: {
+    flex: 1,
+    minWidth: '40%',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    gap: 6,
+  },
+  foodOptionLabel: { fontSize: 13, ...FONTS.medium, color: COLORS.text, textAlign: 'center' },
+  mealCostRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
+  mealCostTxt: { fontSize: 13, color: COLORS.textSec },
+
+  amenityGroup: { marginBottom: SPACING.md },
+  amenityGroupHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
+  amenityGroupLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  amenityGroupGrid: { paddingLeft: SPACING.sm },
+
+  addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: SPACING.sm },
+  addressTxt: { flex: 1, fontSize: 13, color: COLORS.textSec, lineHeight: 18 },
+
+  rulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.sm },
+  ruleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  ruleItemTxt: { fontSize: 13, color: COLORS.text },
+  customRuleBox: {
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.raised,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: SPACING.sm,
+  },
+  customRuleLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 4 },
+  customRuleTxt: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
 });
