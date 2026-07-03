@@ -24,7 +24,7 @@ export async function createListing(form: {
   roomType: string;
   bedType: string;
   bathroom: string;
-  roomSize: string;
+
   roomFeatures: string[];
   title: string;
   description: string;
@@ -91,7 +91,7 @@ export async function createListing(form: {
       room_type: form.roomType,
       bed_type: form.bedType,
       bathroom_type: form.bathroom,
-      room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
+
       room_features: form.roomFeatures,
     },
     flatmates: [
@@ -196,7 +196,7 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       room_type: form.roomType,
       bed_type: form.bedType,
       bathroom_type: form.bathroom,
-      room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
+
       room_features: form.roomFeatures,
     },
     flatmates: [

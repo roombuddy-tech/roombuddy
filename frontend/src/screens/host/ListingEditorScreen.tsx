@@ -61,7 +61,7 @@ interface FormData {
   roomType: string;
   bedType: string;
   bathroom: string;
-  roomSize: string;
+
   roomFeatures: string[];
   title: string;
   description: string;
@@ -113,7 +113,7 @@ const INIT: FormData = {
   roomType: '',
   bedType: '',
   bathroom: '',
-  roomSize: '',
+
   roomFeatures: [],
   title: '',
   description: '',
@@ -1014,14 +1014,6 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
             />
           ))}
         </View>
-
-        <Field
-          label="Room size"
-          placeholder="e.g. 12x14 ft"
-          value={form.roomSize}
-          onChange={(v) => update({ roomSize: v })}
-          optional
-        />
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
@@ -2433,7 +2425,7 @@ function mapListingToForm(data: any): FormData {
     roomType: r.room_type,
     bedType: r.bed_type,
     bathroom: r.bathroom_type,
-    roomSize: r.room_size_sqft != null ? String(r.room_size_sqft) : '',
+
     roomFeatures: r.room_features || [],
     title: data.title,
     description: data.description || '',

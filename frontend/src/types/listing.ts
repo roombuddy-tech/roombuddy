@@ -59,7 +59,7 @@ export interface GuestListingDetail {
     room_type: string;
     bed_type: string;
     bathroom_type: string;
-    room_size_sqft: number | null;
+
     room_features: string[];
   };
   photos: ListingPhoto[];

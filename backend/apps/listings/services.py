@@ -113,7 +113,6 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "room_type": room.room_type,
             "bed_type": room.bed_type,
             "bathroom_type": room.bathroom_type,
-            "room_size_sqft": room.room_size_sqft,
             "room_features": room.room_features if isinstance(room.room_features, list) else [],
         },
         "flatmates": [
@@ -227,7 +226,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         room.room_type = room_data["room_type"]
         room.bed_type = room_data["bed_type"]
         room.bathroom_type = room_data["bathroom_type"]
-        room.room_size_sqft = room_data.get("room_size_sqft")
+
         room.room_features = room_data.get("room_features", [])
         room.save()
 
@@ -419,7 +418,7 @@ def create_listing(user: User, data: dict) -> dict:
             room_type=room_data["room_type"],
             bed_type=room_data["bed_type"],
             bathroom_type=room_data["bathroom_type"],
-            room_size_sqft=room_data.get("room_size_sqft"),
+
             room_features=room_data.get("room_features", []),
         )
 
@@ -774,7 +773,6 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
             "room_type": room.room_type,
             "bed_type": room.bed_type,
             "bathroom_type": room.bathroom_type,
-            "room_size_sqft": room.room_size_sqft,
             "room_features": room.room_features if isinstance(room.room_features, list) else [],
         },
         "photos": photos,

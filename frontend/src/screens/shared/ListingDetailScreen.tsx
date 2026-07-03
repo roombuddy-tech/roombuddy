@@ -460,12 +460,6 @@ export default function ListingDetailScreen() {
                         <Text style={styles.spaceCardLabel}>{bathroomLabel(f.bathroom)}</Text>
                       </View>
                     ) : null}
-                    {f.roomSize ? (
-                      <View style={styles.spaceCard}>
-                        <Ionicons name="expand-outline" size={22} color={COLORS.primary} />
-                        <Text style={styles.spaceCardLabel}>{f.roomSize} sq ft</Text>
-                      </View>
-                    ) : null}
                   </View>
 
                   {f.roomFeatures && f.roomFeatures.length > 0 && (
