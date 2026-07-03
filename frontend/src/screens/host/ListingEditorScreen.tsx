@@ -364,7 +364,7 @@ const makeBnStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderColor: COLORS.border,
   },
   backTxt: { fontSize: 15, ...FONTS.medium, color: COLORS.textSec },
-  next: { flex: 3, paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
+  next: { flex: 3, paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.pill, backgroundColor: COLORS.primary },
   nextTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
   errorBox: {
     flexDirection: 'row',
@@ -391,7 +391,7 @@ function Chip({
 }) {
   const COLORS = useThemeColors();
   const cpSt = useMemo(() => makeCpStyles(COLORS), [COLORS]);
-  const color = selected ? COLORS.primary : COLORS.textSec;
+  const color = selected ? '#fff' : COLORS.textSec;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -412,17 +412,18 @@ function Chip({
 
 const makeCpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: RADIUS.pill,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     marginRight: 8,
     marginBottom: 8,
+    backgroundColor: COLORS.bg,
   },
-  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
-  lblSel: { color: COLORS.primary },
+  lblSel: { color: '#fff' },
 });
 
 function AmenityChip({
@@ -443,7 +444,7 @@ function AmenityChip({
       activeOpacity={0.7}
       style={[acSt.chip, selected && acSt.sel]}
     >
-      <Ionicons name={iconName} size={13} color={selected ? COLORS.primary : COLORS.textSec} style={{ marginRight: 5 }} />
+      <Ionicons name={iconName} size={13} color={selected ? '#fff' : COLORS.textSec} style={{ marginRight: 5 }} />
       <Text style={[acSt.lbl, selected && acSt.lblSel]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -453,17 +454,18 @@ const makeAcStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: RADIUS.pill,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     marginRight: 8,
     marginBottom: 8,
+    backgroundColor: COLORS.bg,
   },
-  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
-  lblSel: { color: COLORS.primary },
+  lblSel: { color: '#fff' },
 });
 
 function OptionalMark() {
@@ -512,24 +514,23 @@ function Field({
 }
 
 const makeFldStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  label: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 6 },
+  label: { fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 0,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 15,
     color: COLORS.text,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.chip,
   },
-  multiline: { minHeight: 72, textAlignVertical: 'top', paddingTop: 12 },
+  multiline: { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 },
 });
 
 function SectionLabel({ label, optional }: { label: string; optional?: boolean }) {
   const COLORS = useThemeColors();
   return (
-    <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 16, marginBottom: 8 }}>
+    <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: 16, marginBottom: 8 }}>
       {label}
       {optional && <OptionalMark />}
     </Text>
@@ -651,12 +652,11 @@ const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 0,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: COLORS.bg,
+    paddingVertical: 14,
+    backgroundColor: COLORS.chip,
   },
   triggerTxt: { fontSize: 15, color: COLORS.text },
   overlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
@@ -733,7 +733,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
 const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingTop: SPACING.md },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
-  title: { fontSize: 28, ...FONTS.bold, color: COLORS.primaryDark, textAlign: 'center', marginBottom: SPACING.sm },
+  title: { fontSize: 28, ...FONTS.bold, color: COLORS.primary, textAlign: 'center', marginBottom: SPACING.sm },
   sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
   card: {
     flexDirection: 'row',
@@ -748,7 +748,7 @@ const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   },
   cta: {
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: SPACING.xl,
@@ -785,7 +785,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Your property</Text>
+        <Text style={stSt.title}>Your Property</Text>
         <Text style={stSt.sub}>Share your apartment details so guests know what to expect.</Text>
 
         <SectionLabel label="Apartment type" />
@@ -896,8 +896,9 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderColor: COLORS.border,
     alignItems: 'center',
   },
-  aptCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  aptCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
   aptLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  aptLabelSel: { color: COLORS.primary },
   aptSub: { fontSize: 11, color: COLORS.textSec, textAlign: 'center' },
 });
 
@@ -929,7 +930,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Room details</Text>
+        <Text style={stSt.title}>Room Details</Text>
         <Text style={stSt.sub}>Describe the room you're renting out.</Text>
 
         <SectionLabel label="Room type" />
@@ -1029,7 +1030,7 @@ const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.border,
   },
-  typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  typeCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
   typeTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   typeSub: { fontSize: 12, color: COLORS.textSec, lineHeight: 16 },
 });
@@ -1061,7 +1062,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Title & description</Text>
+        <Text style={stSt.title}>Title & Description</Text>
         <Text style={stSt.sub}>This is the first thing guests see. Make it count!</Text>
 
         <Field
@@ -1530,7 +1531,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={stSt.title}>Amenities & food</Text>
+      <Text style={stSt.title}>Amenities & Food</Text>
       <Text style={stSt.sub}>What's included in the stay? Guests see this before booking.</Text>
 
       {AMENITY_GROUPS.map((group) => (
@@ -1879,7 +1880,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Set your price</Text>
+        <Text style={stSt.title}>Set Your Price</Text>
         <Text style={stSt.sub}>Set your nightly rate. We'll show you what guests pay and what you earn.</Text>
 
         <Text style={fldSt.label}>Your nightly rate</Text>
@@ -2026,7 +2027,7 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>House rules</Text>
+        <Text style={stSt.title}>House Rules</Text>
         <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
         <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
@@ -2245,7 +2246,7 @@ function StepReview({
       ].filter(Boolean).join(' · '),
     },
     {
-      label: 'House rules',
+      label: 'House Rules',
       step: 8,
       value: [
         ruleCount > 0 ? `${ruleCount} rule${ruleCount > 1 ? 's' : ''} set` : null,
@@ -2260,7 +2261,7 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={stSt.title}>{isEditMode ? 'Review & update' : 'Review & list'}</Text>
+      <Text style={stSt.title}>{isEditMode ? 'Review & Update' : 'Review & List'}</Text>
       <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
       {/* Tappable preview card → full guest view */}
@@ -2369,7 +2370,7 @@ const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
 
 const makeStStyles = (COLORS: ThemeColors) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
-  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
+  title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
   infoBox: {
     flexDirection: 'row',
