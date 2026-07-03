@@ -112,10 +112,21 @@ export default function ListingDetailScreen() {
     if (day.dateString < today) return;
     if (!selectingStart) {
       setSelectingStart(day.dateString);
+    } else if (selectingStart === day.dateString) {
+      // Tapped same date twice — cancel selection
+      setSelectingStart(null);
     } else {
-      const start = selectingStart <= day.dateString ? selectingStart : day.dateString;
-      const end = selectingStart <= day.dateString ? day.dateString : selectingStart;
-      setBlockedDates((prev) => [...prev, { start_date: start, end_date: end }]);
+      const start = selectingStart < day.dateString ? selectingStart : day.dateString;
+      const end = selectingStart < day.dateString ? day.dateString : selectingStart;
+      // Avoid adding overlapping ranges
+      setBlockedDates((prev) => {
+        const overlaps = prev.some(r => start <= r.end_date && end >= r.start_date);
+        if (overlaps) {
+          Alert.alert('Already blocked', 'This range overlaps with dates already blocked.');
+          return prev;
+        }
+        return [...prev, { start_date: start, end_date: end }];
+      });
       setSelectingStart(null);
     }
   };
@@ -661,11 +672,6 @@ export default function ListingDetailScreen() {
                     <Text style={styles.priceUnit}>/night</Text>
                   </Text>
                 )}
-                {guestPrice > 0 && hostPrice !== guestPrice && (
-                  <Text style={styles.guestPrice}>
-                    Guest pays: ₹{guestPrice.toLocaleString('en-IN')}/night (incl. taxes & fees)
-                  </Text>
-                )}
               </View>
 
               <Divider />
@@ -673,9 +679,9 @@ export default function ListingDetailScreen() {
               {/* Availability — interactive calendar */}
               {item && (
                 <>
-                  <SectionHeader title="Availability" />
+                  <SectionHeader title="Block dates" />
                   <Text style={{ fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm }}>
-                    Tap a date to start, then tap another to block a range
+                    Tap two dates to block a range — guests can't book those nights
                   </Text>
                   <Calendar
                     minDate={today}
@@ -688,13 +694,21 @@ export default function ListingDetailScreen() {
                       textDayFontFamily: FONTS.medium.fontFamily,
                       textMonthFontFamily: FONTS.semibold.fontFamily,
                       textDayHeaderFontFamily: FONTS.medium.fontFamily,
+                      calendarBackground: COLORS.surface,
+                      dayTextColor: COLORS.text,
+                      textDisabledColor: COLORS.textMut,
+                      monthTextColor: COLORS.text,
+                      textDayFontSize: 13,
+                      textMonthFontSize: 14,
+                      textDayHeaderFontSize: 12,
+
                     }}
-                    style={{ borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}
+                    style={{ borderRadius: RADIUS.lg, overflow: 'hidden', borderWidth: 0, backgroundColor: COLORS.surface }}
                   />
 
                   {selectingStart && (
-                    <Text style={{ fontSize: 13, color: COLORS.accent, marginTop: SPACING.sm, ...FONTS.medium }}>
-                      Tap another date to complete the range
+                    <Text style={{ fontSize: 13, color: COLORS.primary, marginTop: SPACING.sm, ...FONTS.medium }}>
+                      Now tap the end date to block the range
                     </Text>
                   )}
 
@@ -742,16 +756,17 @@ export default function ListingDetailScreen() {
                       </View>
                       <Text style={styles.snoozeSub}>
                         {listingStatus === 'snoozed'
-                          ? 'Your listing is hidden from guests. Turn off to make it visible again.'
-                          : 'Temporarily hide this listing from guests without deleting it.'}
+                          ? 'Your listing is hidden from guests. Toggle off to make it visible again.'
+                          : 'Toggle on to temporarily hide this listing from guests.'}
                       </Text>
                     </View>
                     <Switch
                       value={listingStatus === 'snoozed'}
                       onValueChange={handleToggleSnooze}
                       disabled={togglingSnooze}
-                      trackColor={{ false: COLORS.border, true: COLORS.chip }}
-                      thumbColor={listingStatus === 'snoozed' ? COLORS.primary : COLORS.surface}
+                      trackColor={{ false: COLORS.border, true: COLORS.primary }}
+                      thumbColor="#fff"
+                      ios_backgroundColor={COLORS.border}
                     />
                   </View>
                 </>
@@ -873,10 +888,10 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   miniMap: { width: '100%', height: 180 },
   locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
-  priceRow: { marginBottom: SPACING.sm },
-  price: { fontSize: 22, ...FONTS.serif, color: COLORS.text },
+  priceRow: { marginBottom: SPACING.md },
+  price: { fontSize: 26, ...FONTS.serif, color: COLORS.text },
   priceUnit: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec },
-  guestPrice: { fontSize: 12, color: COLORS.textMut, marginTop: 2 },
+  guestPrice: { fontSize: 13, color: COLORS.textSec, marginTop: 4 },
 
   sectionHeader: { fontSize: 18, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
 
@@ -960,7 +975,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   blockedTxt: { flex: 1, fontSize: 14, color: COLORS.text, ...FONTS.medium },
   saveAvailBtn: {
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: SPACING.md,
@@ -970,20 +985,20 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(245,158,11,0.3)',
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginTop: SPACING.lg,
   },
   snoozeContent: { flex: 1, marginRight: 12 },
-  snoozeTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
-  snoozeSub: { fontSize: 12, color: COLORS.textSec, marginTop: 4, lineHeight: 18 },
+  snoozeTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  snoozeSub: { fontSize: 13, color: COLORS.textSec, marginTop: 4, lineHeight: 19 },
   deleteBarBtn: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#FECACA',
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     paddingVertical: 13,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -1022,7 +1037,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     backgroundColor: COLORS.primary,
     paddingVertical: 13,
     paddingHorizontal: 28,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
   },
   bookBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.semibold },
 

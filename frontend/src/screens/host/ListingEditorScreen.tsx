@@ -294,7 +294,7 @@ const makeHdrStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
 interface StepProps {
   form: FormData;
-  update: (u: Partial<FormData>) => void;
+  update: (u: Partial<FormData> | ((prev: FormData) => Partial<FormData>)) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -909,8 +909,11 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const rdSt = useMemo(() => makeRdStyles(COLORS), [COLORS]);
   const toggleFeature = (f: string) => {
-    const cur = form.roomFeatures;
-    update({ roomFeatures: cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f] });
+    update((prev) => ({
+      roomFeatures: prev.roomFeatures.includes(f)
+        ? prev.roomFeatures.filter((x) => x !== f)
+        : [...prev.roomFeatures, f],
+    }));
   };
 
   const isValid = !!form.roomType && !!form.bedType && !!form.bathroom;
@@ -1043,7 +1046,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
   const LANDMARKS = ['Metro station', 'Bus stop', 'Tech park', 'Mall', 'Hospital', 'Restaurant hub'];
 
   const toggleLandmark = (l: string) => {
-    update({ nearbyLandmarks: form.nearbyLandmarks.includes(l) ? [] : [l] });
+    update((prev) => ({ nearbyLandmarks: prev.nearbyLandmarks.includes(l) ? [] : [l] }));
   };
 
   const isValid = form.title.trim().length > 0 && form.description.trim().length > 0;
@@ -1501,13 +1504,19 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const amSt = useMemo(() => makeAmStyles(COLORS), [COLORS]);
   const toggleAmenity = (a: string) => {
-    const cur = form.amenities;
-    update({ amenities: cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a] });
+    update((prev) => ({
+      amenities: prev.amenities.includes(a)
+        ? prev.amenities.filter((x) => x !== a)
+        : [...prev.amenities, a],
+    }));
   };
 
   const toggleMealType = (m: string) => {
-    const cur = form.mealTypes;
-    update({ mealTypes: cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m] });
+    update((prev) => ({
+      mealTypes: prev.mealTypes.includes(m)
+        ? prev.mealTypes.filter((x) => x !== m)
+        : [...prev.mealTypes, m],
+    }));
   };
 
   const requiredGroups = AMENITY_GROUPS.filter((g) => !g.optional);
@@ -2522,7 +2531,9 @@ export default function ListingEditorScreen() {
     }
   }, [listingId, resumeDraft, draftKey]);
 
-  const update = useCallback((u: Partial<FormData>) => setForm((prev) => ({ ...prev, ...u })), []);
+  const update = useCallback((u: Partial<FormData> | ((prev: FormData) => Partial<FormData>)) => {
+    setForm((prev) => ({ ...prev, ...(typeof u === 'function' ? u(prev) : u) }));
+  }, []);
 
   const next = useCallback(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)), []);
 

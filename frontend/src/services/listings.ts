@@ -246,19 +246,8 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
 
 function _buildDescription(form: {
   description: string;
-  nearbyLandmarks: string[];
-  distanceToLandmark: string;
 }): string {
-  const parts: string[] = [];
-  if (form.description.trim()) parts.push(form.description.trim());
-
-  if (form.nearbyLandmarks.length > 0) {
-    const dist = form.distanceToLandmark.trim();
-    const landmarks = form.nearbyLandmarks.join(', ');
-    parts.push(`Nearby: ${landmarks}${dist ? ` (${dist})` : ''}`);
-  }
-
-  return parts.join('\n\n');
+  return form.description.trim();
 }
 
 function _mapMinStay(val: string): number {
