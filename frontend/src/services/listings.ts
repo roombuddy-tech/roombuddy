@@ -246,8 +246,18 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
 
 function _buildDescription(form: {
   description: string;
+  nearbyLandmarks: string[];
+  distanceToLandmark: string;
 }): string {
-  return form.description.trim();
+  let desc = form.description.trim();
+  if (form.nearbyLandmarks.length > 0) {
+    const landmark = form.nearbyLandmarks[0];
+    const dist = form.distanceToLandmark?.trim();
+    desc += dist
+      ? `\n\nNearby: ${landmark} (${dist} min walk)`
+      : `\n\nNearby: ${landmark}`;
+  }
+  return desc;
 }
 
 function _mapMinStay(val: string): number {

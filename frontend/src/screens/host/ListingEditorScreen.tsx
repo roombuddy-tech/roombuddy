@@ -2424,7 +2424,20 @@ function mapListingToForm(data: any): FormData {
 
     roomFeatures: r.room_features || [],
     title: data.title,
-    description: data.description || '',
+    description: (() => {
+      const raw = data.description || '';
+      return raw.replace(/\n\nNearby: .+?(?:\s\(\d+ min walk\))?$/, '').trim();
+    })(),
+    nearbyLandmarks: (() => {
+      const raw = data.description || '';
+      const m = raw.match(/\n\nNearby: (.+?)(?:\s\((\d+) min walk\))?$/);
+      return m ? [m[1]] : [];
+    })(),
+    distanceToLandmark: (() => {
+      const raw = data.description || '';
+      const m = raw.match(/\n\nNearby: .+?\s\((\d+) min walk\)$/);
+      return m ? m[1] : '';
+    })(),
     flatmates: realFlatmates.map((f: any) => ({
       id: f.id || String(Date.now() + Math.random()),
       name: f.name,
