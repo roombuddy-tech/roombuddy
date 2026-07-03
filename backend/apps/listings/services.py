@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.db import transaction
+from django.utils import timezone
 from django.db.models import Q
 
 from apps.amenities.models import AmenityDefinition
@@ -239,6 +240,9 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         listing.food_meals_available = d.get("food_meals_available", False)
         listing.food_meal_cost = d.get("food_meal_cost")
         listing.food_meal_description = meal_desc or None
+        if listing.status == Listing.Status.PENDING and _listing_status_for_user(user) == Listing.Status.LIVE:
+            listing.status = Listing.Status.LIVE
+            listing.published_at = timezone.now()
         listing.save()
 
         ListingAmenity.objects.filter(listing=listing).delete()

@@ -2277,16 +2277,6 @@ function StepReview({
           </View>
         )}
 
-        {tags.length > 0 && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACING.sm }}>
-            {tags.map((tag) => (
-              <View key={tag} style={rvSt.tag}>
-                <Text style={rvSt.tagTxt}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
         <Text style={rvSt.previewTitle} numberOfLines={2}>
           {form.title || 'Your listing title'}
         </Text>
