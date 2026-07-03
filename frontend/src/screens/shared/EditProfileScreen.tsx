@@ -164,7 +164,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Mobile number</Text>
-            <View style={[styles.input, { backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center' }]}>
+            <View style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}>
               <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
               <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>{phone || 'Not available'}</Text>
             </View>
@@ -232,16 +232,16 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   saveBtn: { fontSize: 16, color: COLORS.primary, ...FONTS.semibold },
   form: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.xxl },
   field: { marginBottom: SPACING.lg },
-  label: { fontSize: 14, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 14, fontSize: 16, color: COLORS.text, backgroundColor: COLORS.bg, ...FONTS.medium },
-  dateInput: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 14, backgroundColor: COLORS.bg },
+  label: { fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 8, letterSpacing: 0.2 },
+  input: { borderWidth: 0, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 15, fontSize: 16, color: COLORS.text, backgroundColor: COLORS.chip, ...FONTS.medium },
+  dateInput: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 15, backgroundColor: COLORS.chip },
   dateText: { fontSize: 16, color: COLORS.text, ...FONTS.medium },
   datePlaceholder: { fontSize: 16, color: COLORS.textMut, ...FONTS.medium },
   doneBtn: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 16, marginTop: 4 },
   doneBtnText: { fontSize: 16, color: COLORS.primary, ...FONTS.semibold },
   pillRow: { flexDirection: 'row', gap: SPACING.sm },
-  pill: { paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.pill, backgroundColor: COLORS.bg },
-  pillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  pill: { paddingVertical: 10, paddingHorizontal: 22, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.pill, backgroundColor: COLORS.bg },
+  pillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   pillText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  pillTextActive: { color: COLORS.primary, ...FONTS.semibold },
+  pillTextActive: { color: '#fff', ...FONTS.semibold },
 });

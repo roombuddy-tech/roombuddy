@@ -25,10 +25,20 @@ interface BookingItem {
   check_out_date: string;
   nights: number;
   guest_purpose: string | null;
+  listing_title?: string;
   status: string;
   total_guest_pays: number;
   total_host_receives: number;
 }
+
+const AVATAR_PALETTE = [
+  { bg: 'rgba(34,197,94,0.15)', text: '#16A34A' },
+  { bg: 'rgba(59,130,246,0.15)', text: '#2563EB' },
+  { bg: 'rgba(234,179,8,0.15)', text: '#B45309' },
+  { bg: 'rgba(168,85,247,0.15)', text: '#7C3AED' },
+  { bg: 'rgba(239,68,68,0.15)', text: '#DC2626' },
+  { bg: 'rgba(20,184,166,0.15)', text: '#0F766E' },
+];
 
 const FILTERS = ['All', 'Active', 'Upcoming', 'Completed'];
 
@@ -137,8 +147,9 @@ export default function BookingsScreen() {
             <Text style={styles.emptySub}>When guests book your room, they'll appear here.</Text>
           </View>
         ) : (
-          bookings.map((b) => {
+          bookings.map((b, idx) => {
             const statusStyle = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
+            const avatarColor = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
             return (
               <TouchableOpacity
                 key={b.booking_id}
@@ -146,25 +157,27 @@ export default function BookingsScreen() {
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('BookingDetail', { booking: b })}
               >
-                {/* Avatar */}
-                <View style={styles.guestAvatar}>
-                  <Text style={styles.guestInitials}>{b.guest_initials}</Text>
+                {/* Row 1: Avatar + Name + Status */}
+                <View style={styles.cardTopRow}>
+                  <View style={[styles.guestAvatar, { backgroundColor: avatarColor.bg }]}>
+                    <Text style={[styles.guestInitials, { color: avatarColor.text }]}>{b.guest_initials}</Text>
+                  </View>
+                  <View style={styles.bookingDetails}>
+                    <Text style={styles.guestName}>{b.guest_name}</Text>
+                    <Text style={styles.bookingMeta} numberOfLines={1}>
+                      {b.listing_title ? `${b.listing_title} · ` : ''}{b.nights} night{b.nights === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                  <Text style={[styles.statusBadge, { color: statusStyle.text }]}>
+                    {formatStatus(b.status)}
+                  </Text>
                 </View>
 
-                {/* Details */}
-                <View style={styles.bookingDetails}>
-                  <Text style={styles.guestName}>{b.guest_name}</Text>
-                  <Text style={styles.bookingMeta}>
-                    {formatDateRange(b.check_in_date, b.check_out_date)}
-                    {b.guest_purpose ? ` · ${b.guest_purpose}` : ''}
-                  </Text>
+                {/* Row 2: Date range + Price */}
+                <View style={styles.cardBottomRow}>
+                  <Text style={styles.dateRange}>{formatDateRange(b.check_in_date, b.check_out_date)}</Text>
                   <Text style={styles.bookingPrice}>₹{b.total_host_receives.toLocaleString('en-IN')}</Text>
                 </View>
-
-                {/* Status badge */}
-                <Text style={[styles.statusBadge, { color: statusStyle.text }]}>
-                  {formatStatus(b.status)}
-                </Text>
               </TouchableOpacity>
             );
           })
@@ -203,12 +216,15 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center' },
 
-  bookingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.sm },
-  guestAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  guestInitials: { fontSize: 16, ...FONTS.bold, color: COLORS.primary },
+  bookingCard: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.sm },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
+  guestAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  guestInitials: { fontSize: 15, ...FONTS.bold },
   bookingDetails: { flex: 1 },
   guestName: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   bookingMeta: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
-  bookingPrice: { fontSize: 14, ...FONTS.bold, color: COLORS.text, marginTop: 2 },
+  dateRange: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
+  bookingPrice: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
   statusBadge: { fontSize: 13, ...FONTS.semibold },
 });

@@ -223,11 +223,11 @@ export default function PaymentMethodsScreen({ visible, onClose }: PaymentMethod
           {/* Add buttons */}
           <View style={styles.addRow}>
             <TouchableOpacity style={styles.addBtn} onPress={() => setAddMode('bank')}>
-              <Ionicons name="business-outline" size={20} color={COLORS.primary} />
+              <Ionicons name="card-outline" size={24} color={COLORS.primary} />
               <Text style={styles.addBtnText}>Add bank account</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.addBtn} onPress={() => setAddMode('upi')}>
-              <Ionicons name="phone-portrait-outline" size={20} color={COLORS.primary} />
+              <Ionicons name="phone-portrait-outline" size={24} color={COLORS.primary} />
               <Text style={styles.addBtnText}>Add UPI</Text>
             </TouchableOpacity>
           </View>
@@ -303,7 +303,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
 
   addRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
-  addBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.md, borderStyle: 'dashed' },
+  addBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 18, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.lg },
   addBtnText: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
 
   emptyState: { alignItems: 'center', paddingVertical: SPACING.xxl },
@@ -311,13 +311,13 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
   emptyText: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22, paddingHorizontal: SPACING.lg },
 
-  accountCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
+  accountCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, backgroundColor: COLORS.surface },
   accountRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   accountContent: { flex: 1 },
   accountLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   accountSub: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
-  primaryBadge: { backgroundColor: '#E6F9F0', paddingVertical: 4, paddingHorizontal: 10, borderRadius: RADIUS.pill },
-  primaryText: { fontSize: 11, color: '#10B981', ...FONTS.semibold },
+  primaryBadge: { backgroundColor: COLORS.accentSoft, paddingVertical: 4, paddingHorizontal: 10, borderRadius: RADIUS.pill },
+  primaryText: { fontSize: 11, color: COLORS.accent, ...FONTS.semibold },
   accountActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: SPACING.lg, marginTop: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
   actionText: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
   deleteText: { fontSize: 13, color: COLORS.danger, ...FONTS.semibold },

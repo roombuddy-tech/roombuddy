@@ -123,7 +123,7 @@ export default function MessagesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="chatbubbles-outline" size={40} color={COLORS.primary} />
+              <Ionicons name="chatbubble-outline" size={36} color={COLORS.textMut} />
             </View>
             <Text style={styles.emptyTitle}>No messages yet</Text>
             <Text style={styles.emptySub}>
@@ -140,10 +140,9 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm,
   },
-  headerTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text },
+  headerTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
 
   row: {
     flexDirection: 'row', alignItems: 'center',
@@ -175,11 +174,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   emptyPad: { flexGrow: 1 },
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
   emptyIcon: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryAlpha,
+    width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.chip,
     justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg,
   },
-  emptyTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
-  emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 21 },
+  emptyTitle: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
+  emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22, maxWidth: 260 },
   listingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   listing: { fontSize: 12, color: COLORS.textMut, flex: 1 },
 });
