@@ -10,12 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ENDPOINTS } from '../../constants/endpoints';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import ProfileMenu from '../shared/ProfileMenu';
 
 interface EarningsData {
   lifetime: {
@@ -32,6 +34,7 @@ interface EarningsData {
   payout: {
     bank_name: string | null;
     account_last4: string | null;
+    upi_id: string | null;
     payout_schedule: string | null;
     next_payout_amount: number | null;
     next_payout_date: string | null;
@@ -85,6 +88,7 @@ export default function EarningsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPayouts, setShowPayouts] = useState(false);
+  const [showPaymentProfile, setShowPaymentProfile] = useState(false);
   const [payoutsData, setPayoutsData] = useState<PayoutsResponse | null>(null);
   const [payoutsLoading, setPayoutsLoading] = useState(false);
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
@@ -211,6 +215,8 @@ export default function EarningsScreen() {
               <Text style={styles.payoutHistorySub}>
                 {d?.payout.bank_name
                   ? `${d.payout.bank_name} ****${d.payout.account_last4}`
+                  : d?.payout.upi_id
+                  ? `UPI · ${d.payout.upi_id}`
                   : 'No payout account added'}
               </Text>
             </View>
@@ -219,13 +225,14 @@ export default function EarningsScreen() {
         </TouchableOpacity>
 
         {/* No payout account warning */}
-        {!d?.payout.bank_name && (
-          <View style={styles.warningCard}>
+        {!d?.payout.bank_name && !d?.payout.upi_id && (
+          <TouchableOpacity style={styles.warningCard} activeOpacity={0.7} onPress={() => setShowPaymentProfile(true)}>
             <Ionicons name="alert-circle-outline" size={18} color={COLORS.accent} />
             <Text style={styles.warningText}>
-              Add a bank account or UPI in Profile → Payment Methods to receive payouts.
+              Add a bank account or UPI to receive payouts. Tap to add now.
             </Text>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.accent} />
+          </TouchableOpacity>
         )}
 
         {/* Monthly breakdown */}
@@ -248,6 +255,8 @@ export default function EarningsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ProfileMenu visible={showPaymentProfile} onClose={() => setShowPaymentProfile(false)} initialScreen="payment" />
 
       {/* Payout History Modal */}
       <Modal visible={showPayouts} animationType="slide" presentationStyle="pageSheet">

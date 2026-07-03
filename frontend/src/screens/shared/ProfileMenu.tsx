@@ -16,9 +16,12 @@ import TermsPrivacyScreen from './TermsPrivacyScreen';
 import VerificationScreen from './VerificationScreen';
 
 
+type SubScreen = 'none' | 'edit_profile' | 'verification' | 'payment' | 'help' | 'terms';
+
 interface ProfileMenuProps {
   visible: boolean;
   onClose: () => void;
+  initialScreen?: SubScreen;
 }
 
 interface ProfileData {
@@ -36,9 +39,7 @@ interface ProfileData {
   profile_photo_url: string | null;
 }
 
-type SubScreen = 'none' | 'edit_profile' | 'verification' | 'payment' | 'help' | 'terms';
-
-export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
+export default function ProfileMenu({ visible, onClose, initialScreen }: ProfileMenuProps) {
   const { logout } = useAuth();
   const { mode, colors: COLORS, toggle } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
@@ -49,7 +50,7 @@ export default function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
   useEffect(() => {
     if (visible) {
       fetchProfile();
-      setActiveScreen('none');
+      setActiveScreen(initialScreen || 'none');
     }
   }, [visible]);
 
