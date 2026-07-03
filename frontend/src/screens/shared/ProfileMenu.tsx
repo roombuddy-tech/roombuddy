@@ -206,23 +206,25 @@ const handlePickPhoto = async () => {
               </Text>
 
               <View style={styles.badgeRow}>
-                {profile?.phone_verified && (
-                  <View style={[styles.badge, styles.badgeGreen]}>
-                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                    <Text style={[styles.badgeText, { color: '#10B981' }]}>Phone verified</Text>
-                  </View>
-                )}
-                {profile?.email_verified ? (
-                  <View style={[styles.badge, styles.badgeGreen]}>
-                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                    <Text style={[styles.badgeText, { color: '#10B981' }]}>Email verified</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity style={[styles.badge, styles.badgeWarning]} onPress={() => setActiveScreen('verification')}>
-                    <Ionicons name="alert-circle-outline" size={14} color="#F59E0B" />
-                    <Text style={[styles.badgeText, { color: '#F59E0B' }]}>Verify email</Text>
-                  </TouchableOpacity>
-                )}
+                <View style={[styles.badge, profile?.phone_verified ? styles.badgeGreen : styles.badgeWarning]}>
+                  <Ionicons
+                    name={profile?.phone_verified ? 'checkmark-circle' : 'alert-circle-outline'}
+                    size={14}
+                    color={profile?.phone_verified ? '#10B981' : '#F59E0B'}
+                  />
+                  <Text style={[styles.badgeText, { color: profile?.phone_verified ? '#10B981' : '#F59E0B' }]}>Phone</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.badge, profile?.email_verified ? styles.badgeGreen : styles.badgeWarning]}
+                  onPress={profile?.email_verified ? undefined : () => setActiveScreen('verification')}
+                >
+                  <Ionicons
+                    name={profile?.email_verified ? 'checkmark-circle' : 'alert-circle-outline'}
+                    size={14}
+                    color={profile?.email_verified ? '#10B981' : '#F59E0B'}
+                  />
+                  <Text style={[styles.badgeText, { color: profile?.email_verified ? '#10B981' : '#F59E0B' }]}>Email</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.badge, profile?.aadhaar_verified ? styles.badgeSuccess : styles.badgeWarning]}
                   onPress={() => setActiveScreen('verification')}
@@ -233,7 +235,7 @@ const handlePickPhoto = async () => {
                     color={profile?.aadhaar_verified ? '#10B981' : COLORS.textMut}
                   />
                   <Text style={[styles.badgeText, { color: profile?.aadhaar_verified ? '#10B981' : COLORS.textMut }]}>
-                    {profile?.aadhaar_verified ? 'Aadhaar verified' : 'Aadhaar pending'}
+                    Aadhaar
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -321,12 +323,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   closeBtn: { alignSelf: 'flex-end', padding: SPACING.sm, marginTop: SPACING.sm },
   profileHeader: { alignItems: 'center', marginBottom: SPACING.xl },
   avatarWrapper: { position: 'relative', marginBottom: SPACING.md },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.border },
-  avatarInitials: { fontSize: 28, ...FONTS.bold, color: COLORS.primary },
-  avatarImage: { width: 76, height: 76, borderRadius: 38 },
-  editBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
+  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.primary },
+  avatarInitials: { fontSize: 32, ...FONTS.bold, color: COLORS.primary },
+  avatarImage: { width: 86, height: 86, borderRadius: 43 },
+  editBadge: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
   badgeSuccess: { backgroundColor: '#E6F9F0', borderColor: '#C5EDDA' },
-  userName: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
+  userName: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
   userMeta: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.md },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, justifyContent: 'center' },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: RADIUS.pill },

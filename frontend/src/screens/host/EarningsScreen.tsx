@@ -186,15 +186,15 @@ export default function EarningsScreen() {
 
         {/* Payout summary cards */}
         <View style={styles.payoutSummaryRow}>
-          <View style={[styles.payoutSummaryCard, { borderLeftColor: COLORS.success }]}>
-            <Text style={styles.payoutSummaryLabel}>Paid out</Text>
+          <View style={[styles.payoutSummaryCard, { backgroundColor: '#E6F5EC', borderColor: '#A8DBBA' }]}>
+            <Text style={[styles.payoutSummaryLabel, { color: COLORS.success }]}>Paid out</Text>
             <Text style={[styles.payoutSummaryValue, { color: COLORS.success }]}>
               {formatCurrency(ps?.total_paid_out || 0)}
             </Text>
           </View>
-          <View style={[styles.payoutSummaryCard, { borderLeftColor: COLORS.primary }]}>
-            <Text style={styles.payoutSummaryLabel}>Pending</Text>
-            <Text style={[styles.payoutSummaryValue, { color: COLORS.primary }]}>
+          <View style={[styles.payoutSummaryCard, { backgroundColor: COLORS.accentSoft, borderColor: COLORS.border }]}>
+            <Text style={[styles.payoutSummaryLabel, { color: COLORS.accent }]}>Pending</Text>
+            <Text style={[styles.payoutSummaryValue, { color: COLORS.accent }]}>
               {formatCurrency((ps?.pending_amount || 0) + (ps?.unpaid_amount || 0))}
             </Text>
           </View>
@@ -380,15 +380,12 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   payoutSummaryRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.md },
   payoutSummaryCard: {
     flex: 1,
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderLeftWidth: 3,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
   },
-  payoutSummaryLabel: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium, marginBottom: 4 },
-  payoutSummaryValue: { fontSize: 20, ...FONTS.bold },
+  payoutSummaryLabel: { fontSize: 11, ...FONTS.semibold, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 },
+  payoutSummaryValue: { fontSize: 22, ...FONTS.bold },
 
   // Payout history button
   payoutHistoryBtn: {

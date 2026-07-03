@@ -192,9 +192,9 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   filterRow: { marginBottom: SPACING.lg, maxHeight: 44 },
   filterContent: { gap: 8 },
   filterPill: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.bg },
-  filterPillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  filterPillActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   filterText: { fontSize: 14, color: COLORS.textSec, ...FONTS.medium },
-  filterTextActive: { color: COLORS.primary, ...FONTS.semibold },
+  filterTextActive: { color: COLORS.onPrimary, ...FONTS.semibold },
 
   loadingArea: { paddingVertical: 60, alignItems: 'center' },
 
