@@ -133,6 +133,11 @@ export default function EarningsScreen() {
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  const formatMonthYear = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return COLORS.success;
@@ -265,7 +270,7 @@ export default function EarningsScreen() {
             <TouchableOpacity onPress={() => setShowPayouts(false)}>
               <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Payout History</Text>
+            <Text style={styles.modalTitle}>Payout history</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -275,9 +280,9 @@ export default function EarningsScreen() {
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: 40 }}>
-              {/* Total summary */}
+              {/* Total summary dark card */}
               <View style={styles.modalSummary}>
-                <Text style={styles.modalSummaryLabel}>Total paid out</Text>
+                <Text style={styles.modalSummaryLabel}>TOTAL PAID OUT</Text>
                 <Text style={styles.modalSummaryValue}>
                   {formatCurrency(payoutsData?.total_paid_out || 0)}
                 </Text>
@@ -301,60 +306,30 @@ export default function EarningsScreen() {
                 payoutsData.payouts.map((p) => (
                   <TouchableOpacity
                     key={p.id}
-                    style={styles.payoutCard}
+                    style={styles.payoutRow}
                     activeOpacity={0.7}
                     onPress={() => setExpandedPayout(expandedPayout === p.id ? null : p.id)}
                   >
-                    {/* Top row: amount + status */}
-                    <View style={styles.payoutTopRow}>
-                      <Text style={styles.payoutAmount}>{formatCurrency(p.amount)}</Text>
-                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(p.status) + '15' }]}>
-                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(p.status) }]} />
-                        <Text style={[styles.statusText, { color: getStatusColor(p.status) }]}>
-                          {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                        </Text>
-                      </View>
+                    {/* Checkmark icon */}
+                    <View style={[styles.payoutRowIcon, { backgroundColor: getStatusColor(p.status) + '18' }]}>
+                      <Ionicons name="checkmark" size={18} color={getStatusColor(p.status)} />
                     </View>
 
-                    {/* Details row */}
-                    <Text style={styles.payoutDetails}>
-                      {formatDate(p.initiated_at)}
-                      {p.bank_name ? `  ·  ${p.bank_name} ****${p.account_last4}` : ''}
-                    </Text>
-                    <Text style={styles.payoutMethod}>
-                      {getMethodLabel(p.method)}
-                      {p.transfer_reference ? `  ·  Ref: ${p.transfer_reference}` : ''}
-                    </Text>
-
-                    {p.booking_count > 0 && (
-                      <Text style={styles.payoutBookingCount}>
-                        {p.booking_count} booking{p.booking_count === 1 ? '' : 's'} included
-                        <Text style={{ color: COLORS.primary }}> {expandedPayout === p.id ? '▲' : '▼'}</Text>
+                    {/* Amount + details */}
+                    <View style={styles.payoutRowContent}>
+                      <Text style={styles.payoutAmount}>{formatCurrency(p.amount)}</Text>
+                      <Text style={styles.payoutDetails}>
+                        {formatMonthYear(p.initiated_at)}
+                        {p.bank_name ? ` · ${p.bank_name} ****${p.account_last4}` : p.transfer_reference ? ` · Ref: ${p.transfer_reference}` : ''}
                       </Text>
-                    )}
+                    </View>
 
-                    {/* Expanded booking details */}
-                    {expandedPayout === p.id && p.bookings.length > 0 && (
-                      <View style={styles.bookingsList}>
-                        {p.bookings.map((b, i) => (
-                          <View key={b.booking_code || i} style={styles.bookingRow}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.bookingCode}>{b.booking_code}</Text>
-                              <Text style={styles.bookingGuest}>
-                                {b.guest_name} · {b.nights} night{b.nights === 1 ? '' : 's'}
-                              </Text>
-                              <Text style={styles.bookingDates}>{b.check_in} → {b.check_out}</Text>
-                            </View>
-                            <Text style={styles.bookingAmount}>{formatCurrency(b.host_receives)}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Notes */}
-                    {p.notes && expandedPayout === p.id && (
-                      <Text style={styles.payoutNotes}>Note: {p.notes}</Text>
-                    )}
+                    {/* Status pill */}
+                    <View style={[styles.payoutStatusPill, { backgroundColor: getStatusColor(p.status) + '18' }]}>
+                      <Text style={[styles.payoutStatusTxt, { color: getStatusColor(p.status) }]}>
+                        {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 ))
               )}
@@ -466,7 +441,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  modalTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text },
+  modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
 
   modalSummary: {
     backgroundColor: COLORS.primaryDeep,
@@ -475,8 +450,8 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     marginBottom: SPACING.lg,
     alignItems: 'center',
   },
-  modalSummaryLabel: { fontSize: 11, color: 'rgba(251,244,236,0.65)', ...FONTS.semibold, letterSpacing: 1.3, textTransform: 'uppercase' },
-  modalSummaryValue: { fontSize: 36, ...FONTS.serifLight, color: COLORS.onPrimary, marginVertical: 4, letterSpacing: -0.5 },
+  modalSummaryLabel: { fontSize: 11, color: 'rgba(251,244,236,0.65)', ...FONTS.semibold, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
+  modalSummaryValue: { fontSize: 42, ...FONTS.serifLight, color: COLORS.onPrimary, marginVertical: 4, letterSpacing: -1 },
   modalSummaryCount: { fontSize: 13, color: 'rgba(251,244,236,0.55)', ...FONTS.medium },
 
   // Empty payouts
@@ -493,57 +468,19 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   emptyPayoutsTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
   emptyPayoutsText: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22, paddingHorizontal: SPACING.lg },
 
-  // Payout card
-  payoutCard: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  payoutTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  payoutAmount: { fontSize: 20, ...FONTS.bold, color: COLORS.text },
-  statusBadge: {
+  // Payout row (new clean design)
+  payoutRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: RADIUS.pill,
-  },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 12, ...FONTS.semibold },
-  payoutDetails: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
-  payoutMethod: { fontSize: 12, color: COLORS.textMut, marginTop: 2 },
-  payoutBookingCount: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, marginTop: 8 },
-
-  // Expanded bookings
-  bookingsList: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  bookingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
+    gap: 14,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  bookingCode: { fontSize: 13, ...FONTS.semibold, color: COLORS.primary },
-  bookingGuest: { fontSize: 12, color: COLORS.textSec, marginTop: 1 },
-  bookingDates: { fontSize: 11, color: COLORS.textMut, marginTop: 1 },
-  bookingAmount: { fontSize: 14, ...FONTS.bold, color: COLORS.text },
-
-  payoutNotes: {
-    fontSize: 12,
-    color: COLORS.textMut,
-    fontStyle: 'italic',
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
+  payoutRowIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  payoutRowContent: { flex: 1 },
+  payoutAmount: { fontSize: 17, ...FONTS.bold, color: COLORS.text },
+  payoutDetails: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, marginTop: 2 },
+  payoutStatusPill: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: RADIUS.pill },
+  payoutStatusTxt: { fontSize: 12, ...FONTS.semibold },
 });
