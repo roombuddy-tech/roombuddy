@@ -26,6 +26,7 @@ class ErrorCode:
     LISTING_NOT_FOUND = "LISTING_NOT_FOUND"
     SELF_BOOKING = "SELF_BOOKING"
     BOOKING_CONFLICT = "BOOKING_CONFLICT"
+    GENDER_MISMATCH = "gender_mismatch"
 
     # ── Payments ─────────────────────────────────────────────
     ALREADY_PAID = "ALREADY_PAID"

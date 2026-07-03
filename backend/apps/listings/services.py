@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.db import transaction
+from django.utils import timezone
 from django.db.models import Q
 
 from apps.amenities.models import AmenityDefinition
@@ -113,7 +114,6 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "room_type": room.room_type,
             "bed_type": room.bed_type,
             "bathroom_type": room.bathroom_type,
-            "room_size_sqft": room.room_size_sqft,
             "room_features": room.room_features if isinstance(room.room_features, list) else [],
         },
         "flatmates": [
@@ -227,7 +227,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         room.room_type = room_data["room_type"]
         room.bed_type = room_data["bed_type"]
         room.bathroom_type = room_data["bathroom_type"]
-        room.room_size_sqft = room_data.get("room_size_sqft")
+
         room.room_features = room_data.get("room_features", [])
         room.save()
 
@@ -240,6 +240,9 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         listing.food_meals_available = d.get("food_meals_available", False)
         listing.food_meal_cost = d.get("food_meal_cost")
         listing.food_meal_description = meal_desc or None
+        if listing.status == Listing.Status.PENDING and _listing_status_for_user(user) == Listing.Status.LIVE:
+            listing.status = Listing.Status.LIVE
+            listing.published_at = timezone.now()
         listing.save()
 
         ListingAmenity.objects.filter(listing=listing).delete()
@@ -419,7 +422,7 @@ def create_listing(user: User, data: dict) -> dict:
             room_type=room_data["room_type"],
             bed_type=room_data["bed_type"],
             bathroom_type=room_data["bathroom_type"],
-            room_size_sqft=room_data.get("room_size_sqft"),
+
             room_features=room_data.get("room_features", []),
         )
 
@@ -774,7 +777,6 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
             "room_type": room.room_type,
             "bed_type": room.bed_type,
             "bathroom_type": room.bathroom_type,
-            "room_size_sqft": room.room_size_sqft,
             "room_features": room.room_features if isinstance(room.room_features, list) else [],
         },
         "photos": photos,

@@ -182,7 +182,7 @@ export default function ListingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Modal visible={showVerification} animationType="slide">
-        <VerificationScreen visible={showVerification} onClose={handleVerificationClose} />
+        <VerificationScreen visible={showVerification} onClose={handleVerificationClose} onVerified={fetchListings} />
       </Modal>
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -293,15 +293,16 @@ export default function ListingsScreen() {
                     >
                       <View style={styles.photoContainer}>
                         <ListingThumbnail uri={item.cover_photo_url} styles={styles} COLORS={COLORS} />
+                        <View style={styles.statusOverlay}>
+                          <View style={[styles.statusOverlayDot, { backgroundColor: statusConfig.color }]} />
+                          <Text style={styles.statusOverlayTxt}>{statusConfig.label}</Text>
+                        </View>
                       </View>
 
                       <View style={styles.detailsContainer}>
                         <View style={styles.titleRow}>
                           <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                          <View style={styles.statusRow}>
-                            <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
-                            <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
-                          </View>
+                          <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.textMut} />
                         </View>
 
                         <Text style={styles.areaName}>{item.area_name}</Text>
@@ -314,7 +315,7 @@ export default function ListingsScreen() {
                           <View style={styles.statsRow}>
                             {item.average_rating ? (
                               <>
-                                <Text style={styles.star}>☆</Text>
+                                <Text style={styles.star}>★</Text>
                                 <Text style={styles.rating}>{item.average_rating}</Text>
                                 <Text style={styles.dot}>·</Text>
                               </>
@@ -440,25 +441,39 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   sectionLabel: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec, marginBottom: SPACING.sm },
 
   listingCard: {
-    flexDirection: 'row',
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
-    padding: SPACING.md,
     marginBottom: SPACING.sm,
+    overflow: 'hidden',
     ...SHADOW.sm,
   },
 
-  photoContainer: { marginRight: 12 },
-  photo: { width: 64, height: 64, borderRadius: RADIUS.sm, overflow: 'hidden' },
+  photoContainer: { position: 'relative' },
+  photo: { width: '100%', height: 160 },
   photoPlaceholder: { backgroundColor: COLORS.warm, justifyContent: 'center', alignItems: 'center' },
   photoEmoji: { fontSize: 32 },
 
-  detailsContainer: { flex: 1 },
+  statusOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusOverlayDot: { width: 6, height: 6, borderRadius: 3 },
+  statusOverlayTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
+
+  detailsContainer: { padding: SPACING.md },
 
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
-  listingTitle: { fontSize: 16, ...FONTS.serif, color: COLORS.text, flex: 1, marginRight: 8 },
+  listingTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, flex: 1, marginRight: 8 },
 
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },

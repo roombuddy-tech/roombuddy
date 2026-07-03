@@ -429,12 +429,6 @@ export default function GuestListingDetailScreen() {
                 <View style={styles.spaceCardIconWrap}><Ionicons name="water-outline" size={20} color={COLORS.primary} /></View>
                 <Text style={styles.spaceCardLabel}>{listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}</Text>
               </View>
-              {listing.room.room_size_sqft && (
-                <View style={styles.spaceCard}>
-                  <View style={styles.spaceCardIconWrap}><Ionicons name="expand-outline" size={20} color={COLORS.primary} /></View>
-                  <Text style={styles.spaceCardLabel}>{listing.room.room_size_sqft} sq ft</Text>
-                </View>
-              )}
             </View>
             {listing.room.room_features.length > 0 && (
               <>

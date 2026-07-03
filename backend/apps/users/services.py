@@ -644,12 +644,15 @@ def review_id_verification(user_id: str, action: str, reviewer: str, reason: str
         profile.id_rejection_reason = None
         promoted_count = Listing.objects.filter(
             host_user=user, status=Listing.Status.PENDING,
-        ).update(status=Listing.Status.LIVE)
+        ).update(status=Listing.Status.LIVE, published_at=timezone.now())
     elif action == "reject":
         if not reason:
             raise AuthServiceError("Rejection reason is required.", "REASON_REQUIRED", 400)
         profile.id_verification_status = UserProfile.IDVerificationStatus.REJECTED
         profile.id_rejection_reason = reason
+        Listing.objects.filter(
+            host_user=user, status=Listing.Status.LIVE,
+        ).update(status=Listing.Status.PENDING, published_at=None)
     else:
         raise AuthServiceError("Action must be 'approve' or 'reject'.", "INVALID_ACTION", 400)
 

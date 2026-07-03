@@ -54,7 +54,7 @@ class RoomInputSerializer(serializers.Serializer):
     room_type = serializers.ChoiceField(choices=["private", "shared"])
     bed_type = serializers.ChoiceField(choices=["single", "double", "queen", "king", "mattress"])
     bathroom_type = serializers.ChoiceField(choices=["attached", "shared"])
-    room_size_sqft = serializers.IntegerField(required=False, allow_null=True)
+
     room_features = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
     )

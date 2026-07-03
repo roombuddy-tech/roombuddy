@@ -61,7 +61,7 @@ interface FormData {
   roomType: string;
   bedType: string;
   bathroom: string;
-  roomSize: string;
+
   roomFeatures: string[];
   title: string;
   description: string;
@@ -113,7 +113,7 @@ const INIT: FormData = {
   roomType: '',
   bedType: '',
   bathroom: '',
-  roomSize: '',
+
   roomFeatures: [],
   title: '',
   description: '',
@@ -294,7 +294,7 @@ const makeHdrStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
 interface StepProps {
   form: FormData;
-  update: (u: Partial<FormData>) => void;
+  update: (u: Partial<FormData> | ((prev: FormData) => Partial<FormData>)) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -364,7 +364,7 @@ const makeBnStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderColor: COLORS.border,
   },
   backTxt: { fontSize: 15, ...FONTS.medium, color: COLORS.textSec },
-  next: { flex: 3, paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.md, backgroundColor: COLORS.primary },
+  next: { flex: 3, paddingVertical: 14, alignItems: 'center', borderRadius: RADIUS.pill, backgroundColor: COLORS.primary },
   nextTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
   errorBox: {
     flexDirection: 'row',
@@ -391,7 +391,7 @@ function Chip({
 }) {
   const COLORS = useThemeColors();
   const cpSt = useMemo(() => makeCpStyles(COLORS), [COLORS]);
-  const color = selected ? COLORS.primary : COLORS.textSec;
+  const color = selected ? '#fff' : COLORS.textSec;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -412,17 +412,18 @@ function Chip({
 
 const makeCpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: RADIUS.pill,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     marginRight: 8,
     marginBottom: 8,
+    backgroundColor: COLORS.bg,
   },
-  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
-  lblSel: { color: COLORS.primary },
+  lblSel: { color: '#fff' },
 });
 
 function AmenityChip({
@@ -443,7 +444,7 @@ function AmenityChip({
       activeOpacity={0.7}
       style={[acSt.chip, selected && acSt.sel]}
     >
-      <Ionicons name={iconName} size={13} color={selected ? COLORS.primary : COLORS.textSec} style={{ marginRight: 5 }} />
+      <Ionicons name={iconName} size={13} color={selected ? '#fff' : COLORS.textSec} style={{ marginRight: 5 }} />
       <Text style={[acSt.lbl, selected && acSt.lblSel]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -453,17 +454,18 @@ const makeAcStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: RADIUS.pill,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     marginRight: 8,
     marginBottom: 8,
+    backgroundColor: COLORS.bg,
   },
-  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
-  lblSel: { color: COLORS.primary },
+  lblSel: { color: '#fff' },
 });
 
 function OptionalMark() {
@@ -512,24 +514,23 @@ function Field({
 }
 
 const makeFldStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  label: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 6 },
+  label: { fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 0,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 15,
     color: COLORS.text,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.chip,
   },
-  multiline: { minHeight: 72, textAlignVertical: 'top', paddingTop: 12 },
+  multiline: { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 },
 });
 
 function SectionLabel({ label, optional }: { label: string; optional?: boolean }) {
   const COLORS = useThemeColors();
   return (
-    <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 16, marginBottom: 8 }}>
+    <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: 16, marginBottom: 8 }}>
       {label}
       {optional && <OptionalMark />}
     </Text>
@@ -651,12 +652,11 @@ const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 0,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: COLORS.bg,
+    paddingVertical: 14,
+    backgroundColor: COLORS.chip,
   },
   triggerTxt: { fontSize: 15, color: COLORS.text },
   overlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
@@ -733,7 +733,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
 const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingTop: SPACING.md },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
-  title: { fontSize: 28, ...FONTS.bold, color: COLORS.primaryDark, textAlign: 'center', marginBottom: SPACING.sm },
+  title: { fontSize: 28, ...FONTS.bold, color: COLORS.primary, textAlign: 'center', marginBottom: SPACING.sm },
   sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
   card: {
     flexDirection: 'row',
@@ -748,7 +748,7 @@ const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   },
   cta: {
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.pill,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: SPACING.xl,
@@ -785,7 +785,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Your property</Text>
+        <Text style={stSt.title}>Your Property</Text>
         <Text style={stSt.sub}>Share your apartment details so guests know what to expect.</Text>
 
         <SectionLabel label="Apartment type" />
@@ -896,8 +896,9 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderColor: COLORS.border,
     alignItems: 'center',
   },
-  aptCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  aptCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
   aptLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  aptLabelSel: { color: COLORS.primary },
   aptSub: { fontSize: 11, color: COLORS.textSec, textAlign: 'center' },
 });
 
@@ -908,8 +909,11 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const rdSt = useMemo(() => makeRdStyles(COLORS), [COLORS]);
   const toggleFeature = (f: string) => {
-    const cur = form.roomFeatures;
-    update({ roomFeatures: cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f] });
+    update((prev) => ({
+      roomFeatures: prev.roomFeatures.includes(f)
+        ? prev.roomFeatures.filter((x) => x !== f)
+        : [...prev.roomFeatures, f],
+    }));
   };
 
   const isValid = !!form.roomType && !!form.bedType && !!form.bathroom;
@@ -929,7 +933,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Room details</Text>
+        <Text style={stSt.title}>Room Details</Text>
         <Text style={stSt.sub}>Describe the room you're renting out.</Text>
 
         <SectionLabel label="Room type" />
@@ -1015,14 +1019,6 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
           ))}
         </View>
 
-        <Field
-          label="Room size"
-          placeholder="e.g. 12x14 ft"
-          value={form.roomSize}
-          onChange={(v) => update({ roomSize: v })}
-          optional
-        />
-
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -1037,7 +1033,7 @@ const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.border,
   },
-  typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  typeCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
   typeTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   typeSub: { fontSize: 12, color: COLORS.textSec, lineHeight: 16 },
 });
@@ -1050,7 +1046,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
   const LANDMARKS = ['Metro station', 'Bus stop', 'Tech park', 'Mall', 'Hospital', 'Restaurant hub'];
 
   const toggleLandmark = (l: string) => {
-    update({ nearbyLandmarks: form.nearbyLandmarks.includes(l) ? [] : [l] });
+    update((prev) => ({ nearbyLandmarks: prev.nearbyLandmarks.includes(l) ? [] : [l] }));
   };
 
   const isValid = form.title.trim().length > 0 && form.description.trim().length > 0;
@@ -1069,7 +1065,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Title & description</Text>
+        <Text style={stSt.title}>Title & Description</Text>
         <Text style={stSt.sub}>This is the first thing guests see. Make it count!</Text>
 
         <Field
@@ -1101,7 +1097,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
 
         {form.nearbyLandmarks.length > 0 && (
           <Field
-            label="Distance to nearest landmark (in minutes walk)"
+            label="Walking time to nearest landmark (minutes)"
             placeholder="e.g. 5"
             value={form.distanceToLandmark}
             onChange={(v) => update({ distanceToLandmark: v.replace(/[^0-9]/g, '') })}
@@ -1508,13 +1504,19 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const amSt = useMemo(() => makeAmStyles(COLORS), [COLORS]);
   const toggleAmenity = (a: string) => {
-    const cur = form.amenities;
-    update({ amenities: cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a] });
+    update((prev) => ({
+      amenities: prev.amenities.includes(a)
+        ? prev.amenities.filter((x) => x !== a)
+        : [...prev.amenities, a],
+    }));
   };
 
   const toggleMealType = (m: string) => {
-    const cur = form.mealTypes;
-    update({ mealTypes: cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m] });
+    update((prev) => ({
+      mealTypes: prev.mealTypes.includes(m)
+        ? prev.mealTypes.filter((x) => x !== m)
+        : [...prev.mealTypes, m],
+    }));
   };
 
   const requiredGroups = AMENITY_GROUPS.filter((g) => !g.optional);
@@ -1538,7 +1540,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={stSt.title}>Amenities & food</Text>
+      <Text style={stSt.title}>Amenities & Food</Text>
       <Text style={stSt.sub}>What's included in the stay? Guests see this before booking.</Text>
 
       {AMENITY_GROUPS.map((group) => (
@@ -1721,7 +1723,6 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
             <View key={cat.key} style={[phSt.categoryCard, hasPhotos && phSt.categoryCardFilled]}>
               {/* Row header */}
               <View style={phSt.categoryHeader}>
-                <Text style={phSt.categoryIcon}>{cat.icon}</Text>
                 <Text style={phSt.categoryName}>{cat.label}</Text>
                 {cat.required && !hasPhotos && (
                   <View style={phSt.requiredBadge}>
@@ -1743,7 +1744,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                 >
                   {isLoading
                     ? <ActivityIndicator size="small" color={COLORS.primary} />
-                    : <Ionicons name={hasPhotos ? 'add' : 'camera-outline'} size={18} color={COLORS.primary} />
+                    : <Ionicons name="add" size={18} color="#fff" />
                   }
                 </TouchableOpacity>
               </View>
@@ -1807,12 +1808,11 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     marginBottom: SPACING.sm,
     backgroundColor: COLORS.surface,
     overflow: 'hidden',
-    ...SHADOW.sm,
   },
   categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
   categoryIcon: { fontSize: 18 },
-  categoryName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  categoryName: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
   requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.border },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentSoft },
@@ -1821,9 +1821,7 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     width: 34,
     height: 34,
     borderRadius: 17,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryAlpha,
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1844,10 +1842,8 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     marginBottom: SPACING.md,
     paddingVertical: 16,
     borderRadius: RADIUS.sm,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
-    backgroundColor: COLORS.surface,
+    borderWidth: 0,
+    backgroundColor: COLORS.warm,
   },
   emptyPromptTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
 
@@ -1887,10 +1883,10 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>Set your price</Text>
+        <Text style={stSt.title}>Set Your Price</Text>
         <Text style={stSt.sub}>Set your nightly rate. We'll show you what guests pay and what you earn.</Text>
 
-        <Text style={fldSt.label}>Your nightly rate</Text>
+        <Text style={[fldSt.label, { textAlign: 'center', marginBottom: SPACING.sm }]}>Your nightly rate</Text>
         <View style={prSt.rateRow}>
           <Text style={prSt.rupee}>₹</Text>
           <TextInput
@@ -1933,8 +1929,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
               <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
             </View>
 
-            <View style={prSt.breakdownBox}>
-              <Text style={prSt.breakdownTitle}>You earn</Text>
+            <View style={prSt.earningsBox}>
+              <Text style={prSt.earningTitle}>You earn</Text>
               <PriceRow label="Room rate" value={`₹${rate}`} />
               {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
               <PriceRow label={`RoomBuddy fee (${CONFIG.HOST_PLATFORM_FEE_PCT * 100}% on room)`} value={`−₹${hostFee}`} muted />
@@ -1997,20 +1993,22 @@ function PriceRow({
 }
 
 const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 8 },
-  rupee: { fontSize: 28, ...FONTS.bold, color: COLORS.text },
-  rateInput: { fontSize: 52, ...FONTS.bold, color: COLORS.text, minWidth: 120, textAlign: 'center' },
-  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 8 },
+  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 4, backgroundColor: COLORS.chip, borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  rupee: { fontSize: 36, ...FONTS.bold, color: COLORS.text },
+  rateInput: { fontSize: 52, ...FONTS.extrabold, color: COLORS.text, minWidth: 100, textAlign: 'center' },
+  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 10 },
   breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
+  earningsBox: { backgroundColor: 'rgba(34,197,94,0.07)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
+  earningTitle: { fontSize: 13, ...FONTS.semibold, color: '#16A34A', marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
   tooltipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm, paddingHorizontal: 2 },
   tooltipText: { flex: 1, fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
   minStayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border },
-  minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.border },
+  minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   minStayTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  minStayTxtSel: { color: COLORS.primary, ...FONTS.semibold },
+  minStayTxtSel: { color: '#fff', ...FONTS.semibold },
 });
 
 // ─── Step 8: House Rules ──────────────────────────────────────────────────────
@@ -2034,10 +2032,10 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={stSt.title}>House rules</Text>
+        <Text style={stSt.title}>House Rules</Text>
         <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
-        <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
+        <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
           Common rules
         </Text>
 
@@ -2253,7 +2251,7 @@ function StepReview({
       ].filter(Boolean).join(' · '),
     },
     {
-      label: 'House rules',
+      label: 'House Rules',
       step: 8,
       value: [
         ruleCount > 0 ? `${ruleCount} rule${ruleCount > 1 ? 's' : ''} set` : null,
@@ -2268,7 +2266,7 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={stSt.title}>{isEditMode ? 'Review & update' : 'Review & list'}</Text>
+      <Text style={stSt.title}>{isEditMode ? 'Review & Update' : 'Review & List'}</Text>
       <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
       {/* Tappable preview card → full guest view */}
@@ -2284,37 +2282,27 @@ function StepReview({
             <Ionicons name="home-outline" size={36} color={COLORS.textMut} />
           </View>
         )}
-
-        {tags.length > 0 && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACING.sm }}>
-            {tags.map((tag) => (
-              <View key={tag} style={rvSt.tag}>
-                <Text style={rvSt.tagTxt}>{tag}</Text>
+        <View style={{ padding: SPACING.md }}>
+          <Text style={rvSt.previewTitle} numberOfLines={2}>
+            {form.title || 'Your listing title'}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            {rate > 0 && (
+              <Text style={rvSt.price}>
+                ₹{rate.toLocaleString('en-IN')}
+                <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
+              </Text>
+            )}
+            {!isEditMode && (
+              <View style={rvSt.newBadge}>
+                <Text style={rvSt.newTxt}>✨ New listing</Text>
               </View>
-            ))}
+            )}
           </View>
-        )}
-
-        <Text style={rvSt.previewTitle} numberOfLines={2}>
-          {form.title || 'Your listing title'}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          {rate > 0 && (
-            <Text style={rvSt.price}>
-              ₹{rate.toLocaleString('en-IN')}
-              <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
-            </Text>
-          )}
-          {!isEditMode && (
-            <View style={rvSt.newBadge}>
-              <Text style={rvSt.newTxt}>✨ New listing</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={rvSt.tapHint}>
-          <Ionicons name="eye-outline" size={13} color={COLORS.primary} />
-          <Text style={rvSt.tapHintTxt}>Tap to see guest view</Text>
+          <View style={rvSt.tapHint}>
+            <Ionicons name="eye-outline" size={13} color={COLORS.primary} />
+            <Text style={rvSt.tapHintTxt}>Tap to see guest view</Text>
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -2363,9 +2351,9 @@ function StepReview({
 }
 
 const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  previewCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg, ...SHADOW.sm },
-  coverPhoto: { width: '100%', height: 140, borderRadius: RADIUS.sm },
-  photoPlaceholder: { height: 120, backgroundColor: COLORS.warm, borderRadius: RADIUS.sm, justifyContent: 'center', alignItems: 'center' },
+  previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.sm },
+  coverPhoto: { width: '100%', height: 150, borderRadius: 0 },
+  photoPlaceholder: { height: 150, backgroundColor: COLORS.warm, borderRadius: 0, justifyContent: 'center', alignItems: 'center' },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   tagTxt: { fontSize: 11, ...FONTS.medium, color: COLORS.textSec },
   previewTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 6 },
@@ -2374,12 +2362,12 @@ const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.accent },
   tapHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, justifyContent: 'center' },
   tapHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
-  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
-  summaryLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 2 },
-  summaryValue: { fontSize: 14, color: COLORS.text },
-  editBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border },
-  editTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
-  publishBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 16, alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.sm },
+  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
+  summaryLabel: { fontSize: 11, ...FONTS.semibold, color: COLORS.textMut, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+  summaryValue: { fontSize: 14, ...FONTS.medium, color: COLORS.text },
+  editBtn: { paddingLeft: SPACING.sm },
+  editTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.primary },
+  publishBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 16, alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.sm },
   backBtn: { alignItems: 'center', paddingVertical: SPACING.sm, marginBottom: SPACING.lg },
 });
 
@@ -2387,7 +2375,7 @@ const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
 
 const makeStStyles = (COLORS: ThemeColors) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
-  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
+  title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
   infoBox: {
     flexDirection: 'row',
@@ -2433,10 +2421,23 @@ function mapListingToForm(data: any): FormData {
     roomType: r.room_type,
     bedType: r.bed_type,
     bathroom: r.bathroom_type,
-    roomSize: r.room_size_sqft != null ? String(r.room_size_sqft) : '',
+
     roomFeatures: r.room_features || [],
     title: data.title,
-    description: data.description || '',
+    description: (() => {
+      const raw = data.description || '';
+      return raw.replace(/\n\nNearby: .+?(?:\s\(\d+ min walk\))?$/, '').trim();
+    })(),
+    nearbyLandmarks: (() => {
+      const raw = data.description || '';
+      const m = raw.match(/\n\nNearby: (.+?)(?:\s\((\d+) min walk\))?$/);
+      return m ? [m[1]] : [];
+    })(),
+    distanceToLandmark: (() => {
+      const raw = data.description || '';
+      const m = raw.match(/\n\nNearby: .+?\s\((\d+) min walk\)$/);
+      return m ? m[1] : '';
+    })(),
     flatmates: realFlatmates.map((f: any) => ({
       id: f.id || String(Date.now() + Math.random()),
       name: f.name,
@@ -2543,7 +2544,9 @@ export default function ListingEditorScreen() {
     }
   }, [listingId, resumeDraft, draftKey]);
 
-  const update = useCallback((u: Partial<FormData>) => setForm((prev) => ({ ...prev, ...u })), []);
+  const update = useCallback((u: Partial<FormData> | ((prev: FormData) => Partial<FormData>)) => {
+    setForm((prev) => ({ ...prev, ...(typeof u === 'function' ? u(prev) : u) }));
+  }, []);
 
   const next = useCallback(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS)), []);
 

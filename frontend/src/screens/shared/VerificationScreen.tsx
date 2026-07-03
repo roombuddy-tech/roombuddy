@@ -12,6 +12,7 @@ import { getErrorMessage } from '../../utils/errors';
 interface VerificationScreenProps {
   visible: boolean;
   onClose: () => void;
+  onVerified?: () => void;
 }
 
 interface VerificationStatus {
@@ -24,7 +25,7 @@ interface VerificationStatus {
   id_rejection_reason: string | null;
 }
 
-export default function VerificationScreen({ visible, onClose }: VerificationScreenProps) {
+export default function VerificationScreen({ visible, onClose, onVerified }: VerificationScreenProps) {
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const [status, setStatus] = useState<VerificationStatus | null>(null);
@@ -50,8 +51,12 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
     setLoading(true);
     try {
       const res = await api.get(ENDPOINTS.USER.VERIFICATION_STATUS);
+      const prevStatus = status?.id_verification_status;
       setStatus(res.data);
       if (res.data.email) setEmailInput(res.data.email);
+      if (prevStatus !== 'approved' && res.data.id_verification_status === 'approved') {
+        onVerified?.();
+      }
     } catch (err) {
       console.log('Verification status error:', err);
     } finally {
@@ -163,24 +168,36 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
           {/* Phone */}
           <View style={styles.verifyCard}>
             <View style={styles.verifyRow}>
-              <Ionicons name="call-outline" size={22} color={status?.phone_verified ? '#10B981' : COLORS.textMut} />
+              <View style={[styles.verifyIconCircle, { backgroundColor: 'rgba(34,197,94,0.1)' }]}>
+                <Ionicons name="call-outline" size={20} color="#10B981" />
+              </View>
               <View style={styles.verifyContent}>
                 <Text style={styles.verifyLabel}>Phone number</Text>
-                <Text style={styles.verifyStatus}>{status?.phone_verified ? `Verified\n(${status.phone})` : 'Not verified'}</Text>
+                <Text style={styles.verifyStatusGreen}>{status?.phone_verified ? 'Verified' : 'Not verified'}</Text>
+                {status?.phone && <Text style={styles.verifyValue}>{status.phone}</Text>}
               </View>
-              {status?.phone_verified ? <Ionicons name="checkmark-circle" size={24} color="#10B981" /> : <Ionicons name="close-circle-outline" size={24} color={COLORS.textMut} />}
+              {status?.phone_verified
+                ? <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                : <Ionicons name="close-circle-outline" size={24} color={COLORS.textMut} />}
             </View>
           </View>
 
           {/* Email */}
           <View style={styles.verifyCard}>
             <View style={styles.verifyRow}>
-              <Ionicons name="mail-outline" size={22} color={status?.email_verified ? '#10B981' : COLORS.textMut} />
+              <View style={[styles.verifyIconCircle, { backgroundColor: 'rgba(34,197,94,0.1)' }]}>
+                <Ionicons name="mail-outline" size={20} color="#10B981" />
+              </View>
               <View style={styles.verifyContent}>
                 <Text style={styles.verifyLabel}>Email address</Text>
-                <Text style={styles.verifyStatus}>{status?.email_verified ? `Verified\n(${status.email})` : 'Not verified'}</Text>
+                <Text style={status?.email_verified ? styles.verifyStatusGreen : styles.verifyStatus}>
+                  {status?.email_verified ? 'Verified' : 'Not verified'}
+                </Text>
+                {status?.email && <Text style={styles.verifyValue}>{status.email}</Text>}
               </View>
-              {status?.email_verified ? <Ionicons name="checkmark-circle" size={24} color="#10B981" /> : <Ionicons name="close-circle-outline" size={24} color={COLORS.textMut} />}
+              {status?.email_verified
+                ? <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                : <Ionicons name="close-circle-outline" size={24} color={COLORS.textMut} />}
             </View>
 
             {!status?.email_verified && (
@@ -222,10 +239,21 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
           {/* Aadhaar / ID Verification */}
           <View style={styles.verifyCard}>
             <View style={styles.verifyRow}>
-              <Ionicons name="id-card-outline" size={22} color={idStatus === 'approved' ? '#10B981' : idStatus === 'pending' ? '#F59E0B' : COLORS.textMut} />
+              <View style={[styles.verifyIconCircle, {
+                backgroundColor: idStatus === 'approved' ? 'rgba(34,197,94,0.1)' : idStatus === 'pending' ? 'rgba(245,158,11,0.1)' : COLORS.chip,
+              }]}>
+                <Ionicons
+                  name="id-card-outline"
+                  size={20}
+                  color={idStatus === 'approved' ? '#10B981' : idStatus === 'pending' ? '#F59E0B' : COLORS.textMut}
+                />
+              </View>
               <View style={styles.verifyContent}>
                 <Text style={styles.verifyLabel}>Aadhaar</Text>
-                <Text style={[styles.verifyStatus, idStatus === 'rejected' && { color: '#EF4444' }]}>{getAadhaarStatusText()}</Text>
+                <Text style={[
+                  idStatus === 'approved' ? styles.verifyStatusGreen : styles.verifyStatus,
+                  idStatus === 'rejected' && { color: '#EF4444' },
+                ]}>{getAadhaarStatusText()}</Text>
               </View>
               {getAadhaarIcon()}
             </View>
@@ -289,7 +317,7 @@ export default function VerificationScreen({ visible, onClose }: VerificationScr
           </View>
 
           <View style={styles.infoCard}>
-            <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
+            <Ionicons name="information-circle-outline" size={20} color="#10B981" />
             <Text style={styles.infoText}>Verifying your identity helps build trust with other users and unlocks additional features. Your Aadhaar photo is stored securely and never shared publicly.</Text>
           </View>
         </ScrollView>
@@ -304,11 +332,14 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md },
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   content: { marginTop: SPACING.md },
-  verifyCard: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
-  verifyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  verifyCard: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm },
+  verifyRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  verifyIconCircle: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
   verifyContent: { flex: 1 },
   verifyLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   verifyStatus: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
+  verifyStatusGreen: { fontSize: 13, color: '#10B981', ...FONTS.medium, marginTop: 2 },
+  verifyValue: { fontSize: 13, color: COLORS.textSec, marginTop: 1 },
   emailSection: { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 12, marginBottom: SPACING.sm },
   sendBtn: { backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.md, alignItems: 'center' },
@@ -341,6 +372,6 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   pendingText: { fontSize: 13, color: COLORS.textSec, textAlign: 'center', lineHeight: 20, marginBottom: SPACING.md },
   refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 16, borderWidth: 1, borderColor: COLORS.primary, borderRadius: RADIUS.md },
   refreshBtnText: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
-  infoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: SPACING.md, backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md, marginTop: SPACING.md },
-  infoText: { flex: 1, fontSize: 13, color: COLORS.primary, lineHeight: 19 },
+  infoCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: SPACING.md, backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: RADIUS.md, marginTop: SPACING.md },
+  infoText: { flex: 1, fontSize: 13, color: '#15803D', lineHeight: 19 },
 });

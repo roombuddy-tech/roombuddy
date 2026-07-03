@@ -41,8 +41,8 @@ export default function HelpSupportScreen({ visible, onClose }: HelpSupportScree
         <Text style={styles.sectionTitle}>Get in touch</Text>
 
         <TouchableOpacity style={styles.contactCard} onPress={handleEmail}>
-          <View style={[styles.contactIcon, { backgroundColor: COLORS.primaryAlpha }]}>
-            <Ionicons name="mail-outline" size={22} color={COLORS.primary} />
+          <View style={[styles.contactIcon, { backgroundColor: '#EEF0FF' }]}>
+            <Ionicons name="mail-outline" size={22} color="#5B5FC7" />
           </View>
           <View style={styles.contactContent}>
             <Text style={styles.contactLabel}>Email us</Text>
@@ -53,7 +53,7 @@ export default function HelpSupportScreen({ visible, onClose }: HelpSupportScree
 
         <TouchableOpacity style={styles.contactCard} onPress={handleWhatsApp}>
           <View style={[styles.contactIcon, { backgroundColor: '#E6F9F0' }]}>
-            <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
+            <Ionicons name="chatbubble-outline" size={22} color="#25D366" />
           </View>
           <View style={styles.contactContent}>
             <Text style={styles.contactLabel}>WhatsApp</Text>
@@ -63,8 +63,8 @@ export default function HelpSupportScreen({ visible, onClose }: HelpSupportScree
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.contactCard} onPress={handleCall}>
-          <View style={[styles.contactIcon, { backgroundColor: '#EEF0FF' }]}>
-            <Ionicons name="call-outline" size={22} color="#5B5FC7" />
+          <View style={[styles.contactIcon, { backgroundColor: COLORS.accentSoft }]}>
+            <Ionicons name="call-outline" size={22} color={COLORS.accent} />
           </View>
           <View style={styles.contactContent}>
             <Text style={styles.contactLabel}>Call us</Text>
@@ -104,14 +104,14 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.md },
   headerTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
-  content: { flex: 1, paddingBottom: 40 },
-  sectionTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
-  contactCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  content: { flex: 1 },
+  sectionTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
+  contactCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, paddingVertical: SPACING.md, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm },
   contactIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   contactContent: { flex: 1 },
   contactLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   contactValue: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
-  faqCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
-  faqQ: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 6 },
+  faqCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm },
+  faqQ: { fontSize: 15, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   faqA: { fontSize: 13, color: COLORS.textSec, lineHeight: 20 },
 });

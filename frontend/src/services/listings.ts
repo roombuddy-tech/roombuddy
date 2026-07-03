@@ -24,7 +24,7 @@ export async function createListing(form: {
   roomType: string;
   bedType: string;
   bathroom: string;
-  roomSize: string;
+
   roomFeatures: string[];
   title: string;
   description: string;
@@ -91,7 +91,7 @@ export async function createListing(form: {
       room_type: form.roomType,
       bed_type: form.bedType,
       bathroom_type: form.bathroom,
-      room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
+
       room_features: form.roomFeatures,
     },
     flatmates: [
@@ -196,7 +196,7 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       room_type: form.roomType,
       bed_type: form.bedType,
       bathroom_type: form.bathroom,
-      room_size_sqft: form.roomSize ? parseInt(form.roomSize, 10) : null,
+
       room_features: form.roomFeatures,
     },
     flatmates: [
@@ -249,16 +249,15 @@ function _buildDescription(form: {
   nearbyLandmarks: string[];
   distanceToLandmark: string;
 }): string {
-  const parts: string[] = [];
-  if (form.description.trim()) parts.push(form.description.trim());
-
+  let desc = form.description.trim();
   if (form.nearbyLandmarks.length > 0) {
-    const dist = form.distanceToLandmark.trim();
-    const landmarks = form.nearbyLandmarks.join(', ');
-    parts.push(`Nearby: ${landmarks}${dist ? ` (${dist})` : ''}`);
+    const landmark = form.nearbyLandmarks[0];
+    const dist = form.distanceToLandmark?.trim();
+    desc += dist
+      ? `\n\nNearby: ${landmark} (${dist} min walk)`
+      : `\n\nNearby: ${landmark}`;
   }
-
-  return parts.join('\n\n');
+  return desc;
 }
 
 function _mapMinStay(val: string): number {
