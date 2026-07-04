@@ -770,6 +770,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
             "apartment_type": prop.apartment_type,
             "apartment_name": prop.apartment_name,
             "city_name": prop.city_name,
+            "gender_preference": prop.gender_preference,
             "latitude": float(prop.latitude) if prop.latitude else None,
             "longitude": float(prop.longitude) if prop.longitude else None,
         },

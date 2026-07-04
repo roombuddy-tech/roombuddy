@@ -103,6 +103,19 @@ export default function BookingConfirmScreen() {
   const genderLabel = genderPreference === 'female_only' ? 'Female guests only'
     : genderPreference === 'male_only' ? 'Male guests only' : '';
 
+  useEffect(() => {
+    if (genderMismatch && guestProfile) {
+      Alert.alert(
+        'Cannot book this property',
+        `This listing is for ${genderLabel.toLowerCase()}. Your profile gender (${guestProfile.gender}) does not match.\n\nPlease look for other listings that match your profile.`,
+        [
+          { text: 'Go back', onPress: () => navigation.goBack() },
+          { text: 'Stay here', style: 'cancel' },
+        ],
+      );
+    }
+  }, [genderMismatch, guestProfile]);
+
   const fetchQuote = async (mealOpt: boolean) => {
     setLoading(true);
     try {
@@ -186,18 +199,22 @@ const policyMeta =  POLICY_META.flexible;
           </View>
         </View>
 
-        {/* Guest details */}
+        {/* Guest details — booking is for the logged-in user */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Guest details</Text>
+          <Text style={styles.cardTitle}>Booking for</Text>
           {guestProfile ? (
             <>
               <View style={styles.row}>
                 <Text style={styles.label}>Name</Text>
                 <Text style={styles.value}>{guestProfile.first_name} {guestProfile.last_name}</Text>
               </View>
-              <View style={[styles.row, { marginBottom: 0 }]}>
+              <View style={styles.row}>
                 <Text style={styles.label}>Gender</Text>
                 <Text style={styles.value}>{guestProfile.gender.charAt(0).toUpperCase() + guestProfile.gender.slice(1)}</Text>
+              </View>
+              <View style={[styles.row, { marginBottom: 0 }]}>
+                <Text style={styles.label}>Phone</Text>
+                <Text style={styles.value}>{user?.phone || '—'}</Text>
               </View>
             </>
           ) : (
