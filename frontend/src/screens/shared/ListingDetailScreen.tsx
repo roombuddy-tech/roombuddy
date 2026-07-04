@@ -94,8 +94,6 @@ export default function ListingDetailScreen() {
   const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
-  const reviewInitials = (name: string) =>
-    name?.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '';
 
   const StarDisplay = ({ rating }: { rating: number }) => (
     <View style={{ flexDirection: 'row', gap: 2 }}>
@@ -120,7 +118,7 @@ export default function ListingDetailScreen() {
       <TouchableOpacity style={styles.reviewCard} activeOpacity={0.8} onPress={() => toggleReviewExpand(review.id)}>
         <View style={styles.reviewCardTop}>
           <View style={styles.reviewerAvatar}>
-            <Text style={styles.reviewerInitials}>{reviewInitials(review.reviewer_name) || 'G'}</Text>
+            <Text style={styles.reviewerInitials}>{initials(review.reviewer_name) || 'G'}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
