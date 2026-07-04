@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ import { useThemeColors } from '../../context/ThemeContext';
 import { CONFIG } from '../../constants/config';
 import type { HostStackParamList } from '../../navigation/types';
 import { getListing, updateBlockedDates, deleteListing, toggleSnooze } from '../../services/listings';
+import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'ListingDetail'>;
 type Route = RouteProp<HostStackParamList, 'ListingDetail'>;
@@ -89,6 +91,76 @@ export default function ListingDetailScreen() {
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [listingStatus, setListingStatus] = useState<string>(item?.status ?? 'live');
   const [togglingSnooze, setTogglingSnooze] = useState(false);
+  const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  const reviewInitials = (name: string) =>
+    name?.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '';
+
+  const StarDisplay = ({ rating }: { rating: number }) => (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons key={i} name={i <= rating ? 'star' : 'star-outline'} size={14} color="#F59E0B" />
+      ))}
+    </View>
+  );
+
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
+  const toggleReviewExpand = (id: string) => {
+    setExpandedReviews((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const ReviewCard = ({ review }: { review: ReviewItem }) => {
+    const isExpanded = expandedReviews.has(review.id);
+    return (
+      <TouchableOpacity style={styles.reviewCard} activeOpacity={0.8} onPress={() => toggleReviewExpand(review.id)}>
+        <View style={styles.reviewCardTop}>
+          <View style={styles.reviewerAvatar}>
+            <Text style={styles.reviewerInitials}>{reviewInitials(review.reviewer_name) || 'G'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
+            <Text style={styles.reviewDate}>
+              {new Date(review.submitted_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            </Text>
+          </View>
+          <StarDisplay rating={review.overall_rating} />
+        </View>
+        {review.title ? <Text style={styles.reviewTitle}>{review.title}</Text> : null}
+        {review.body ? (
+          <>
+            <Text style={styles.reviewBody} numberOfLines={isExpanded ? undefined : 4}>{review.body}</Text>
+            {!isExpanded && review.body.length > 120 && (
+              <Text style={styles.readMore}>Read more</Text>
+            )}
+          </>
+        ) : null}
+        {review.host_response ? (
+          <View style={styles.hostReply}>
+            <Text style={styles.hostReplyLabel}>Your response</Text>
+            <Text style={styles.hostReplyBody}>{review.host_response}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
+  const BREAKDOWN_LABELS: Record<string, string> = {
+    cleanliness: 'Cleanliness',
+    accuracy: 'Accuracy',
+    communication: 'Communication',
+    location: 'Location',
+    value: 'Value for money',
+    food: 'Food & Kitchen',
+  };
+
+  const breakdownEntries = reviewsData
+    ? (Object.entries(reviewsData.breakdown).filter(([, v]) => v != null) as [string, number][])
+    : [];
 
   const hasUnsavedDates = JSON.stringify(blockedDates) !== JSON.stringify(savedDates);
 
@@ -105,6 +177,7 @@ export default function ListingDetailScreen() {
             if (data.status) setListingStatus(data.status);
           })
           .catch(() => {});
+        getListingReviews(item.listing_id).then(setReviewsData).catch(() => {});
       }
     }, [item?.listing_id, isPreview]),
   );
@@ -678,6 +751,42 @@ export default function ListingDetailScreen() {
 
               <Divider />
 
+              {/* ── Reviews ── */}
+              {!isPreview && reviewsData && reviewsData.total > 0 && (
+                <>
+                  <View style={styles.reviewsHeaderRow}>
+                    <View style={styles.sectionAccent} />
+                    <Ionicons name="star" size={18} color="#F59E0B" />
+                    <Text style={styles.sectionHeader}>
+                      {reviewsData.average_rating?.toFixed(1)}{'  ·  '}{reviewsData.total} review{reviewsData.total !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                  {breakdownEntries.length > 0 && (
+                    <View style={styles.breakdownWrap}>
+                      {breakdownEntries.map(([key, val]) => (
+                        <View key={key} style={[styles.breakdownRow, { marginBottom: key === breakdownEntries[breakdownEntries.length - 1][0] ? 0 : 10 }]}>
+                          <Text style={styles.breakdownLabel}>{BREAKDOWN_LABELS[key] ?? key}</Text>
+                          <View style={styles.breakdownTrack}>
+                            <View style={[styles.breakdownFill, { width: `${(val / 5) * 100}%` as any }]} />
+                          </View>
+                          <Text style={styles.breakdownVal}>{val.toFixed(1)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: SPACING.lg }}>
+                    {reviewsData.reviews.map((r) => <ReviewCard key={r.id} review={r} />)}
+                  </ScrollView>
+                  {reviewsData.total > reviewsData.reviews.length && (
+                    <TouchableOpacity style={styles.showAllReviewsBtn} activeOpacity={0.7} onPress={() => setShowAllReviews(true)}>
+                      <Text style={styles.showAllReviewsTxt}>Show all {reviewsData.total} reviews</Text>
+                      <Ionicons name="chevron-forward" size={16} color={COLORS.text} />
+                    </TouchableOpacity>
+                  )}
+                  <View style={{ height: SPACING.md }} />
+                </>
+              )}
+
               {/* Availability — interactive calendar */}
               {item && (
                 <>
@@ -822,6 +931,46 @@ export default function ListingDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* ── All Reviews modal ── */}
+      <Modal visible={showAllReviews} animationType="slide">
+        <SafeAreaView style={styles.allReviewsModal}>
+          <View style={styles.allReviewsHeader}>
+            <TouchableOpacity onPress={() => setShowAllReviews(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="star" size={16} color="#F59E0B" />
+                <Text style={styles.allReviewsTitle}>
+                  {reviewsData?.average_rating?.toFixed(1)} · {reviewsData?.total} review{reviewsData?.total !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            <View style={{ width: 24 }} />
+          </View>
+          {breakdownEntries.length > 0 && (
+            <View style={[styles.breakdownWrap, { marginHorizontal: SPACING.lg, marginBottom: SPACING.md }]}>
+              {breakdownEntries.map(([key, val]) => (
+                <View key={key} style={[styles.breakdownRow, { marginBottom: key === breakdownEntries[breakdownEntries.length - 1][0] ? 0 : 10 }]}>
+                  <Text style={styles.breakdownLabel}>{BREAKDOWN_LABELS[key] ?? key}</Text>
+                  <View style={styles.breakdownTrack}>
+                    <View style={[styles.breakdownFill, { width: `${(val / 5) * 100}%` as any }]} />
+                  </View>
+                  <Text style={styles.breakdownVal}>{val.toFixed(1)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          <FlatList
+            data={reviewsData?.reviews ?? []}
+            keyExtractor={(r) => r.id}
+            contentContainerStyle={{ paddingHorizontal: SPACING.lg, paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item: r }) => <ReviewCard review={r} />}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1129,4 +1278,29 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   customRuleLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 4 },
   customRuleTxt: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
+
+  reviewsHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  breakdownLabel: { width: 116, fontSize: 13, color: COLORS.textSec },
+  breakdownTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: COLORS.border, overflow: 'hidden' },
+  breakdownFill: { height: 5, borderRadius: 3, backgroundColor: '#F59E0B' },
+  breakdownVal: { width: 30, fontSize: 13, ...FONTS.semibold, color: COLORS.text, textAlign: 'right' as const },
+  reviewCard: { width: 280, backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  reviewCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  reviewerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, alignItems: 'center', justifyContent: 'center' },
+  reviewerInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
+  reviewerName: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  reviewDate: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
+  reviewTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
+  reviewBody: { fontSize: 14, color: COLORS.textSec, lineHeight: 21 },
+  readMore: { fontSize: 13, ...FONTS.semibold, color: COLORS.primary, marginTop: 4 },
+  hostReply: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
+  hostReplyLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
+  hostReplyBody: { fontSize: 13, color: COLORS.textSec, lineHeight: 19 },
+  showAllReviewsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 14, borderWidth: 1.5, borderColor: COLORS.text, borderRadius: RADIUS.md, marginTop: SPACING.xs },
+  showAllReviewsTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  allReviewsModal: { flex: 1, backgroundColor: COLORS.bg },
+  allReviewsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  allReviewsTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 });

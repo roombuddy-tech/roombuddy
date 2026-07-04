@@ -135,30 +135,48 @@ export default function GuestListingDetailScreen() {
     </View>
   );
 
-  const ReviewCard = ({ review }: { review: ReviewItem }) => (
-    <View style={styles.reviewCard}>
-      <View style={styles.reviewCardTop}>
-        <View style={styles.reviewerAvatar}>
-          <Text style={styles.reviewerInitials}>{initials(review.reviewer_name) || 'G'}</Text>
+  const toggleReviewExpand = (id: string) => {
+    setExpandedReviews((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const ReviewCard = ({ review }: { review: ReviewItem }) => {
+    const isExpanded = expandedReviews.has(review.id);
+    return (
+      <TouchableOpacity style={styles.reviewCard} activeOpacity={0.8} onPress={() => toggleReviewExpand(review.id)}>
+        <View style={styles.reviewCardTop}>
+          <View style={styles.reviewerAvatar}>
+            <Text style={styles.reviewerInitials}>{initials(review.reviewer_name) || 'G'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
+            <Text style={styles.reviewDate}>
+              {new Date(review.submitted_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            </Text>
+          </View>
+          <StarDisplay rating={review.overall_rating} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
-          <Text style={styles.reviewDate}>
-            {new Date(review.submitted_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-          </Text>
-        </View>
-        <StarDisplay rating={review.overall_rating} />
-      </View>
-      {review.title ? <Text style={styles.reviewTitle}>{review.title}</Text> : null}
-      {review.body ? <Text style={styles.reviewBody} numberOfLines={4}>{review.body}</Text> : null}
-      {review.host_response ? (
-        <View style={styles.hostReply}>
-          <Text style={styles.hostReplyLabel}>Response from host</Text>
-          <Text style={styles.hostReplyBody}>{review.host_response}</Text>
-        </View>
-      ) : null}
-    </View>
-  );
+        {review.title ? <Text style={styles.reviewTitle}>{review.title}</Text> : null}
+        {review.body ? (
+          <>
+            <Text style={styles.reviewBody} numberOfLines={isExpanded ? undefined : 4}>{review.body}</Text>
+            {!isExpanded && review.body.length > 120 && (
+              <Text style={styles.readMore}>Read more</Text>
+            )}
+          </>
+        ) : null}
+        {review.host_response ? (
+          <View style={styles.hostReply}>
+            <Text style={styles.hostReplyLabel}>Response from host</Text>
+            <Text style={styles.hostReplyBody}>{review.host_response}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,6 +186,8 @@ export default function GuestListingDetailScreen() {
   const [checkIn, setCheckIn] = useState<string | null>(passedCheckIn ?? null);
   const [checkOut, setCheckOut] = useState<string | null>(passedCheckOut ?? null);
   const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
   const [showHostModal, setShowHostModal] = useState(false);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
@@ -590,9 +610,14 @@ export default function GuestListingDetailScreen() {
                   ))}
                 </View>
               )}
-              {reviewsData!.reviews.slice(0, 3).map((r) => <ReviewCard key={r.id} review={r} />)}
-              {reviewsData!.total > 3 && (
-                <Text style={styles.moreReviews}>+ {reviewsData!.total - 3} more review{reviewsData!.total - 3 !== 1 ? 's' : ''}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: SPACING.lg }}>
+                {reviewsData!.reviews.map((r) => <ReviewCard key={r.id} review={r} />)}
+              </ScrollView>
+              {reviewsData!.total > reviewsData!.reviews.length && (
+                <TouchableOpacity style={styles.showAllReviewsBtn} activeOpacity={0.7} onPress={() => setShowAllReviews(true)}>
+                  <Text style={styles.showAllReviewsTxt}>Show all {reviewsData!.total} reviews</Text>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -747,6 +772,46 @@ export default function GuestListingDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── All Reviews modal ── */}
+      <Modal visible={showAllReviews} animationType="slide">
+        <SafeAreaView style={styles.allReviewsModal}>
+          <View style={styles.allReviewsHeader}>
+            <TouchableOpacity onPress={() => setShowAllReviews(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="star" size={16} color="#F59E0B" />
+                <Text style={styles.allReviewsTitle}>
+                  {reviewsData?.average_rating?.toFixed(1)} · {reviewsData?.total} review{reviewsData?.total !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            <View style={{ width: 24 }} />
+          </View>
+          {breakdownEntries.length > 0 && (
+            <View style={[styles.breakdownWrap, { marginHorizontal: SPACING.lg, marginBottom: SPACING.md }]}>
+              {breakdownEntries.map(([key, val]) => (
+                <View key={key} style={[styles.breakdownRow, { marginBottom: key === breakdownEntries[breakdownEntries.length - 1][0] ? 0 : 10 }]}>
+                  <Text style={styles.breakdownLabel}>{BREAKDOWN_LABELS[key] ?? key}</Text>
+                  <View style={styles.breakdownTrack}>
+                    <View style={[styles.breakdownFill, { width: `${(val / 5) * 100}%` as any }]} />
+                  </View>
+                  <Text style={styles.breakdownVal}>{val.toFixed(1)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          <FlatList
+            data={reviewsData?.reviews ?? []}
+            keyExtractor={(r) => r.id}
+            contentContainerStyle={{ paddingHorizontal: SPACING.lg, paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item: r }) => <ReviewCard review={r} />}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -830,7 +895,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   breakdownTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: COLORS.border, overflow: 'hidden' },
   breakdownFill: { height: 5, borderRadius: 3, backgroundColor: '#F59E0B' },
   breakdownVal: { width: 30, fontSize: 13, ...FONTS.semibold, color: COLORS.text, textAlign: 'right' },
-  reviewCard: { backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.sm },
+  reviewCard: { width: 280, backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.sm },
   reviewCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   reviewerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, alignItems: 'center', justifyContent: 'center' },
   reviewerInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
@@ -838,10 +903,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   reviewDate: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
   reviewTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   reviewBody: { fontSize: 14, color: COLORS.textSec, lineHeight: 21 },
+  readMore: { fontSize: 13, ...FONTS.semibold, color: COLORS.primary, marginTop: 4 },
   hostReply: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
   hostReplyLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   hostReplyBody: { fontSize: 13, color: COLORS.textSec, lineHeight: 19 },
-  moreReviews: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold, textAlign: 'center', paddingVertical: SPACING.sm },
+  showAllReviewsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 14, borderWidth: 1.5, borderColor: COLORS.text, borderRadius: RADIUS.md, marginTop: SPACING.xs },
+  showAllReviewsTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  allReviewsModal: { flex: 1, backgroundColor: COLORS.bg },
+  allReviewsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  allReviewsTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
   stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, paddingBottom: 30, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
   stickyPrice: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
