@@ -71,7 +71,10 @@ export default function ListingDetailScreen() {
   );
 
   const SectionHeader = ({ title }: { title: string }) => (
-    <Text style={styles.sectionHeader}>{title}</Text>
+    <View style={styles.sectionHeaderRow}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionHeader}>{title}</Text>
+    </View>
   );
 
   const isPreview = !!preview;
@@ -254,7 +257,6 @@ export default function ListingDetailScreen() {
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 
   const previewSubtitle = isPreview && f ? [
-    areaName,
     f.bedType ? `${f.bedType.charAt(0).toUpperCase()}${f.bedType.slice(1)} bed` : null,
     (f.amenities as string[])?.includes('AC') ? 'AC' : null,
     f.bathroom === 'attached' ? 'Attached bath' : f.bathroom === 'shared' ? 'Shared bath' : null,
@@ -372,30 +374,45 @@ export default function ListingDetailScreen() {
                       <Text style={styles.apartmentNameTxt}>{f.apartmentName}</Text>
                     </View>
                   ) : null}
-                  <View style={styles.spaceGrid}>
+                  <View style={styles.spaceList}>
                     {f.apartmentType ? (
-                      <View style={styles.spaceCard}>
-                        <Ionicons name="home-outline" size={22} color={COLORS.primary} />
-                        <Text style={styles.spaceCardLabel}>{aptLabel[f.apartmentType] || f.apartmentType}</Text>
+                      <View style={styles.spaceRow}>
+                        <View style={styles.spaceRowIconWrap}>
+                          <Ionicons name="home-outline" size={18} color={COLORS.primary} />
+                        </View>
+                        <View>
+                          <Text style={styles.spaceRowLabel}>{aptLabel[f.apartmentType] || f.apartmentType}</Text>
+                          <Text style={styles.spaceRowSub}>Apartment type</Text>
+                        </View>
                       </View>
                     ) : null}
                     {f.roomType ? (
-                      <View style={styles.spaceCard}>
-                        <MaterialCommunityIcons
-                          name={f.roomType === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
-                          size={22}
-                          color={COLORS.primary}
-                        />
-                        <Text style={styles.spaceCardLabel}>
-                          {f.roomType === 'private' ? 'Private room' : 'Shared room'}
-                        </Text>
-                        {f.bedType ? <Text style={styles.spaceCardSub}>{bedLabel(f.bedType)}</Text> : null}
+                      <View style={styles.spaceRow}>
+                        <View style={styles.spaceRowIconWrap}>
+                          <MaterialCommunityIcons
+                            name={f.roomType === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'}
+                            size={18}
+                            color={COLORS.primary}
+                          />
+                        </View>
+                        <View>
+                          <Text style={styles.spaceRowLabel}>
+                            {f.roomType === 'private' ? 'Private room' : 'Shared room'}
+                            {f.bedType ? ` · ${bedLabel(f.bedType)}` : ''}
+                          </Text>
+                          <Text style={styles.spaceRowSub}>Room type</Text>
+                        </View>
                       </View>
                     ) : null}
                     {f.bathroom ? (
-                      <View style={styles.spaceCard}>
-                        <Ionicons name="water-outline" size={22} color={COLORS.primary} />
-                        <Text style={styles.spaceCardLabel}>{bathroomLabel(f.bathroom)}</Text>
+                      <View style={styles.spaceRow}>
+                        <View style={styles.spaceRowIconWrap}>
+                          <Ionicons name="water-outline" size={18} color={COLORS.primary} />
+                        </View>
+                        <View>
+                          <Text style={styles.spaceRowLabel}>{bathroomLabel(f.bathroom)}</Text>
+                          <Text style={styles.spaceRowSub}>Bathroom</Text>
+                        </View>
                       </View>
                     ) : null}
                   </View>
@@ -436,7 +453,7 @@ export default function ListingDetailScreen() {
               {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
                 <>
                   <Divider />
-                  <SectionHeader title="👥 Meet your flatmates" />
+                  <SectionHeader title="Meet your flatmates" />
                   {(f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
                     <View style={styles.flatmateCard}>
                       <View style={styles.flatmateAvatar}>
@@ -480,39 +497,24 @@ export default function ListingDetailScreen() {
               {(f.kitchenAccess || f.homeCooked) && (
                 <>
                   <Divider />
-                  <SectionHeader title="🍳 Food options" />
-                  <View style={styles.foodOptionGrid}>
+                  <SectionHeader title="Food options" />
+                  <View style={styles.foodChipRow}>
                     {f.kitchenAccess && (
-                      <View style={styles.foodOptionCard}>
-                        <Ionicons name="restaurant-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.foodOptionLabel}>Kitchen access</Text>
+                      <View style={styles.foodChip}>
+                        <Ionicons name="restaurant-outline" size={14} color={COLORS.primary} />
+                        <Text style={styles.foodChipText}>Kitchen access</Text>
                       </View>
                     )}
-                    {f.homeCooked && (f.mealTypes as string[]).includes('breakfast') && (
-                      <View style={styles.foodOptionCard}>
-                        <Ionicons name="sunny-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.foodOptionLabel}>Breakfast</Text>
+                    {f.homeCooked && f.mealCost ? (
+                      <View style={styles.foodChip}>
+                        <Ionicons name="fast-food-outline" size={14} color={COLORS.primary} />
+                        <Text style={styles.foodChipText}>
+                          Home meals · ₹{f.mealCost}/day
+                          {f.mealTypes && (f.mealTypes as string[]).length > 0 ? ` · ${(f.mealTypes as string[]).join(', ')}` : ''}
+                        </Text>
                       </View>
-                    )}
-                    {f.homeCooked && (f.mealTypes as string[]).includes('lunch') && (
-                      <View style={styles.foodOptionCard}>
-                        <Ionicons name="partly-sunny-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.foodOptionLabel}>Lunch</Text>
-                      </View>
-                    )}
-                    {f.homeCooked && (f.mealTypes as string[]).includes('dinner') && (
-                      <View style={styles.foodOptionCard}>
-                        <Ionicons name="moon-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.foodOptionLabel}>Dinner</Text>
-                      </View>
-                    )}
+                    ) : null}
                   </View>
-                  {f.homeCooked && f.mealCost ? (
-                    <View style={styles.mealCostRow}>
-                      <Ionicons name="pricetag-outline" size={14} color={COLORS.textSec} />
-                      <Text style={styles.mealCostTxt}>Meal cost: ₹{f.mealCost}/day</Text>
-                    </View>
-                  ) : null}
                   {f.mealDescription ? <Text style={styles.foodDesc}>{f.mealDescription}</Text> : null}
                 </>
               )}
@@ -545,7 +547,7 @@ export default function ListingDetailScreen() {
                 return (
                   <>
                     <Divider />
-                    <SectionHeader title="✨ What's included" />
+                    <SectionHeader title="What's included" />
                     {groups.map((group) => (
                       <View key={group.label} style={styles.amenityGroup}>
                         <View style={styles.amenityGroupHeader}>
@@ -602,21 +604,21 @@ export default function ListingDetailScreen() {
               {(f.noSmoking || f.noLoudMusic || f.noPets || f.noParties || f.shoesOff || f.kitchenClean || f.noAlcohol || f.lockDoor || f.customRules) && (
                 <>
                   <Divider />
-                  <SectionHeader title="🏠 House rules" />
-                  <View style={styles.rulesGrid}>
+                  <SectionHeader title="House rules" />
+                  <View>
                     {[
-                      { flag: f.noSmoking, label: 'No smoking', icon: 'ban-outline' },
-                      { flag: f.noLoudMusic, label: 'No loud music', icon: 'musical-notes-outline' },
+                      { flag: f.noSmoking, label: 'No smoking', icon: 'close-circle-outline' },
+                      { flag: f.noLoudMusic, label: 'No loud music late at night', icon: 'volume-mute-outline' },
                       { flag: f.noPets, label: 'No pets', icon: 'paw-outline' },
-                      { flag: f.noParties, label: 'No parties', icon: 'people-outline' },
-                      { flag: f.shoesOff, label: 'Shoes off at door', icon: 'footsteps-outline' },
-                      { flag: f.kitchenClean, label: 'Keep kitchen clean', icon: 'sparkles-outline' },
-                      { flag: f.noAlcohol, label: 'No alcohol', icon: 'wine-outline' },
-                      { flag: f.lockDoor, label: 'Lock door at night', icon: 'lock-closed-outline' },
+                      { flag: f.noParties, label: 'No parties or events', icon: 'people-circle-outline' },
+                      { flag: f.shoesOff, label: 'Shoes off at the entrance', icon: 'footsteps-outline' },
+                      { flag: f.kitchenClean, label: 'Keep the kitchen clean after use', icon: 'cafe-outline' },
+                      { flag: f.noAlcohol, label: 'No alcohol in common areas', icon: 'wine-outline' },
+                      { flag: f.lockDoor, label: 'Lock the door when leaving', icon: 'lock-closed-outline' },
                     ].filter(r => r.flag).map((rule) => (
-                      <View key={rule.label} style={styles.ruleItem}>
-                        <Ionicons name={rule.icon as any} size={16} color={COLORS.primary} />
-                        <Text style={styles.ruleItemTxt}>{rule.label}</Text>
+                      <View key={rule.label} style={styles.ruleRow}>
+                        <Ionicons name={rule.icon as any} size={18} color={COLORS.danger} />
+                        <Text style={styles.ruleRowTxt}>{rule.label}</Text>
                       </View>
                     ))}
                   </View>
@@ -870,7 +872,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   body: { padding: SPACING.lg },
 
-  title: { fontSize: 24, ...FONTS.serif, color: COLORS.text, letterSpacing: -0.3, marginBottom: 4 },
+  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 6, lineHeight: 30 },
   subtitle: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm },
 
   badgeRow: { flexDirection: 'row', gap: 8, marginBottom: SPACING.sm },
@@ -893,31 +895,36 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   priceUnit: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec },
   guestPrice: { fontSize: 13, color: COLORS.textSec, marginTop: 4 },
 
-  sectionHeader: { fontSize: 18, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  sectionAccent: { width: 3, height: 18, borderRadius: 2, backgroundColor: COLORS.primary },
+  sectionHeader: { fontSize: 17, ...FONTS.bold, color: COLORS.text },
 
   description: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
 
-  spaceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.sm },
-  spaceCard: {
-    width: '47%',
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 4,
+  spaceList: { gap: 0, marginBottom: SPACING.sm },
+  spaceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  spaceCardLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
-  spaceCardSub: { fontSize: 12, color: COLORS.textSec },
+  spaceRowIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
+  spaceRowLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  spaceRowSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1 },
   featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: SPACING.sm },
 
   amenitiesGrid: { gap: 4 },
   amenityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   amenityTxt: { fontSize: 14, color: COLORS.text },
 
-  foodChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  foodChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.sm },
   foodChip: {
-    paddingHorizontal: 12, paddingVertical: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 9,
     borderRadius: RADIUS.md, backgroundColor: COLORS.primaryAlpha,
+    borderWidth: 1, borderColor: 'rgba(13,115,119,0.15)',
   },
   foodChipText: { fontSize: 13, color: COLORS.primary, ...FONTS.medium },
   foodDesc: { fontSize: 13, color: COLORS.textSec, marginTop: SPACING.sm, lineHeight: 20 },
@@ -955,14 +962,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   checkinCard: {
     flex: 1,
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   checkinLabel: { fontSize: 12, color: COLORS.textSec },
-  checkinTime: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  checkinTime: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
   blockedRow: {
     flexDirection: 'row',
@@ -1041,7 +1049,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   bookBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.semibold },
 
-  stickyPrice: { fontSize: 20, ...FONTS.serif, color: COLORS.text },
+  stickyPrice: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyBookBtn: {
     backgroundColor: COLORS.accent, paddingVertical: 13, paddingHorizontal: 28,
@@ -1109,19 +1117,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: SPACING.sm },
   addressTxt: { flex: 1, fontSize: 13, color: COLORS.textSec, lineHeight: 18 },
 
-  rulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.sm },
-  ruleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  ruleItemTxt: { fontSize: 13, color: COLORS.text },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  ruleRowTxt: { fontSize: 14, color: COLORS.text, ...FONTS.medium },
   customRuleBox: {
     padding: SPACING.md,
     borderRadius: RADIUS.md,

@@ -325,6 +325,68 @@ export default function GuestListingDetailScreen() {
             </View>
           ) : null}
 
+          {/* ── The space ── */}
+          <View style={styles.section}>
+            <SectionTitle label="The space" />
+            {listing.property.apartment_name ? (
+              <View style={styles.apartmentNameRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.apartmentNameTxt}>{listing.property.apartment_name}</Text>
+              </View>
+            ) : null}
+            <View style={styles.spaceList}>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}><Ionicons name="home-outline" size={18} color={COLORS.primary} /></View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>{{ '1bhk': '1 BHK', '2bhk': '2 BHK', '3bhk': '3 BHK', '4bhk+': '4 BHK+ / Villa' }[listing.property.apartment_type.toLowerCase()] ?? listing.property.apartment_type}</Text>
+                  <Text style={styles.spaceRowSub}>Apartment type</Text>
+                </View>
+              </View>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}>
+                  <MaterialCommunityIcons name={listing.room.room_type === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'} size={18} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>
+                    {listing.room.room_type === 'private' ? 'Private room' : 'Shared room'}
+                    {listing.room.bed_type ? ` · ${listing.room.bed_type.charAt(0).toUpperCase() + listing.room.bed_type.slice(1)} bed` : ''}
+                  </Text>
+                  <Text style={styles.spaceRowSub}>Room type</Text>
+                </View>
+              </View>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}><Ionicons name="water-outline" size={18} color={COLORS.primary} /></View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>{listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}</Text>
+                  <Text style={styles.spaceRowSub}>Bathroom</Text>
+                </View>
+              </View>
+            </View>
+            {listing.room.room_features.length > 0 && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
+                  <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>What this room has</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  {listing.room.room_features.map((f) => (
+                    <View key={f} style={styles.featureChip}><Text style={styles.featureChipText}>{f}</Text></View>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+
+          {nearbyLine && (
+            <View style={styles.section}>
+              <SectionTitle label="Nearby" />
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}>
+                <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
+                <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Flatmates ── */}
           {listing.flatmates.length > 0 && (
             <View style={styles.section}>
@@ -386,6 +448,7 @@ export default function GuestListingDetailScreen() {
           {/* ── Amenities (grouped by category) ── */}
           {listing.amenities.length > 0 && (
             <View style={styles.section}>
+              <SectionTitle label="What's included" />
               {Object.entries(amenityGroups).map(([category, items]) => {
                 const catMeta = AMENITY_CATEGORIES[category];
                 return (
@@ -410,55 +473,10 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* ── The space ── */}
-          <View style={styles.section}>
-            <SectionTitle label="The space" />
-            <View style={styles.spaceGrid}>
-              <View style={styles.spaceCard}>
-                <View style={styles.spaceCardIconWrap}><Ionicons name="home-outline" size={20} color={COLORS.primary} /></View>
-                <Text style={styles.spaceCardLabel}>{listing.property.apartment_type}</Text>
-              </View>
-              <View style={styles.spaceCard}>
-                <View style={styles.spaceCardIconWrap}>
-                  <MaterialCommunityIcons name={listing.room.room_type === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'} size={20} color={COLORS.primary} />
-                </View>
-                <Text style={styles.spaceCardLabel}>{listing.room.room_type === 'private' ? 'Private room' : 'Shared room'}</Text>
-                {listing.room.bed_type && <Text style={styles.spaceCardSub}>{listing.room.bed_type.charAt(0).toUpperCase() + listing.room.bed_type.slice(1)} bed</Text>}
-              </View>
-              <View style={styles.spaceCard}>
-                <View style={styles.spaceCardIconWrap}><Ionicons name="water-outline" size={20} color={COLORS.primary} /></View>
-                <Text style={styles.spaceCardLabel}>{listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}</Text>
-              </View>
-            </View>
-            {listing.room.room_features.length > 0 && (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
-                  <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>What this room has</Text>
-                </View>
-                <View style={styles.featureRow}>
-                  {listing.room.room_features.map((f) => (
-                    <View key={f} style={styles.featureChip}><Text style={styles.featureChipText}>{f}</Text></View>
-                  ))}
-                </View>
-              </>
-            )}
-          </View>
-
-          {nearbyLine && (
-            <View style={styles.section}>
-              <SectionTitle label="Nearby" />
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}>
-                <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
-                <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
-              </View>
-            </View>
-          )}
-
           {/* ── Map ── */}
           {listing.property.latitude && listing.property.longitude && (
             <View style={styles.section}>
-              <SectionTitle label="Approximate location" />
+              <SectionTitle label="Location" />
               <View style={styles.miniMapWrap}>
                 <MapView
                   style={styles.miniMap} provider={PROVIDER_GOOGLE}
@@ -468,10 +486,10 @@ export default function GuestListingDetailScreen() {
                   <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(13,115,119,0.12)" strokeColor="rgba(13,115,119,0.3)" strokeWidth={1} />
                 </MapView>
               </View>
-                <Text style={styles.locationDisclaimer}>
-                  {listing.property.apartment_name ? `Near ${listing.property.apartment_name} · ` : ''}Exact location shared after booking
-                </Text>
-              </View>
+              <Text style={styles.locationDisclaimer}>
+                {listing.property.apartment_name ? `Near ${listing.property.apartment_name} · ` : ''}Exact location shared after booking
+              </Text>
+            </View>
           )}
 
           {/* ── House Rules ── */}
@@ -492,44 +510,36 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* ── Check-in / out ── */}
-          {(listing.check_in_from || listing.check_out_by) && (
-            <View style={styles.section}>
-              <SectionTitle label="Check-in & Check-out" />
-              <View style={styles.checkinRow}>
-                {listing.check_in_from ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-in from</Text>
-                    <Text style={styles.checkinTime}>{listing.check_in_from}</Text>
-                  </View>
-                ) : null}
-                {listing.check_out_by ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-out by</Text>
-                    <Text style={styles.checkinTime}>{listing.check_out_by}</Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          )}
-
-          {/* ── Stay info ── */}
+          {/* ── Stay details (check-in/out + min stay merged) ── */}
           <View style={styles.section}>
             <SectionTitle label="Stay details" />
-            <View style={styles.stayInfoRow}>
-              <View style={styles.stayInfoItem}>
-                <Text style={styles.stayInfoLabel}>Min stay</Text>
-                <Text style={styles.stayInfoValue}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
-              </View>
-              {listing.security_deposit > 0 && (
-                <View style={styles.stayInfoItem}>
-                  <Text style={styles.stayInfoLabel}>Deposit</Text>
-                  <Text style={styles.stayInfoValue}>₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
+            <View style={styles.checkinRow}>
+              {listing.check_in_from ? (
+                <View style={styles.checkinCard}>
+                  <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.checkinLabel}>Check-in from</Text>
+                  <Text style={styles.checkinTime}>{listing.check_in_from}</Text>
                 </View>
-              )}
+              ) : null}
+              {listing.check_out_by ? (
+                <View style={styles.checkinCard}>
+                  <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.checkinLabel}>Check-out by</Text>
+                  <Text style={styles.checkinTime}>{listing.check_out_by}</Text>
+                </View>
+              ) : null}
+              <View style={styles.checkinCard}>
+                <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.checkinLabel}>Min stay</Text>
+                <Text style={styles.checkinTime}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
+              </View>
             </View>
+            {listing.security_deposit > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm }}>
+                <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.textSec} />
+                <Text style={{ fontSize: 13, color: COLORS.textSec, ...FONTS.medium }}>Security deposit: ₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
+              </View>
+            )}
           </View>
 
           {/* ── Reviews ── */}
@@ -568,7 +578,7 @@ export default function GuestListingDetailScreen() {
       <View style={styles.stickyBar}>
         <View>
           <Text style={styles.stickyPrice}>
-            Rs.{listing.guest_price_per_night.toLocaleString('en-IN')}
+            ₹{listing.guest_price_per_night.toLocaleString('en-IN')}
             <Text style={styles.stickyPriceUnit}>/night</Text>
           </Text>
           {hasReviews && (
@@ -697,11 +707,13 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   amenityRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
   amenityText: { fontSize: 14, color: COLORS.text, flex: 1 },
 
-  spaceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.sm },
-  spaceCard: { width: (SCREEN_W - SPACING.lg * 2 - 10) / 2, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, gap: 8 },
-  spaceCardIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
-  spaceCardLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
-  spaceCardSub: { fontSize: 12, color: COLORS.textSec },
+  apartmentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm },
+  apartmentNameTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  spaceList: { gap: 0, marginBottom: SPACING.sm },
+  spaceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  spaceRowIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
+  spaceRowLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  spaceRowSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1 },
   featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   featureChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   featureChipText: { fontSize: 12, color: COLORS.textSec },
@@ -714,11 +726,6 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   checkinCard: { flex: 1, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6 },
   checkinLabel: { fontSize: 12, color: COLORS.textSec },
   checkinTime: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
-
-  stayInfoRow: { flexDirection: 'row', gap: SPACING.sm },
-  stayInfoItem: { flex: 1, alignItems: 'center', padding: SPACING.md, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
-  stayInfoLabel: { fontSize: 11, color: COLORS.textMut, marginBottom: 4, ...FONTS.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
-  stayInfoValue: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
 
   reviewsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
