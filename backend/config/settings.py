@@ -324,3 +324,10 @@ if SENTRY_DSN and not DEBUG:
 REVIEW_PHONE_NUMBER = os.environ.get("REVIEW_PHONE_NUMBER", "9999999999")
 REVIEW_COUNTRY_CODE = os.environ.get("REVIEW_COUNTRY_CODE", "+91")
 REVIEW_STATIC_OTP = os.environ.get("REVIEW_STATIC_OTP", "123456")
+
+# ── Seed / demo phone numbers (accept static OTP 111111 when DEBUG=True) ──────
+# Comma-separated list of phone numbers (without country code) that bypass real OTP.
+SEED_PHONE_NUMBERS: set[str] = set(
+    os.environ.get("SEED_PHONE_NUMBERS", "9800000001,9800000002,9800000003,9800000004").split(",")
+)
+SEED_OTP = os.environ.get("SEED_OTP", "111111")

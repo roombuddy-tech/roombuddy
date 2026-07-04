@@ -204,7 +204,8 @@ export default function VerificationScreen({ visible, onClose, onVerified }: Ver
               <View style={styles.emailSection}>
                 {!emailSent ? (
                   <>
-                    <View style={[styles.input, { backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center' }]}>                        <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
+                    <View style={[styles.input, { backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center' }]}>
+                      <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} style={{ marginRight: 8 }} />
                       <Text style={{ fontSize: 15, color: emailInput ? COLORS.text : COLORS.textMut, ...FONTS.medium, flex: 1 }}>
                         {emailInput || 'No email saved — add one in Edit Profile'}
                       </Text>
