@@ -838,6 +838,7 @@ def _get_today_activity(user: User, today) -> dict:
         {
             "reviewer_name": get_display_name(r.reviewer_user),
             "rating": r.overall_rating,
+            "title": r.title or "",
             "body": (r.body or "")[:100],
             "submitted_at": r.submitted_at.isoformat(),
         }

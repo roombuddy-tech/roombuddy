@@ -1,9 +1,46 @@
-{% extends "notifications/_includes/base_email.html" %}
-{% block content %}
-<tr><td style="padding:16px 24px;">
-  <h2 style="margin:0 0 8px;">New booking request!</h2>
-  <p style="color:#555;">Hi {{ recipient_name }}, you have a new booking from <strong>{{ guest_name }}</strong>.</p>
-  {% include "notifications/_includes/reservation_details.html" %}
-  <p style="color:#555;margin-top:16px;">Please review and respond within 24 hours.</p>
-</td></tr>
+{% extends "_includes/base_email.html" %}
+
+{% block hero_title %}New booking request!{% endblock %}
+{% block hero_subtitle %}
+  Hi {{ recipient_name }}, you have a new booking from <strong>{{ guest_name }}</strong>.
 {% endblock %}
+
+{% block content %}
+  {% include "_includes/reservation_details.html" %}
+
+  <!-- Guest details (shown to host) -->
+  <tr>
+    <td style="padding:0 24px 8px 24px;">
+      <h3 style="margin:0 0 12px 0;color:#1a1a1a;font-size:16px;font-weight:600;">Guest details</h3>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;width:35%;vertical-align:top;">Guest name</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ guest_name }}</td>
+        </tr>
+        {% if guest_phone %}
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Guest phone</td>
+          <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ guest_phone }}</td>
+        </tr>
+        {% endif %}
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 24px 24px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <p style="margin:0;color:#9A3412;font-size:13px;line-height:1.5;">
+              Please review and respond within <strong>24 hours</strong>.
+              The booking will be automatically cancelled if no action is taken.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+{% endblock %}
+
+{% block cta %}{% endblock %}

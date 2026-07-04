@@ -60,6 +60,11 @@ export default function MessagesScreen() {
   };
 
   const openThread = (c: Conversation) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.conversation_id === c.conversation_id ? { ...it, unread_count: 0 } : it,
+      ),
+    );
     navigation.navigate('Chat', {
       conversationId: c.conversation_id,
       title: c.counterpart_name,

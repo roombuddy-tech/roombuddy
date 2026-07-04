@@ -311,6 +311,7 @@ def create_booking(
                 meal_total=Decimal(str(quote["meal_total"])) if quote["meal_total"] else None,
                 cancellation_policy=cancellation_policy,
                 host_response_deadline=host_response_deadline,
+                expires_at=timezone.now() + timedelta(minutes=10),
             )
 
             BookingStatusHistory.objects.create(
@@ -322,35 +323,6 @@ def create_booking(
             )
 
         logger.info(f"Booking {booking.booking_code} created for guest {user.id}")
-
-        # ── Notify host of new booking ────────────────────────────────────
-        try:
-            guest_profile = getattr(user, "profile", None)
-            guest_display = ""
-            if guest_profile:
-                first = getattr(guest_profile, "first_name", "") or ""
-                last = getattr(guest_profile, "last_name", "") or ""
-                guest_display = f"{first} {last}".strip()
-            guest_display = guest_display or user.mobile_number or "A guest"
-
-            dispatch(
-                event_type=EventType.BOOKING_NEW,
-                recipients=[listing.host_user],
-                context={
-                    "recipient_name": _user_first_name(listing.host_user),
-                    "guest_name": guest_display,
-                    "booking_reference": booking.booking_code,
-                    "property_name": listing.title,
-                    "check_in": check_in.strftime("%a, %d %b %Y"),
-                    "check_out": check_out.strftime("%a, %d %b %Y"),
-                    "nights": nights,
-                    "amount": str(int(float(quote["total_guest_pays"]))),
-                    "booking_url": f"/bookings/{booking.id}",
-                },
-                idempotency_event_id=f"booking_new:{booking.id}",
-            )
-        except Exception:
-            logger.exception("Failed to notify host of new booking %s", booking.booking_code)
 
         return booking
 
@@ -766,23 +738,41 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
     """Fire notification to the guest when host accepts or rejects."""
     from apps.notifications.services import dispatch
     from apps.notifications.models import EventType
+    from apps.payments.services import _build_booking_context, _send_invoice_email
     try:
         event = (
             EventType.BOOKING_HOST_ACCEPTED if accepted
             else EventType.BOOKING_HOST_REJECTED
         )
+        listing = booking.listing
+        host_user = booking.host_user
+        host_phone = f"{host_user.phone_country_code}{host_user.phone_number}"
         dispatch(
             event_type=event,
             recipients=[booking.guest_user],
             context={
-                "property_name": booking.listing.title if booking.listing else "",
+                "property_name": listing.title if listing else "",
                 "booking_id": str(booking.id),
                 "booking_reference": booking.booking_code,
                 "host_name": get_display_name(booking.host_user),
+                "host_phone": host_phone,
                 "recipient_name": _user_first_name(booking.guest_user),
+                "check_in": booking.check_in_date.strftime("%a, %d %b %Y"),
+                "check_out": booking.check_out_date.strftime("%a, %d %b %Y"),
+                "nights": booking.nights,
+                "guest_count": booking.number_of_guests,
+                "per_night_amount": str(int(booking.guest_nightly_price)),
+                "subtotal": str(int(booking.subtotal)),
+                "tax_amount": str(int(booking.gst_amount)),
+                "amount": str(int(booking.total_guest_pays)),
+                "location": getattr(listing.property, "city_name", "") if listing else "",
             },
             idempotency_event_id=f"host_respond:{booking.id}:{'accept' if accepted else 'reject'}",
         )
+
+        if accepted:
+            base = _build_booking_context(booking)
+            _send_invoice_email(booking, booking.guest_user, base)
     except Exception:
         logger.exception("_notify_host_responded failed booking_id=%s", booking.id)
 

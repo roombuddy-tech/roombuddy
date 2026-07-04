@@ -1,17 +1,33 @@
 {% extends "_includes/base_email.html" %}
 
-{% block subject %}Booking confirmed — {{ property_name }}{% endblock %}
+{% block subject %}Payment received — {{ property_name }}{% endblock %}
 {% block hero_color %}#0a84ff{% endblock %}
 
-{% block hero_title %}Thanks {{ recipient_name }}! Your booking is confirmed.{% endblock %}
+{% block hero_title %}Payment received, {{ recipient_name }}!{% endblock %}
 {% block hero_subtitle %}
-  {{ property_name }} is expecting you on <strong>{{ check_in }}</strong>.
-  Use the link below to view, modify or cancel your booking.
+  Your payment for <strong>{{ property_name }}</strong> has been received.
+  The host will review your booking and respond shortly.
 {% endblock %}
 
 {% block content %}
   {% include "_includes/reservation_details.html" %}
   {% include "_includes/price_details.html" %}
+
+  <tr>
+    <td style="padding:0 24px 24px 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;">
+        <tr>
+          <td style="padding:14px 16px;">
+            <p style="margin:0 0 4px 0;color:#1E40AF;font-size:13px;font-weight:600;">What happens next?</p>
+            <p style="margin:0;color:#1E40AF;font-size:13px;line-height:1.5;">
+              The host has 24 hours to accept or decline your request.
+              You'll receive a confirmation email once they respond.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
 
   {% if free_cancellation_deadline %}
   <tr>
@@ -32,4 +48,4 @@
   {% endif %}
 {% endblock %}
 
-{% block cta_label %}View booking{% endblock %}
+{% block cta %}{% endblock %}

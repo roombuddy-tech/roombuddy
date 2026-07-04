@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -43,16 +43,51 @@ function DetailRow({ label, value, styles }: { label: string; value: string; sty
   );
 }
 
+function mapApiToBooking(d: any): any {
+  return {
+    booking_id: d.booking_id,
+    booking_code: d.booking_code,
+    status: d.status,
+    guest_name: d.guest?.name ?? '',
+    guest_initials: d.guest?.initials ?? '',
+    guest_purpose: d.guest_purpose ?? null,
+    check_in_date: d.check_in_date,
+    check_out_date: d.check_out_date,
+    nights: d.nights,
+    total_guest_pays: d.pricing?.total_guest_pays ?? 0,
+    total_host_receives: d.pricing?.total_host_receives ?? 0,
+  };
+}
+
 export default function BookingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { colors: COLORS, shadows: SHADOW } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const STATUS_COLORS = useMemo(() => makeStatusColors(COLORS), [COLORS]);
-  const { booking } = route.params;
+  const paramBooking = route.params.booking;
 
+  const needsFetch = !paramBooking.status;
+  const [booking, setBooking] = useState<any>(needsFetch ? null : paramBooking);
+  const [loading, setLoading] = useState(needsFetch);
+
+  useEffect(() => {
+    if (!needsFetch) return;
+    (async () => {
+      try {
+        const res = await api.get(`/api/bookings/${paramBooking.booking_id}/`);
+        setBooking(mapApiToBooking(res.data));
+      } catch {
+        Alert.alert('Error', 'Could not load booking details.');
+        navigation.goBack();
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [paramBooking.booking_id, needsFetch]);
 
   const messageGuest = async () => {
+    if (!booking) return;
     try {
       const convo = await startConversation(booking.booking_id);
       navigation.navigate('Chat', {
@@ -65,8 +100,12 @@ export default function BookingDetailScreen() {
     }
   };
 
-  const [bookingStatus, setBookingStatus] = useState<string>(booking.status);
+  const [bookingStatus, setBookingStatus] = useState<string>(paramBooking.status ?? '');
   const [responding, setResponding] = useState(false);
+
+  useEffect(() => {
+    if (booking?.status && !bookingStatus) setBookingStatus(booking.status);
+  }, [booking]);
 
   const statusStyle = STATUS_COLORS[bookingStatus] || STATUS_COLORS.pending;
 
@@ -101,6 +140,23 @@ export default function BookingDetailScreen() {
       ],
     );
   };
+
+  if (loading || !booking) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Booking details</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -145,11 +201,6 @@ export default function BookingDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings</Text>
-          <DetailRow
-            styles={styles}
-            label="Guest pays"
-            value={`₹${booking.total_guest_pays.toLocaleString('en-IN')}`}
-          />
           <View style={styles.earningsRow}>
             <Text style={styles.earningsLabel}>You receive</Text>
             <Text style={styles.earningsValue}>

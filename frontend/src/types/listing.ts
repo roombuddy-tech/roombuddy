@@ -90,5 +90,14 @@ export interface GuestListingDetail {
   review_count: number;
   total_bookings: number;
   host_name: string;
+  host_profile: {
+    full_name: string;
+    photo_url: string | null;
+    gender: string;
+    member_since: string;
+    occupation?: string;
+    hobbies?: string;
+    hometown?: string;
+  };
   area_name: string;
 }

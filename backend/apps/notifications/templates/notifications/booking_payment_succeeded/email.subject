@@ -1,1 +1,1 @@
-Booking confirmed — {{ property_name }}
+Payment received — {{ property_name }}

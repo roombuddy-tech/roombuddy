@@ -31,7 +31,7 @@ interface DashboardData {
   today: {
     check_ins: Array<{ booking_id: string; booking_code: string; guest_name: string; nights: number; check_in_time: string }>;
     check_outs: Array<{ booking_id: string; booking_code: string; guest_name: string }>;
-    recent_reviews: Array<{ reviewer_name: string; rating: number; body: string; submitted_at: string }>;
+    recent_reviews: Array<{ reviewer_name: string; rating: number; title: string | null; body: string; submitted_at: string }>;
   };
 }
 
@@ -240,7 +240,8 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityTitle}>New review from {rv.reviewer_name}</Text>
-                <Text style={styles.activitySub}>{'★'.repeat(rv.rating)} {rv.body}</Text>
+                <Text style={styles.activitySub}>{'★'.repeat(rv.rating)}{rv.title ? ` ${rv.title}` : ''}</Text>
+                {rv.body ? <Text style={styles.activitySub} numberOfLines={2}>{rv.body}</Text> : null}
               </View>
             </View>
           ))

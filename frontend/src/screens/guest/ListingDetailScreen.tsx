@@ -135,30 +135,48 @@ export default function GuestListingDetailScreen() {
     </View>
   );
 
-  const ReviewCard = ({ review }: { review: ReviewItem }) => (
-    <View style={styles.reviewCard}>
-      <View style={styles.reviewCardTop}>
-        <View style={styles.reviewerAvatar}>
-          <Text style={styles.reviewerInitials}>{initials(review.reviewer_name) || 'G'}</Text>
+  const toggleReviewExpand = (id: string) => {
+    setExpandedReviews((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const ReviewCard = ({ review }: { review: ReviewItem }) => {
+    const isExpanded = expandedReviews.has(review.id);
+    return (
+      <TouchableOpacity style={styles.reviewCard} activeOpacity={0.8} onPress={() => toggleReviewExpand(review.id)}>
+        <View style={styles.reviewCardTop}>
+          <View style={styles.reviewerAvatar}>
+            <Text style={styles.reviewerInitials}>{initials(review.reviewer_name) || 'G'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
+            <Text style={styles.reviewDate}>
+              {new Date(review.submitted_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            </Text>
+          </View>
+          <StarDisplay rating={review.overall_rating} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.reviewerName}>{review.reviewer_name}</Text>
-          <Text style={styles.reviewDate}>
-            {new Date(review.submitted_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-          </Text>
-        </View>
-        <StarDisplay rating={review.overall_rating} />
-      </View>
-      {review.title ? <Text style={styles.reviewTitle}>{review.title}</Text> : null}
-      {review.body ? <Text style={styles.reviewBody} numberOfLines={4}>{review.body}</Text> : null}
-      {review.host_response ? (
-        <View style={styles.hostReply}>
-          <Text style={styles.hostReplyLabel}>Response from host</Text>
-          <Text style={styles.hostReplyBody}>{review.host_response}</Text>
-        </View>
-      ) : null}
-    </View>
-  );
+        {review.title ? <Text style={styles.reviewTitle}>{review.title}</Text> : null}
+        {review.body ? (
+          <>
+            <Text style={styles.reviewBody} numberOfLines={isExpanded ? undefined : 4}>{review.body}</Text>
+            {!isExpanded && review.body.length > 120 && (
+              <Text style={styles.readMore}>Read more</Text>
+            )}
+          </>
+        ) : null}
+        {review.host_response ? (
+          <View style={styles.hostReply}>
+            <Text style={styles.hostReplyLabel}>Response from host</Text>
+            <Text style={styles.hostReplyBody}>{review.host_response}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,6 +186,9 @@ export default function GuestListingDetailScreen() {
   const [checkIn, setCheckIn] = useState<string | null>(passedCheckIn ?? null);
   const [checkOut, setCheckOut] = useState<string | null>(passedCheckOut ?? null);
   const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
+  const [showHostModal, setShowHostModal] = useState(false);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
@@ -325,6 +346,68 @@ export default function GuestListingDetailScreen() {
             </View>
           ) : null}
 
+          {/* ── The space ── */}
+          <View style={styles.section}>
+            <SectionTitle label="The space" />
+            {listing.property.apartment_name ? (
+              <View style={styles.apartmentNameRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.apartmentNameTxt}>{listing.property.apartment_name}</Text>
+              </View>
+            ) : null}
+            <View style={styles.spaceList}>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}><Ionicons name="home-outline" size={18} color={COLORS.primary} /></View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>{{ '1bhk': '1 BHK', '2bhk': '2 BHK', '3bhk': '3 BHK', '4bhk+': '4 BHK+ / Villa' }[listing.property.apartment_type.toLowerCase()] ?? listing.property.apartment_type}</Text>
+                  <Text style={styles.spaceRowSub}>Apartment type</Text>
+                </View>
+              </View>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}>
+                  <MaterialCommunityIcons name={listing.room.room_type === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'} size={18} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>
+                    {listing.room.room_type === 'private' ? 'Private room' : 'Shared room'}
+                    {listing.room.bed_type ? ` · ${listing.room.bed_type.charAt(0).toUpperCase() + listing.room.bed_type.slice(1)} bed` : ''}
+                  </Text>
+                  <Text style={styles.spaceRowSub}>Room type</Text>
+                </View>
+              </View>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}><Ionicons name="water-outline" size={18} color={COLORS.primary} /></View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>{listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}</Text>
+                  <Text style={styles.spaceRowSub}>Bathroom</Text>
+                </View>
+              </View>
+            </View>
+            {listing.room.room_features.length > 0 && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
+                  <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>What this room has</Text>
+                </View>
+                <View style={styles.featureRow}>
+                  {listing.room.room_features.map((f) => (
+                    <View key={f} style={styles.featureChip}><Text style={styles.featureChipText}>{f}</Text></View>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+
+          {nearbyLine && (
+            <View style={styles.section}>
+              <SectionTitle label="Nearby" />
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}>
+                <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
+                <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Flatmates ── */}
           {listing.flatmates.length > 0 && (
             <View style={styles.section}>
@@ -386,6 +469,7 @@ export default function GuestListingDetailScreen() {
           {/* ── Amenities (grouped by category) ── */}
           {listing.amenities.length > 0 && (
             <View style={styles.section}>
+              <SectionTitle label="What's included" />
               {Object.entries(amenityGroups).map(([category, items]) => {
                 const catMeta = AMENITY_CATEGORIES[category];
                 return (
@@ -410,55 +494,10 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* ── The space ── */}
-          <View style={styles.section}>
-            <SectionTitle label="The space" />
-            <View style={styles.spaceGrid}>
-              <View style={styles.spaceCard}>
-                <View style={styles.spaceCardIconWrap}><Ionicons name="home-outline" size={20} color={COLORS.primary} /></View>
-                <Text style={styles.spaceCardLabel}>{listing.property.apartment_type}</Text>
-              </View>
-              <View style={styles.spaceCard}>
-                <View style={styles.spaceCardIconWrap}>
-                  <MaterialCommunityIcons name={listing.room.room_type === 'private' ? 'door-closed-lock' : 'bunk-bed-outline'} size={20} color={COLORS.primary} />
-                </View>
-                <Text style={styles.spaceCardLabel}>{listing.room.room_type === 'private' ? 'Private room' : 'Shared room'}</Text>
-                {listing.room.bed_type && <Text style={styles.spaceCardSub}>{listing.room.bed_type.charAt(0).toUpperCase() + listing.room.bed_type.slice(1)} bed</Text>}
-              </View>
-              <View style={styles.spaceCard}>
-                <View style={styles.spaceCardIconWrap}><Ionicons name="water-outline" size={20} color={COLORS.primary} /></View>
-                <Text style={styles.spaceCardLabel}>{listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}</Text>
-              </View>
-            </View>
-            {listing.room.room_features.length > 0 && (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
-                  <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>What this room has</Text>
-                </View>
-                <View style={styles.featureRow}>
-                  {listing.room.room_features.map((f) => (
-                    <View key={f} style={styles.featureChip}><Text style={styles.featureChipText}>{f}</Text></View>
-                  ))}
-                </View>
-              </>
-            )}
-          </View>
-
-          {nearbyLine && (
-            <View style={styles.section}>
-              <SectionTitle label="Nearby" />
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}>
-                <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
-                <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
-              </View>
-            </View>
-          )}
-
           {/* ── Map ── */}
           {listing.property.latitude && listing.property.longitude && (
             <View style={styles.section}>
-              <SectionTitle label="Approximate location" />
+              <SectionTitle label="Location" />
               <View style={styles.miniMapWrap}>
                 <MapView
                   style={styles.miniMap} provider={PROVIDER_GOOGLE}
@@ -468,10 +507,10 @@ export default function GuestListingDetailScreen() {
                   <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(13,115,119,0.12)" strokeColor="rgba(13,115,119,0.3)" strokeWidth={1} />
                 </MapView>
               </View>
-                <Text style={styles.locationDisclaimer}>
-                  {listing.property.apartment_name ? `Near ${listing.property.apartment_name} · ` : ''}Exact location shared after booking
-                </Text>
-              </View>
+              <Text style={styles.locationDisclaimer}>
+                {listing.property.apartment_name ? `Near ${listing.property.apartment_name} · ` : ''}Exact location shared after booking
+              </Text>
+            </View>
           )}
 
           {/* ── House Rules ── */}
@@ -492,45 +531,61 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* ── Check-in / out ── */}
-          {(listing.check_in_from || listing.check_out_by) && (
-            <View style={styles.section}>
-              <SectionTitle label="Check-in & Check-out" />
-              <View style={styles.checkinRow}>
-                {listing.check_in_from ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-in from</Text>
-                    <Text style={styles.checkinTime}>{listing.check_in_from}</Text>
-                  </View>
-                ) : null}
-                {listing.check_out_by ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-out by</Text>
-                    <Text style={styles.checkinTime}>{listing.check_out_by}</Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          )}
-
-          {/* ── Stay info ── */}
+          {/* ── Stay details (check-in/out + min stay merged) ── */}
           <View style={styles.section}>
             <SectionTitle label="Stay details" />
-            <View style={styles.stayInfoRow}>
-              <View style={styles.stayInfoItem}>
-                <Text style={styles.stayInfoLabel}>Min stay</Text>
-                <Text style={styles.stayInfoValue}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
-              </View>
-              {listing.security_deposit > 0 && (
-                <View style={styles.stayInfoItem}>
-                  <Text style={styles.stayInfoLabel}>Deposit</Text>
-                  <Text style={styles.stayInfoValue}>₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
+            <View style={styles.checkinRow}>
+              {listing.check_in_from ? (
+                <View style={styles.checkinCard}>
+                  <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.checkinLabel}>Check-in from</Text>
+                  <Text style={styles.checkinTime}>{listing.check_in_from}</Text>
                 </View>
-              )}
+              ) : null}
+              {listing.check_out_by ? (
+                <View style={styles.checkinCard}>
+                  <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.checkinLabel}>Check-out by</Text>
+                  <Text style={styles.checkinTime}>{listing.check_out_by}</Text>
+                </View>
+              ) : null}
+              <View style={styles.checkinCard}>
+                <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.checkinLabel}>Min stay</Text>
+                <Text style={styles.checkinTime}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
+              </View>
             </View>
+            {listing.security_deposit > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm }}>
+                <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.textSec} />
+                <Text style={{ fontSize: 13, color: COLORS.textSec, ...FONTS.medium }}>Security deposit: ₹{listing.security_deposit.toLocaleString('en-IN')}</Text>
+              </View>
+            )}
           </View>
+
+          {/* ── About your host ── */}
+          {listing.host_name ? (
+            <TouchableOpacity
+              style={styles.hostCard}
+              activeOpacity={0.7}
+              onPress={() => setShowHostModal(true)}
+            >
+              <View style={styles.hostAvatarLg}>
+                {listing.host_profile?.photo_url ? (
+                  <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostAvatarImg} />
+                ) : (
+                  <Text style={styles.hostAvatarInitials}>{initials(listing.host_name)}</Text>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hostCardName}>Hosted by {listing.host_name}</Text>
+                {listing.host_profile?.member_since ? (
+                  <Text style={styles.hostCardSub}>Member since {listing.host_profile.member_since}</Text>
+                ) : null}
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMut} />
+            </TouchableOpacity>
+          ) : null}
 
           {/* ── Reviews ── */}
           {hasReviews && (
@@ -555,9 +610,14 @@ export default function GuestListingDetailScreen() {
                   ))}
                 </View>
               )}
-              {reviewsData!.reviews.slice(0, 3).map((r) => <ReviewCard key={r.id} review={r} />)}
-              {reviewsData!.total > 3 && (
-                <Text style={styles.moreReviews}>+ {reviewsData!.total - 3} more review{reviewsData!.total - 3 !== 1 ? 's' : ''}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: SPACING.lg }}>
+                {reviewsData!.reviews.map((r) => <ReviewCard key={r.id} review={r} />)}
+              </ScrollView>
+              {reviewsData!.total > reviewsData!.reviews.length && (
+                <TouchableOpacity style={styles.showAllReviewsBtn} activeOpacity={0.7} onPress={() => setShowAllReviews(true)}>
+                  <Text style={styles.showAllReviewsTxt}>Show all {reviewsData!.total} reviews</Text>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -568,7 +628,7 @@ export default function GuestListingDetailScreen() {
       <View style={styles.stickyBar}>
         <View>
           <Text style={styles.stickyPrice}>
-            Rs.{listing.guest_price_per_night.toLocaleString('en-IN')}
+            ₹{listing.guest_price_per_night.toLocaleString('en-IN')}
             <Text style={styles.stickyPriceUnit}>/night</Text>
           </Text>
           {hasReviews && (
@@ -641,6 +701,117 @@ export default function GuestListingDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Host profile modal ── */}
+      <Modal visible={showHostModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.hostModalContent}>
+            <View style={styles.hostModalHeader}>
+              <Text style={styles.hostModalTitle}>About your host</Text>
+              <TouchableOpacity onPress={() => setShowHostModal(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.hostModalProfile}>
+                <View style={styles.hostModalAvatarWrap}>
+                  {listing.host_profile?.photo_url ? (
+                    <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostModalAvatar} />
+                  ) : (
+                    <View style={styles.hostModalAvatarFallback}>
+                      <Text style={styles.hostModalAvatarInitials}>{initials(listing.host_name)}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.hostModalName}>{listing.host_profile?.full_name || listing.host_name}</Text>
+                {listing.host_profile?.member_since ? (
+                  <Text style={styles.hostModalMeta}>Member since {listing.host_profile.member_since}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.hostModalDetails}>
+                {listing.host_profile?.hometown ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="home-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>From</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.hometown}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {listing.host_profile?.occupation ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="briefcase-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Work</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.occupation}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {listing.host_profile?.gender ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="person-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Gender</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.gender.charAt(0).toUpperCase() + listing.host_profile.gender.slice(1)}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {listing.host_profile?.hobbies ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="heart-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Hobbies</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.hobbies}</Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── All Reviews modal ── */}
+      <Modal visible={showAllReviews} animationType="slide">
+        <SafeAreaView style={styles.allReviewsModal}>
+          <View style={styles.allReviewsHeader}>
+            <TouchableOpacity onPress={() => setShowAllReviews(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="star" size={16} color="#F59E0B" />
+                <Text style={styles.allReviewsTitle}>
+                  {reviewsData?.average_rating?.toFixed(1)} · {reviewsData?.total} review{reviewsData?.total !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            <View style={{ width: 24 }} />
+          </View>
+          {breakdownEntries.length > 0 && (
+            <View style={[styles.breakdownWrap, { marginHorizontal: SPACING.lg, marginBottom: SPACING.md }]}>
+              {breakdownEntries.map(([key, val]) => (
+                <View key={key} style={[styles.breakdownRow, { marginBottom: key === breakdownEntries[breakdownEntries.length - 1][0] ? 0 : 10 }]}>
+                  <Text style={styles.breakdownLabel}>{BREAKDOWN_LABELS[key] ?? key}</Text>
+                  <View style={styles.breakdownTrack}>
+                    <View style={[styles.breakdownFill, { width: `${(val / 5) * 100}%` as any }]} />
+                  </View>
+                  <Text style={styles.breakdownVal}>{val.toFixed(1)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          <FlatList
+            data={reviewsData?.reviews ?? []}
+            keyExtractor={(r) => r.id}
+            contentContainerStyle={{ paddingHorizontal: SPACING.lg, paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item: r }) => <ReviewCard review={r} />}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -697,11 +868,13 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   amenityRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
   amenityText: { fontSize: 14, color: COLORS.text, flex: 1 },
 
-  spaceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.sm },
-  spaceCard: { width: (SCREEN_W - SPACING.lg * 2 - 10) / 2, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, gap: 8 },
-  spaceCardIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
-  spaceCardLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
-  spaceCardSub: { fontSize: 12, color: COLORS.textSec },
+  apartmentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm },
+  apartmentNameTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  spaceList: { gap: 0, marginBottom: SPACING.sm },
+  spaceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  spaceRowIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
+  spaceRowLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  spaceRowSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1 },
   featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   featureChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   featureChipText: { fontSize: 12, color: COLORS.textSec },
@@ -715,11 +888,6 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   checkinLabel: { fontSize: 12, color: COLORS.textSec },
   checkinTime: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
-  stayInfoRow: { flexDirection: 'row', gap: SPACING.sm },
-  stayInfoItem: { flex: 1, alignItems: 'center', padding: SPACING.md, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
-  stayInfoLabel: { fontSize: 11, color: COLORS.textMut, marginBottom: 4, ...FONTS.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
-  stayInfoValue: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
-
   reviewsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -727,7 +895,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   breakdownTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: COLORS.border, overflow: 'hidden' },
   breakdownFill: { height: 5, borderRadius: 3, backgroundColor: '#F59E0B' },
   breakdownVal: { width: 30, fontSize: 13, ...FONTS.semibold, color: COLORS.text, textAlign: 'right' },
-  reviewCard: { backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.sm },
+  reviewCard: { width: 280, backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.sm },
   reviewCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   reviewerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, alignItems: 'center', justifyContent: 'center' },
   reviewerInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
@@ -735,10 +903,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   reviewDate: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
   reviewTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   reviewBody: { fontSize: 14, color: COLORS.textSec, lineHeight: 21 },
+  readMore: { fontSize: 13, ...FONTS.semibold, color: COLORS.primary, marginTop: 4 },
   hostReply: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
   hostReplyLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   hostReplyBody: { fontSize: 13, color: COLORS.textSec, lineHeight: 19 },
-  moreReviews: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold, textAlign: 'center', paddingVertical: SPACING.sm },
+  showAllReviewsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 14, borderWidth: 1.5, borderColor: COLORS.text, borderRadius: RADIUS.md, marginTop: SPACING.xs },
+  showAllReviewsTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  allReviewsModal: { flex: 1, backgroundColor: COLORS.bg },
+  allReviewsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  allReviewsTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
   stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, paddingBottom: 30, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
   stickyPrice: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
@@ -763,4 +936,54 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   modalBtn: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: RADIUS.pill, alignItems: 'center', marginTop: SPACING.md },
   modalBtnDisabled: { backgroundColor: COLORS.border },
   modalBtnText: { color: '#fff', fontSize: 16, ...FONTS.bold },
+
+  hostCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: SPACING.md, marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  hostAvatarLg: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+  },
+  hostAvatarImg: { width: 52, height: 52, borderRadius: 26 },
+  hostAvatarInitials: { fontSize: 18, ...FONTS.bold, color: COLORS.primary },
+  hostCardName: { fontSize: 16, ...FONTS.semibold, color: COLORS.text },
+  hostCardSub: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
+
+  hostModalContent: {
+    backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 40, maxHeight: '70%',
+  },
+  hostModalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: SPACING.lg, paddingBottom: SPACING.sm,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  hostModalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
+  hostModalProfile: { alignItems: 'center', marginBottom: SPACING.lg },
+  hostModalAvatarWrap: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+    marginBottom: SPACING.md,
+  },
+  hostModalAvatar: { width: 88, height: 88, borderRadius: 44 },
+  hostModalAvatarFallback: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  hostModalAvatarInitials: { fontSize: 32, ...FONTS.bold, color: COLORS.primary },
+  hostModalName: { fontSize: 20, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
+  hostModalMeta: { fontSize: 14, color: COLORS.textSec },
+  hostModalDetails: { gap: 0 },
+  hostModalRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  hostModalRowLabel: { fontSize: 12, color: COLORS.textSec },
+  hostModalRowValue: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 1 },
 });
