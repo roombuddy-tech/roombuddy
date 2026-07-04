@@ -771,15 +771,28 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
             EventType.BOOKING_HOST_ACCEPTED if accepted
             else EventType.BOOKING_HOST_REJECTED
         )
+        listing = booking.listing
+        host_user = booking.host_user
+        host_phone = f"{host_user.phone_country_code}{host_user.phone_number}"
         dispatch(
             event_type=event,
             recipients=[booking.guest_user],
             context={
-                "property_name": booking.listing.title if booking.listing else "",
+                "property_name": listing.title if listing else "",
                 "booking_id": str(booking.id),
                 "booking_reference": booking.booking_code,
                 "host_name": get_display_name(booking.host_user),
+                "host_phone": host_phone,
                 "recipient_name": _user_first_name(booking.guest_user),
+                "check_in": booking.check_in_date.strftime("%a, %d %b %Y"),
+                "check_out": booking.check_out_date.strftime("%a, %d %b %Y"),
+                "nights": booking.nights,
+                "guest_count": booking.number_of_guests,
+                "per_night_amount": str(int(booking.guest_nightly_price)),
+                "subtotal": str(int(booking.subtotal)),
+                "tax_amount": str(int(booking.gst_amount)),
+                "amount": str(int(booking.total_guest_pays)),
+                "location": getattr(listing.property, "city_name", "") if listing else "",
             },
             idempotency_event_id=f"host_respond:{booking.id}:{'accept' if accepted else 'reject'}",
         )
