@@ -426,6 +426,7 @@ def _mark_booking_paid_and_maybe_accept(booking: Booking, by_user) -> None:
     """
     logger.info("_mark_booking_paid_and_maybe_accept booking_id=%s", getattr(booking, "id", None))
     booking.payment_status = Booking.PaymentStatus.PAID
+    booking.expires_at = None
 
     if (
         booking.status == Booking.Status.PENDING
@@ -512,10 +513,11 @@ def _get_location_string(listing) -> str:
     if prop.city_name:
         tail_bits.append(prop.city_name.strip())
     if prop.pincode:
+        pin = str(prop.pincode).strip()
         if tail_bits:
-            tail_bits[-1] = f"{tail_bits[-1]} - {prop.pincode.strip()}"
+            tail_bits[-1] = f"{tail_bits[-1]} - {pin}"
         else:
-            tail_bits.append(prop.pincode.strip())
+            tail_bits.append(pin)
     parts.extend(tail_bits)
 
     if parts:
@@ -583,8 +585,32 @@ def _notify_payment_succeeded(booking, payment) -> None:
     idem = f"payment_succeeded:{payment.id}"
     guest = booking.guest_user
     host = booking.host_user
- 
-    # ── Notify host (standard email, no attachment) ───────────────────────
+
+    # ── Notify host of new booking (only after payment is confirmed) ─────
+    if host:
+        guest_profile = getattr(guest, "profile", None)
+        guest_display = ""
+        if guest_profile:
+            first = getattr(guest_profile, "first_name", "") or ""
+            last = getattr(guest_profile, "last_name", "") or ""
+            guest_display = f"{first} {last}".strip()
+        guest_display = guest_display or getattr(guest, "mobile_number", "") or "A guest"
+
+        try:
+            dispatch(
+                event_type=EventType.BOOKING_NEW,
+                recipients=[host],
+                context={
+                    **base,
+                    "recipient_name": _user_first_name(host),
+                    "guest_name": guest_display,
+                },
+                idempotency_event_id=f"booking_new:{booking.id}",
+            )
+        except Exception:
+            logger.exception("Failed to notify host of new booking %s", booking.booking_code)
+
+    # ── Notify host (payment confirmation, no attachment) ─────────────────
     if host:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,

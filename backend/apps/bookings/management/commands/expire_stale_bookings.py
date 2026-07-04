@@ -41,7 +41,10 @@ class Command(BaseCommand):
         # - have an expires_at in the past
         stale = Booking.objects.filter(
             status=Booking.Status.PENDING,
-            payment_status=Booking.PaymentStatus.PAYMENT_PENDING,
+            payment_status__in=[
+                Booking.PaymentStatus.PAYMENT_PENDING,
+                Booking.PaymentStatus.UNPAID,
+            ],
             expires_at__lt=now,
         )
 

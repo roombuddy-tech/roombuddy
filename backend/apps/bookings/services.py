@@ -311,6 +311,7 @@ def create_booking(
                 meal_total=Decimal(str(quote["meal_total"])) if quote["meal_total"] else None,
                 cancellation_policy=cancellation_policy,
                 host_response_deadline=host_response_deadline,
+                expires_at=timezone.now() + timedelta(minutes=10),
             )
 
             BookingStatusHistory.objects.create(
@@ -322,35 +323,6 @@ def create_booking(
             )
 
         logger.info(f"Booking {booking.booking_code} created for guest {user.id}")
-
-        # ── Notify host of new booking ────────────────────────────────────
-        try:
-            guest_profile = getattr(user, "profile", None)
-            guest_display = ""
-            if guest_profile:
-                first = getattr(guest_profile, "first_name", "") or ""
-                last = getattr(guest_profile, "last_name", "") or ""
-                guest_display = f"{first} {last}".strip()
-            guest_display = guest_display or user.mobile_number or "A guest"
-
-            dispatch(
-                event_type=EventType.BOOKING_NEW,
-                recipients=[listing.host_user],
-                context={
-                    "recipient_name": _user_first_name(listing.host_user),
-                    "guest_name": guest_display,
-                    "booking_reference": booking.booking_code,
-                    "property_name": listing.title,
-                    "check_in": check_in.strftime("%a, %d %b %Y"),
-                    "check_out": check_out.strftime("%a, %d %b %Y"),
-                    "nights": nights,
-                    "amount": str(int(float(quote["total_guest_pays"]))),
-                    "booking_url": f"/bookings/{booking.id}",
-                },
-                idempotency_event_id=f"booking_new:{booking.id}",
-            )
-        except Exception:
-            logger.exception("Failed to notify host of new booking %s", booking.booking_code)
 
         return booking
 

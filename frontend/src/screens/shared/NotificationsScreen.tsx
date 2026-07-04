@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FONTS, SPACING, ThemeColors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
 import {
   listNotifications,
@@ -23,12 +24,14 @@ import type { AppNotification } from '../../types/notification';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
+  const { userRole } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -70,6 +73,21 @@ export default function NotificationsScreen() {
         title: n.payload.sender_name,
         subtitle: n.payload.listing_title || undefined,
       });
+    } else if (n.event_type.startsWith('booking.') && n.payload?.booking_id) {
+      if (userRole === 'host') {
+        navigation.navigate('BookingDetail', {
+          booking: { booking_id: n.payload.booking_id },
+        });
+      } else {
+        navigation.navigate('GuestTabs', { screen: 'MyStays' });
+      }
+    } else {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(n.id)) next.delete(n.id);
+        else next.add(n.id);
+        return next;
+      });
     }
   };
 
@@ -87,6 +105,7 @@ export default function NotificationsScreen() {
 
   const renderItem = ({ item }: { item: AppNotification }) => {
     const v = visualFor(item.event_type, COLORS);
+    const isExpanded = expandedIds.has(item.id);
     return (
       <TouchableOpacity
         style={[styles.row, !item.read_at && styles.rowUnread]}
@@ -97,10 +116,10 @@ export default function NotificationsScreen() {
           <Ionicons name={v.icon} size={20} color={v.color} />
         </View>
         <View style={styles.rowMain}>
-          <Text style={styles.subject} numberOfLines={1}>
+          <Text style={styles.subject} numberOfLines={2}>
             {item.subject || formatEventLabel(item.event_type)}
           </Text>
-          <Text style={styles.body} numberOfLines={2}>
+          <Text style={styles.body} numberOfLines={isExpanded ? undefined : 3}>
             {stripHtml(item.body)}
           </Text>
           <Text style={styles.meta}>{formatRelative(item.sent_at ?? item.created_at)}</Text>
