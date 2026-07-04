@@ -22,22 +22,8 @@
       </tr>
       {% if location %}
       <tr>
-        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Location</td>
-        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;line-height:1.5;">{{ location }}</td>
-      </tr>
-      {% endif %}
-      {% if host_name %}
-      <tr>
-        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#777;font-size:14px;vertical-align:top;">Host</td>
-        <td style="padding:12px 0;border-bottom:1px solid #e8e8e8;color:#1a1a1a;font-size:14px;font-weight:500;">{{ host_name }}</td>
-      </tr>
-      {% endif %}
-      {% if host_phone %}
-      <tr>
-        <td style="padding:12px 0;color:#777;font-size:14px;vertical-align:top;">Phone</td>
-        <td style="padding:12px 0;color:#1a1a1a;font-size:14px;">
-          <a href="tel:{{ host_phone }}" style="color:#0a84ff;text-decoration:none;">{{ host_phone }}</a>
-        </td>
+        <td style="padding:12px 0;color:#777;font-size:14px;vertical-align:top;">Location</td>
+        <td style="padding:12px 0;color:#1a1a1a;font-size:14px;line-height:1.5;">{{ location }}</td>
       </tr>
       {% endif %}
     </table>

@@ -734,11 +734,22 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
                 "hometown": fm.hometown or "",
             })
 
-    # Host name
+    # Host profile
     host_name = ""
+    host_profile_data = {}
     try:
         profile = listing.host_user.profile
         host_name = f"{profile.first_name} {profile.last_name[0]}." if profile.last_name else profile.first_name
+        host_profile_data = {
+            "full_name": f"{profile.first_name} {profile.last_name}".strip(),
+            "photo_url": get_photo_url(profile.profile_photo_url) if profile.profile_photo_url else None,
+            "gender": profile.gender or "",
+            "member_since": listing.host_user.created_at.strftime("%b %Y"),
+        }
+        if host_fm:
+            host_profile_data["occupation"] = host_fm.occupation or ""
+            host_profile_data["hobbies"] = host_fm.hobbies or ""
+            host_profile_data["hometown"] = host_fm.hometown or ""
     except Exception:
         logger.exception("get_guest_listing_detail failed")
         pass
@@ -801,6 +812,7 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         "review_count": listing.review_count,
         "total_bookings": listing.total_bookings,
         "host_name": host_name,
+        "host_profile": host_profile_data,
         "area_name": _get_area_name(listing),
         "blocked_dates": [
             {"start_date": bd.start_date.isoformat(), "end_date": bd.end_date.isoformat()}

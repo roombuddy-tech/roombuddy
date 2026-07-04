@@ -738,6 +738,7 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
     """Fire notification to the guest when host accepts or rejects."""
     from apps.notifications.services import dispatch
     from apps.notifications.models import EventType
+    from apps.payments.services import _build_booking_context, _send_invoice_email
     try:
         event = (
             EventType.BOOKING_HOST_ACCEPTED if accepted
@@ -768,6 +769,10 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
             },
             idempotency_event_id=f"host_respond:{booking.id}:{'accept' if accepted else 'reject'}",
         )
+
+        if accepted:
+            base = _build_booking_context(booking)
+            _send_invoice_email(booking, booking.guest_user, base)
     except Exception:
         logger.exception("_notify_host_responded failed booking_id=%s", booking.id)
 

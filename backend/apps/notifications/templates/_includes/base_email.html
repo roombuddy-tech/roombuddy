@@ -42,32 +42,11 @@ content, cta_url, cta_label, footer_extra.
           </td>
         </tr>
 
-        <!-- Cover photo -->
-        {% if cover_photo_url %}
-        <tr>
-          <td style="padding:20px 24px 0 24px;">
-            <img src="{{ cover_photo_url }}" alt="{{ property_name }}"
-                 style="width:100%;max-width:552px;height:auto;border-radius:6px;display:block;">
-          </td>
-        </tr>
-        {% endif %}
-
         <!-- Per-event content -->
         {% block content %}{% endblock %}
 
-        <!-- Primary CTA -->
-        {% block cta %}
-        {% if booking_url %}
-        <tr>
-          <td align="left" style="padding:8px 24px 24px 24px;">
-            <a href="{% block cta_url %}{{ booking_url }}{% endblock %}"
-               style="display:inline-block;padding:12px 28px;background-color:#0a84ff;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
-              {% block cta_label %}View booking{% endblock %}
-            </a>
-          </td>
-        </tr>
-        {% endif %}
-        {% endblock %}
+        <!-- Primary CTA (override in child templates if needed) -->
+        {% block cta %}{% endblock %}
 
         <!-- Footer -->
         <tr>

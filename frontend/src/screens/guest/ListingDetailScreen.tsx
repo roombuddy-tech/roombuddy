@@ -168,6 +168,7 @@ export default function GuestListingDetailScreen() {
   const [checkIn, setCheckIn] = useState<string | null>(passedCheckIn ?? null);
   const [checkOut, setCheckOut] = useState<string | null>(passedCheckOut ?? null);
   const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
+  const [showHostModal, setShowHostModal] = useState(false);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
@@ -542,6 +543,30 @@ export default function GuestListingDetailScreen() {
             )}
           </View>
 
+          {/* ── About your host ── */}
+          {listing.host_name ? (
+            <TouchableOpacity
+              style={styles.hostCard}
+              activeOpacity={0.7}
+              onPress={() => setShowHostModal(true)}
+            >
+              <View style={styles.hostAvatarLg}>
+                {listing.host_profile?.photo_url ? (
+                  <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostAvatarImg} />
+                ) : (
+                  <Text style={styles.hostAvatarInitials}>{initials(listing.host_name)}</Text>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hostCardName}>Hosted by {listing.host_name}</Text>
+                {listing.host_profile?.member_since ? (
+                  <Text style={styles.hostCardSub}>Member since {listing.host_profile.member_since}</Text>
+                ) : null}
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMut} />
+            </TouchableOpacity>
+          ) : null}
+
           {/* ── Reviews ── */}
           {hasReviews && (
             <View style={styles.section}>
@@ -648,6 +673,77 @@ export default function GuestListingDetailScreen() {
                 </TouchableOpacity>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Host profile modal ── */}
+      <Modal visible={showHostModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.hostModalContent}>
+            <View style={styles.hostModalHeader}>
+              <Text style={styles.hostModalTitle}>About your host</Text>
+              <TouchableOpacity onPress={() => setShowHostModal(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.hostModalProfile}>
+                <View style={styles.hostModalAvatarWrap}>
+                  {listing.host_profile?.photo_url ? (
+                    <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostModalAvatar} />
+                  ) : (
+                    <View style={styles.hostModalAvatarFallback}>
+                      <Text style={styles.hostModalAvatarInitials}>{initials(listing.host_name)}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.hostModalName}>{listing.host_profile?.full_name || listing.host_name}</Text>
+                {listing.host_profile?.member_since ? (
+                  <Text style={styles.hostModalMeta}>Member since {listing.host_profile.member_since}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.hostModalDetails}>
+                {listing.host_profile?.hometown ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="home-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>From</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.hometown}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {listing.host_profile?.occupation ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="briefcase-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Work</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.occupation}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {listing.host_profile?.gender ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="person-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Gender</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.gender.charAt(0).toUpperCase() + listing.host_profile.gender.slice(1)}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {listing.host_profile?.hobbies ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="heart-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Hobbies</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.hobbies}</Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -770,4 +866,54 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   modalBtn: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: RADIUS.pill, alignItems: 'center', marginTop: SPACING.md },
   modalBtnDisabled: { backgroundColor: COLORS.border },
   modalBtnText: { color: '#fff', fontSize: 16, ...FONTS.bold },
+
+  hostCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: SPACING.md, marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  hostAvatarLg: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+  },
+  hostAvatarImg: { width: 52, height: 52, borderRadius: 26 },
+  hostAvatarInitials: { fontSize: 18, ...FONTS.bold, color: COLORS.primary },
+  hostCardName: { fontSize: 16, ...FONTS.semibold, color: COLORS.text },
+  hostCardSub: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
+
+  hostModalContent: {
+    backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: 40, maxHeight: '70%',
+  },
+  hostModalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: SPACING.lg, paddingBottom: SPACING.sm,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  hostModalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
+  hostModalProfile: { alignItems: 'center', marginBottom: SPACING.lg },
+  hostModalAvatarWrap: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+    marginBottom: SPACING.md,
+  },
+  hostModalAvatar: { width: 88, height: 88, borderRadius: 44 },
+  hostModalAvatarFallback: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  hostModalAvatarInitials: { fontSize: 32, ...FONTS.bold, color: COLORS.primary },
+  hostModalName: { fontSize: 20, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
+  hostModalMeta: { fontSize: 14, color: COLORS.textSec },
+  hostModalDetails: { gap: 0 },
+  hostModalRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  hostModalRowLabel: { fontSize: 12, color: COLORS.textSec },
+  hostModalRowValue: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 1 },
 });

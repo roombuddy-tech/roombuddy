@@ -582,11 +582,10 @@ def _build_booking_context(booking) -> dict:
 
 def _notify_payment_succeeded(booking, payment) -> None:
     base = _build_booking_context(booking)
-    idem = f"payment_succeeded:{payment.id}"
     guest = booking.guest_user
     host = booking.host_user
 
-    # ── Notify host of new booking (only after payment is confirmed) ─────
+    # ── Notify host: "New booking request" (one email only) ──────────────
     if host:
         guest_profile = getattr(guest, "profile", None)
         guest_display = ""
@@ -595,6 +594,7 @@ def _notify_payment_succeeded(booking, payment) -> None:
             last = getattr(guest_profile, "last_name", "") or ""
             guest_display = f"{first} {last}".strip()
         guest_display = guest_display or getattr(guest, "mobile_number", "") or "A guest"
+        guest_phone = getattr(guest, "mobile_number", "") or ""
 
         try:
             dispatch(
@@ -604,34 +604,23 @@ def _notify_payment_succeeded(booking, payment) -> None:
                     **base,
                     "recipient_name": _user_first_name(host),
                     "guest_name": guest_display,
+                    "guest_phone": guest_phone,
                 },
                 idempotency_event_id=f"booking_new:{booking.id}",
             )
         except Exception:
             logger.exception("Failed to notify host of new booking %s", booking.booking_code)
 
-    # ── Notify host (payment confirmation, no attachment) ─────────────────
-    if host:
-        dispatch(
-            event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
-            recipients=[host],
-            context={**base, "recipient_name": _user_first_name(host), "recipient_role": "host"},
-            idempotency_event_id=idem,
-        )
- 
-    # ── Notify guest: standard channels (in-app, SMS) ────────────────────
+    # ── Notify guest: "Payment received, awaiting host confirmation" ─────
     if guest:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
             recipients=[guest],
             context={**base, "recipient_name": _user_first_name(guest), "recipient_role": "guest"},
-            idempotency_event_id=idem,
+            idempotency_event_id=f"payment_succeeded:{payment.id}",
         )
- 
-        # ── Send invoice email separately with PDF attachment ─────────────
-        _send_invoice_email(booking, guest, base)
- 
-    # ── Instant booking: also notify guest of acceptance ─────────────────
+
+    # ── Instant booking: auto-accepted, send confirmation + invoice ──────
     if booking.status == booking.Status.ACCEPTED and guest:
         dispatch(
             event_type=EventType.BOOKING_HOST_ACCEPTED,
@@ -639,6 +628,7 @@ def _notify_payment_succeeded(booking, payment) -> None:
             context={**base, "recipient_name": _user_first_name(guest)},
             idempotency_event_id=f"host_accepted:{booking.id}",
         )
+        _send_invoice_email(booking, guest, base)
 
 
 def _notify_payment_failed(booking) -> None:
