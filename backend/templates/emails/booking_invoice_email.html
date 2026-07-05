@@ -12,72 +12,70 @@
 {% block content %}
   {% include "_includes/reservation_details.html" %}
 
-  {# Extended price breakdown for invoice email #}
+  {# Price breakdown: paid online vs paid directly to host #}
   <tr>
     <td style="padding:8px 24px 0 24px;">
       <h3 style="margin:0 0 12px 0;color:#1a1a1a;font-size:16px;font-weight:600;">Price breakdown</h3>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
              style="border-collapse:collapse;background-color:#fafafa;border-radius:6px;">
 
-        <tr>
-          <td style="padding:12px 14px;color:#555;font-size:14px;">
-            {{ nights }} night{{ nights|pluralize }} &times; &#8377;{{ per_night_amount }}
+        <tr style="background-color:#2C4A58;">
+          <td style="padding:14px;color:#fff;font-size:16px;font-weight:700;border-radius:6px 0 0 0;">
+            Paid online (RoomBuddy fee)
           </td>
-          <td style="padding:12px 14px;color:#555;font-size:14px;text-align:right;">
+          <td style="padding:14px;color:#fff;font-size:16px;font-weight:700;text-align:right;border-radius:0 6px 0 0;">
+            &#8377;{{ amount }}
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding:8px 14px 14px 14px;color:#888;font-size:12px;">
+            This is the only amount charged through RoomBuddy.
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:10px 14px 4px 14px;color:#1a1a1a;font-size:14px;font-weight:600;border-top:1px solid #e8e8e8;">
+            Pay the host directly
+          </td>
+          <td style="border-top:1px solid #e8e8e8;"></td>
+        </tr>
+        <tr>
+          <td style="padding:2px 14px;color:#555;font-size:14px;">
+            {{ nights }} night{{ nights|pluralize }} &times; &#8377;{{ per_night_amount }} (rent)
+          </td>
+          <td style="padding:2px 14px;color:#555;font-size:14px;text-align:right;">
             &#8377;{{ subtotal }}
           </td>
         </tr>
 
         {% if meal_total and meal_total != "0" %}
         <tr>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;">
+          <td style="padding:2px 14px;color:#555;font-size:14px;">
             Meals (&#8377;{{ meal_cost_per_day }} &times; {{ nights }} days)
           </td>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;text-align:right;">
+          <td style="padding:2px 14px;color:#555;font-size:14px;text-align:right;">
             &#8377;{{ meal_total }}
-          </td>
-        </tr>
-        {% endif %}
-
-        {% if tax_amount and tax_amount != "0" %}
-        <tr>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;">
-            Goods &amp; services tax (GST)
-          </td>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;text-align:right;">
-            &#8377;{{ tax_amount }}
-          </td>
-        </tr>
-        {% endif %}
-
-        {% if platform_fee and platform_fee != "0" %}
-        <tr>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;">
-            Platform service fee
-          </td>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;text-align:right;">
-            &#8377;{{ platform_fee }}
           </td>
         </tr>
         {% endif %}
 
         {% if security_deposit and security_deposit != "0" %}
         <tr>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;">
+          <td style="padding:2px 14px;color:#555;font-size:14px;">
             Security deposit <span style="color:#888;font-size:12px;">(refundable at checkout)</span>
           </td>
-          <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;text-align:right;">
+          <td style="padding:2px 14px;color:#555;font-size:14px;text-align:right;">
             &#8377;{{ security_deposit }}
           </td>
         </tr>
         {% endif %}
 
-        <tr style="background-color:#2C4A58;">
-          <td style="padding:14px;color:#fff;font-size:16px;font-weight:700;border-radius:0 0 0 6px;">
-            Total paid
+        <tr>
+          <td style="padding:8px 14px 14px 14px;color:#1a1a1a;font-size:15px;font-weight:700;">
+            Payable to host
           </td>
-          <td style="padding:14px;color:#D97055;font-size:16px;font-weight:700;text-align:right;border-radius:0 0 6px 0;">
-            &#8377;{{ amount }}
+          <td style="padding:8px 14px 14px 14px;color:#1a1a1a;font-size:15px;font-weight:700;text-align:right;">
+            &#8377;{{ pay_to_host_directly }}
           </td>
         </tr>
 
@@ -96,8 +94,12 @@
             <p style="margin:0 0 4px 0;color:#92400E;font-size:13px;font-weight:600;">
               Cancellation policy
             </p>
+            <p style="margin:0 0 6px 0;color:#92400E;font-size:13px;line-height:1.5;">
+              The &#8377;{{ platform_fee }} RoomBuddy fee is non-refundable.
+            </p>
             <p style="margin:0;color:#92400E;font-size:13px;line-height:1.5;">
-              {{ cancellation_policy_text }}
+              Rent and deposit are paid to the host directly, so any refund of those
+              follows the host&#39;s policy: {{ cancellation_policy_text }}
             </p>
           </td>
         </tr>

@@ -33,6 +33,7 @@ class EventType(models.TextChoices):
     BOOKING_HOST_CANCELLED = "booking.host_cancelled", "Host cancelled booking"
     BOOKING_REFUND_INITIATED = "booking.refund_initiated", "Refund initiated"
     BOOKING_REFUND_COMPLETED = "booking.refund_completed", "Refund completed"
+    CONTACT_UNLOCKED = "contact.unlocked", "Guest unlocked host contact"
     MESSAGE_RECEIVED = "message.received", "New message received"
     ID_VERIFICATION_APPROVED = "id_verification.approved", "ID verification approved"
     ID_VERIFICATION_REJECTED = "id_verification.rejected", "ID verification rejected"

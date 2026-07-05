@@ -43,6 +43,8 @@ export const ENDPOINTS = {
   PAYMENT: {
     CREATE_ORDER: '/api/payments/create-order/',
     VERIFY: '/api/payments/verify/',
+    UNLOCK_CREATE_ORDER: '/api/payments/unlock/create-order/',
+    UNLOCK_VERIFY: '/api/payments/unlock/verify/',
     HOST_PAYOUTS: '/api/payments/host/payouts/',
   },
   NOTIFICATIONS: {

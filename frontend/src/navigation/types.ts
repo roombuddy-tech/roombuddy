@@ -44,7 +44,12 @@ export type HostStackParamList = {
 
 export type GuestStackParamList = {
   GuestTabs: undefined;
-  GuestListingDetail: { listingId: string; checkIn?: string; checkOut?: string };
+  GuestListingDetail: {
+    listingId: string;
+    checkIn?: string;
+    checkOut?: string;
+    unlockedContact?: { name: string; phone: string | null };
+  };
   BookTest: undefined;
   BookingConfirm: {
     listingId: string;
@@ -63,6 +68,8 @@ export type GuestStackParamList = {
     bookingId: string;
     bookingCode: string;
     order: any;
+    mode?: 'booking' | 'unlock';
+    listingId?: string;
   };
   BookingSuccess: {
     bookingId: string;

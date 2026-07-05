@@ -22,7 +22,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.bookings.models import Booking, BookingStatusHistory
-from apps.payments.models import Payment, Refund, WebhookEvent, WebhookEventType
+from apps.payments.models import ContactUnlock, Payment, Refund, WebhookEvent, WebhookEventType
 from common.constants import StatusChangeReason
 from apps.notifications.models import EventType
 from apps.notifications.services import dispatch
@@ -172,6 +172,155 @@ def verify_and_capture(
     logger.info(f"Booking {booking.booking_code} marked PAID via verify endpoint")
     _notify_payment_succeeded(booking, payment)
     return booking
+
+
+# ─── Contact unlock (₹29 one-time, reveals host phone on a listing) ──────
+
+def _host_phone(host) -> str | None:
+    """Full dialable phone for a host user, or None."""
+    num = getattr(host, "phone_number", "") or ""
+    if not num:
+        return None
+    cc = getattr(host, "phone_country_code", "") or ""
+    return f"{cc}{num}".strip()
+
+
+def get_active_unlock(guest, listing) -> ContactUnlock | None:
+    """Return the guest's captured unlock for this listing, if any."""
+    return ContactUnlock.objects.filter(
+        guest_user=guest, listing=listing, status=ContactUnlock.Status.UNLOCKED,
+    ).first()
+
+
+def create_order_for_unlock(guest, listing) -> dict:
+    """
+    Create a Razorpay order for unlocking a host's contact on a listing.
+
+    Idempotent-ish: if the guest already unlocked this listing, we short-circuit
+    with `already_unlocked` so the app can just reveal the number.
+    """
+    logger.info("create_order_for_unlock guest_id=%s listing_id=%s", getattr(guest, "id", None), getattr(listing, "id", None))
+
+    if listing.host_user_id == guest.id:
+        raise ValidationError({
+            "error": "You cannot unlock your own listing",
+            "code": ErrorCode.FORBIDDEN,
+        })
+
+    if get_active_unlock(guest, listing):
+        return {"already_unlocked": True}
+
+    fee = settings.CONTACT_UNLOCK_FEE
+    notes = {
+        "kind": "contact_unlock",
+        "listing_id": str(listing.id),
+        "guest_id": str(guest.id),
+        "host_id": str(listing.host_user_id),
+    }
+    try:
+        order = rzp.create_order(
+            amount=fee,
+            currency="INR",
+            receipt=f"unlock_{str(listing.id)[:8]}_{str(guest.id)[:8]}",
+            notes=notes,
+        )
+    except Exception as e:
+        logger.error(f"Failed to create unlock order for listing {listing.id}: {e}")
+        raise ValidationError({
+            "error": "Could not create payment order",
+            "code": ErrorCode.GATEWAY_ERROR,
+        })
+
+    ContactUnlock.objects.create(
+        guest_user=guest,
+        listing=listing,
+        host_user=listing.host_user,
+        razorpay_order_id=order["id"],
+        amount=fee,
+        currency="INR",
+        status=ContactUnlock.Status.CREATED,
+        raw_response=order,
+    )
+
+    return {
+        "already_unlocked": False,
+        "razorpay_key_id": settings.RAZORPAY_KEY_ID or "console_key",
+        "order_id": order["id"],
+        "amount": order["amount"],
+        "currency": order["currency"],
+    }
+
+
+def verify_and_capture_unlock(
+    razorpay_order_id: str,
+    razorpay_payment_id: str,
+    razorpay_signature: str,
+) -> dict:
+    """Verify the checkout signature and reveal the host's phone number."""
+    logger.info("verify_and_capture_unlock order_id=%s", razorpay_order_id)
+    if not rzp.verify_payment_signature(
+        razorpay_order_id, razorpay_payment_id, razorpay_signature,
+    ):
+        logger.warning(f"Invalid signature for unlock order {razorpay_order_id}")
+        raise ValidationError({
+            "error": "Invalid payment signature",
+            "code": ErrorCode.BAD_SIGNATURE,
+        })
+
+    try:
+        unlock = ContactUnlock.objects.select_related("listing", "host_user").get(
+            razorpay_order_id=razorpay_order_id,
+        )
+    except ContactUnlock.DoesNotExist:
+        raise NotFound({
+            "error": "Unlock not found",
+            "code": ErrorCode.PAYMENT_NOT_FOUND,
+        })
+
+    newly_unlocked = unlock.status != ContactUnlock.Status.UNLOCKED
+    if newly_unlocked:
+        with transaction.atomic():
+            unlock.razorpay_payment_id = razorpay_payment_id
+            unlock.status = ContactUnlock.Status.UNLOCKED
+            unlock.unlocked_at = timezone.now()
+            unlock.save(update_fields=[
+                "razorpay_payment_id", "status", "unlocked_at", "updated_at",
+            ])
+        _notify_contact_unlocked(unlock)
+
+    return {
+        "listing_id": str(unlock.listing_id),
+        "host_name": _get_host_first_name(unlock.host_user),
+        "host_phone": _host_phone(unlock.host_user),
+    }
+
+
+def _get_host_first_name(host) -> str:
+    try:
+        return host.profile.first_name or "your host"
+    except Exception:
+        return "your host"
+
+
+def _notify_contact_unlocked(unlock: ContactUnlock) -> None:
+    """Light in-app nudge to the host that a guest unlocked their contact."""
+    try:
+        guest_name = _get_host_first_name(unlock.guest_user)
+    except Exception:
+        guest_name = "A guest"
+    try:
+        dispatch(
+            event_type=EventType.CONTACT_UNLOCKED,
+            recipients=[unlock.host_user],
+            context={
+                "guest_name": guest_name,
+                "listing_title": unlock.listing.title,
+            },
+            idempotency_event_id=f"contact_unlocked:{unlock.id}",
+            channels=["in_app"],
+        )
+    except Exception:
+        logger.exception("_notify_contact_unlocked failed")
 
 
 # ─── Webhook handler (source of truth, async) ────────────────────────────
@@ -577,7 +726,11 @@ def _build_booking_context(booking) -> dict:
         "nights": nights,
         "guest_count": booking.number_of_guests,
         "amount": f"{booking.total_guest_pays:,.0f}",
+        "platform_fee": f"{booking.platform_fee:,.0f}",
         "subtotal": f"{booking.subtotal:,.0f}",
+        "security_deposit": f"{booking.security_deposit:,.0f}",
+        "meal_total": f"{(booking.meal_total or 0):,.0f}",
+        "pay_to_host_directly": f"{(booking.subtotal + booking.security_deposit + (booking.meal_total or 0)):,.0f}",
         "tax_amount": f"{booking.gst_amount:,.0f}",
         "per_night_amount": f"{booking.guest_nightly_price:,.0f}",
 

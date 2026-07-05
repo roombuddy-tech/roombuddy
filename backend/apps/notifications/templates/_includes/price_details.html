@@ -3,20 +3,42 @@
     <h3 style="margin:0 0 12px 0;color:#1a1a1a;font-size:16px;font-weight:600;">Price details</h3>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background-color:#fafafa;border-radius:6px;">
       <tr>
-        <td style="padding:12px 14px;color:#555;font-size:14px;">{{ nights }} night{{ nights|pluralize }} × ₹{{ per_night_amount }}</td>
-        <td style="padding:12px 14px;color:#555;font-size:14px;text-align:right;">₹{{ subtotal }}</td>
+        <td style="padding:12px 14px 4px 14px;color:#1a1a1a;font-size:16px;font-weight:600;">
+          Paid online (RoomBuddy fee)
+        </td>
+        <td style="padding:12px 14px 4px 14px;color:#1a1a1a;font-size:16px;font-weight:600;text-align:right;">₹{{ amount }}</td>
       </tr>
-      {% if tax_amount and tax_amount != "0" %}
       <tr>
-        <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;">Goods &amp; services tax</td>
-        <td style="padding:0 14px 12px 14px;color:#555;font-size:14px;text-align:right;">₹{{ tax_amount }}</td>
+        <td style="padding:0 14px 12px 14px;color:#888;font-size:13px;" colspan="2">
+          This is the only amount charged through RoomBuddy.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:12px 14px 4px 14px;color:#555;font-size:14px;font-weight:600;border-top:1px solid #e8e8e8;">
+          Pay the host directly
+        </td>
+        <td style="padding:12px 14px 4px 14px;color:#555;font-size:14px;font-weight:600;text-align:right;border-top:1px solid #e8e8e8;"></td>
+      </tr>
+      <tr>
+        <td style="padding:0 14px 6px 14px;color:#555;font-size:14px;">{{ nights }} night{{ nights|pluralize }} × ₹{{ per_night_amount }} (rent)</td>
+        <td style="padding:0 14px 6px 14px;color:#555;font-size:14px;text-align:right;">₹{{ subtotal }}</td>
+      </tr>
+      {% if security_deposit and security_deposit != "0" %}
+      <tr>
+        <td style="padding:0 14px 6px 14px;color:#555;font-size:14px;">Security deposit</td>
+        <td style="padding:0 14px 6px 14px;color:#555;font-size:14px;text-align:right;">₹{{ security_deposit }}</td>
+      </tr>
+      {% endif %}
+      {% if meal_total and meal_total != "0" %}
+      <tr>
+        <td style="padding:0 14px 6px 14px;color:#555;font-size:14px;">Meals</td>
+        <td style="padding:0 14px 6px 14px;color:#555;font-size:14px;text-align:right;">₹{{ meal_total }}</td>
       </tr>
       {% endif %}
       <tr>
-        <td style="padding:12px 14px;color:#1a1a1a;font-size:16px;font-weight:600;border-top:1px solid #e8e8e8;">
-          Total {% block total_label %}paid{% endblock %}
-        </td>
-        <td style="padding:12px 14px;color:#1a1a1a;font-size:16px;font-weight:600;text-align:right;border-top:1px solid #e8e8e8;">₹{{ amount }}</td>
+        <td style="padding:6px 14px 12px 14px;color:#1a1a1a;font-size:15px;font-weight:600;">Payable to host</td>
+        <td style="padding:6px 14px 12px 14px;color:#1a1a1a;font-size:15px;font-weight:600;text-align:right;">₹{{ pay_to_host_directly }}</td>
       </tr>
     </table>
   </td>

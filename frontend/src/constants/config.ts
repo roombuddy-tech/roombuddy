@@ -12,7 +12,7 @@ type ApiTarget = 'local' | 'aws' | 'prod';
 const API_TARGET: ApiTarget = 'local';
 
 const API_URLS: Record<ApiTarget, string> = {
-  local: 'http://192.168.1.2:8000',
+  local: 'http://192.168.7.4:8000',
   aws: 'https://api.roombuddy.co.in',
   prod: 'https://api.roombuddy.co.in',
 };
@@ -29,4 +29,9 @@ export const CONFIG = {
   GST_PCT: 0.12,
   GUEST_PLATFORM_FEE_PCT: 0.05,
   HOST_PLATFORM_FEE_PCT: 0.04,
+  // Early-stage flat fees (₹). Guest pays only the platform fee to book; rent,
+  // deposit & meals are settled directly with the host. Unlock fee reveals the
+  // host's phone number on a listing.
+  BOOKING_PLATFORM_FEE: 49,
+  CONTACT_UNLOCK_FEE: 29,
 };
