@@ -73,6 +73,13 @@ export default function HomeScreen() {
   const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
 
+  const SectionHead = ({ label }: { label: string }) => (
+    <View style={styles.sectionHeadRow}>
+      <View style={styles.sectionBar} />
+      <Text style={styles.sectionHeadTxt}>{label}</Text>
+    </View>
+  );
+
   const [showProfile, setShowProfile] = useState(false);
 
   const [showSearchForm, setShowSearchForm] = useState(false);
@@ -487,7 +494,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {/* Popular cities */}
-          <Text style={styles.sectionHead}>Popular cities</Text>
+          <SectionHead label="Popular cities" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.citiesRow}>
             {POPULAR_CITIES.map((city) => (
               <TouchableOpacity
@@ -510,7 +517,7 @@ export default function HomeScreen() {
           </ScrollView>
 
           {/* Why RoomBuddy */}
-          <Text style={styles.sectionHead}>Why RoomBuddy?</Text>
+          <SectionHead label="Why RoomBuddy" />
           <View style={styles.whyGrid}>
             {[
               { icon: 'pricetag-outline' as const, title: 'Budget-friendly', sub: 'Rooms from ₹500/night' },
@@ -529,7 +536,7 @@ export default function HomeScreen() {
           </View>
 
           {/* How it works */}
-          <Text style={styles.sectionHead}>How it works</Text>
+          <SectionHead label="How it works" />
           <View style={styles.howRow}>
             {[
               { n: '1', title: 'Search', sub: 'Pick a city & dates', bg: COLORS.chip, fg: COLORS.primary },
@@ -663,7 +670,9 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   pillTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   pillSub: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
 
-  sectionHead: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.md },
+  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
+  sectionBar: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
+  sectionHeadTxt: { fontSize: 13, ...FONTS.bold, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
   citiesRow: { gap: 14, paddingBottom: SPACING.xl },
   cityCard: { alignItems: 'center', width: 72 },
   cityCircle: {
@@ -688,11 +697,15 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   whyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   whySub: { fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
 
-  howRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl },
-  howNum: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  howRow: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: RADIUS.lg, paddingVertical: SPACING.md, paddingHorizontal: SPACING.sm, ...SHADOW.sm,
+  },
+  howNum: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   howNumTxt: { fontSize: 16, ...FONTS.bold },
   howTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
-  howSub: { fontSize: 10, color: COLORS.textMut, textAlign: 'center', marginTop: 2 },
+  howSub: { fontSize: 11, color: COLORS.textMut, textAlign: 'center', marginTop: 2, lineHeight: 15 },
 
   // ── Cards ──
   card: {
@@ -708,9 +721,9 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   tag: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface,
+    paddingHorizontal: 9, paddingVertical: 5, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip,
   },
-  tagText: { fontSize: 11, color: COLORS.textSec, ...FONTS.medium },
+  tagText: { fontSize: 11, color: COLORS.chipInk, ...FONTS.semibold },
   mealTag: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentAlpha,

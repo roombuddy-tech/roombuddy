@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import { ENDPOINTS } from '../../constants/endpoints';
-import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
@@ -172,7 +172,7 @@ const policyMeta =  POLICY_META.flexible;
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirm and pay</Text>
+        <Text style={styles.headerTitle}>CONFIRM AND PAY</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -180,6 +180,10 @@ const policyMeta =  POLICY_META.flexible;
 
         {/* Stay details */}
         <View style={styles.card}>
+          <View style={styles.eyebrowRow}>
+            <View style={styles.accentBar} />
+            <Text style={styles.eyebrow}>Your stay</Text>
+          </View>
           <Text style={styles.listingTitle} numberOfLines={2}>{listingTitle}</Text>
           <View style={styles.row}>
             <Text style={styles.label}>Check-in</Text>
@@ -193,7 +197,7 @@ const policyMeta =  POLICY_META.flexible;
             <Text style={styles.label}>Guests</Text>
             <Text style={styles.value}>{numberOfGuests}</Text>
           </View>
-          <View style={[styles.row, { marginBottom: 0 }]}>
+          <View style={[styles.row, styles.lastRow]}>
             <Text style={styles.label}>Nights</Text>
             <Text style={styles.value}>{quote.nights}</Text>
           </View>
@@ -201,7 +205,10 @@ const policyMeta =  POLICY_META.flexible;
 
         {/* Guest details — booking is for the logged-in user */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Booking for</Text>
+          <View style={styles.eyebrowRow}>
+            <View style={styles.accentBar} />
+            <Text style={styles.eyebrow}>Booking for</Text>
+          </View>
           {guestProfile ? (
             <>
               <View style={styles.row}>
@@ -212,7 +219,7 @@ const policyMeta =  POLICY_META.flexible;
                 <Text style={styles.label}>Gender</Text>
                 <Text style={styles.value}>{guestProfile.gender.charAt(0).toUpperCase() + guestProfile.gender.slice(1)}</Text>
               </View>
-              <View style={[styles.row, { marginBottom: 0 }]}>
+              <View style={[styles.row, styles.lastRow]}>
                 <Text style={styles.label}>Phone</Text>
                 <Text style={styles.value}>{user?.phone || '—'}</Text>
               </View>
@@ -224,17 +231,13 @@ const policyMeta =  POLICY_META.flexible;
 
         {/* Gender mismatch warning */}
         {genderMismatch && (
-          <View style={{
-            backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
-            borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md,
-            flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-          }}>
-            <Ionicons name="alert-circle" size={22} color="#DC2626" />
+          <View style={styles.alertCard}>
+            <Ionicons name="alert-circle" size={22} color={COLORS.danger} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, ...FONTS.semibold, color: '#DC2626', marginBottom: 4 }}>
+              <Text style={styles.alertTitle}>
                 Gender restriction
               </Text>
-              <Text style={{ fontSize: 13, color: '#991B1B', lineHeight: 19 }}>
+              <Text style={styles.alertText}>
                 This property is listed for {genderLabel.toLowerCase()}. Your profile gender ({guestProfile?.gender}) does not match. You cannot book this listing.
               </Text>
             </View>
@@ -246,7 +249,11 @@ const policyMeta =  POLICY_META.flexible;
           <View style={styles.card}>
             <View style={styles.mealHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>Home cooked meals</Text>
+                <View style={styles.eyebrowRow}>
+                  <View style={styles.accentBar} />
+                  <Text style={styles.eyebrow}>Meals</Text>
+                </View>
+                <Text style={styles.mealTitle}>Home cooked meals</Text>
                 {quote.meal_types && <Text style={styles.mealTypes}>Includes: {quote.meal_types}</Text>}
                 {quote.meal_cost_per_day !== null && (
                   <Text style={styles.mealCost}>₹{quote.meal_cost_per_day.toLocaleString('en-IN')}/day</Text>
@@ -266,7 +273,10 @@ const policyMeta =  POLICY_META.flexible;
 
         {/* Price details */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Price details</Text>
+          <View style={styles.eyebrowRow}>
+            <View style={styles.accentBar} />
+            <Text style={styles.eyebrow}>Price details</Text>
+          </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights</Text>
             <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
@@ -482,19 +492,43 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     backgroundColor: COLORS.bg, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 17, ...FONTS.semibold, color: COLORS.text },
+  headerTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text, letterSpacing: 1, textTransform: 'uppercase' },
 
   scroll: { padding: SPACING.md, paddingBottom: 120 },
-  card: { backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md },
-  listingTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW.sm,
+  },
+
+  // Uppercase eyebrow with accent bar
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm },
+  accentBar: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
+  eyebrow: { ...FONTS.bold, fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
+
+  listingTitle: { fontSize: 22, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.sm },
   cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.sm },
-  mealHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mealHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: SPACING.sm },
+  mealTitle: { fontSize: 15, ...FONTS.bold, color: COLORS.text, marginBottom: 2 },
   mealTypes: { fontSize: 13, color: COLORS.textSec, marginBottom: 2 },
-  mealCost: { fontSize: 13, color: COLORS.primary, ...FONTS.medium },
+  mealCost: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
   mealDesc: { fontSize: 13, color: COLORS.textSec, marginTop: SPACING.sm, lineHeight: 19 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  label: { fontSize: 14, color: COLORS.textSec },
-  value: { fontSize: 14, color: COLORS.text, ...FONTS.medium },
+  row: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  label: { fontSize: 14, color: COLORS.textSec, ...FONTS.regular },
+  value: { fontSize: 14, color: COLORS.text, ...FONTS.semibold, textAlign: 'right', flexShrink: 1, marginLeft: SPACING.md },
+  lastRow: { borderBottomWidth: 0, paddingBottom: 0 },
+
+  // Alert card (gender restriction)
+  alertCard: {
+    backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.danger,
+    borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+  },
+  alertTitle: { fontSize: 14, ...FONTS.bold, color: COLORS.danger, marginBottom: 4, letterSpacing: 0.6, textTransform: 'uppercase' },
+  alertText: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   priceLabel: { fontSize: 14, color: COLORS.textSec, flex: 1 },
   priceValue: { fontSize: 14, color: COLORS.text, ...FONTS.medium },
@@ -529,10 +563,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   payBtn: {
     flexDirection: 'row', backgroundColor: COLORS.primary,
-    paddingVertical: 16, borderRadius: RADIUS.md,
+    paddingVertical: 16, borderRadius: RADIUS.pill,
     alignItems: 'center', justifyContent: 'center', gap: 8,
+    ...SHADOW.sm,
   },
-  payBtnDisabled: { backgroundColor: COLORS.primaryLight },
+  payBtnDisabled: { backgroundColor: COLORS.primaryLight, opacity: 0.5 },
   payBtnText: { color: '#fff', fontSize: 16, ...FONTS.bold },
 
   // Modal
