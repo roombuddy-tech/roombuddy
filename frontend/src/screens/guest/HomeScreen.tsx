@@ -17,6 +17,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NotificationBell from '../../components/NotificationBell';
 
+import * as Location from 'expo-location';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import SearchResultsMap from '../../components/maps/SearchResultsMap';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -72,6 +73,34 @@ export default function HomeScreen() {
   const { colors: COLORS, shadows: SHADOW } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
+
+  // Near-you listings (location-based)
+  const [nearbyListings, setNearbyListings] = useState<GuestListingCard[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(true);
+  const [hasLocation, setHasLocation] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        let params: { lat?: number; lng?: number } = {};
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        } else {
+          if (active) setHasLocation(false);
+        }
+        const data = await searchListings(params);
+        if (active) setNearbyListings(data.results.slice(0, 10));
+      } catch {
+        // ignore
+      } finally {
+        if (active) setNearbyLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const SectionHead = ({ label }: { label: string }) => (
     <View style={styles.sectionHeadRow}>
@@ -516,48 +545,67 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
 
-          {/* Why RoomBuddy */}
-          <SectionHead label="Why RoomBuddy" />
-          <View style={styles.whyGrid}>
-            {[
-              { icon: 'pricetag-outline' as const, title: 'Budget-friendly', sub: 'Rooms from ₹500/night' },
-              { icon: 'restaurant-outline' as const, title: 'Home meals', sub: 'Home-cooked food available' },
-              { icon: 'shield-checkmark-outline' as const, title: 'Verified hosts', sub: 'ID verified for safety' },
-              { icon: 'calendar-outline' as const, title: 'Flexible stays', sub: '1 night to 1 month' },
-            ].map((w) => (
-              <View key={w.title} style={styles.whyCard}>
-                <View style={styles.whyIconWrap}>
-                  <Ionicons name={w.icon} size={20} color={COLORS.primary} />
-                </View>
-                <Text style={styles.whyTitle}>{w.title}</Text>
-                <Text style={styles.whySub}>{w.sub}</Text>
-              </View>
-            ))}
-          </View>
+          {/* Near You */}
+          <SectionHead label={hasLocation ? "Near you" : "Explore rooms"} />
+          {nearbyLoading ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
+          ) : nearbyListings.length === 0 ? (
+            <Text style={styles.nearbyEmpty}>No properties nearby yet</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.nearbyRow}
+            >
+              {nearbyListings.map((item) => (
+                <TouchableOpacity
+                  key={item.listing_id}
+                  style={styles.nearbyCard}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id })}
+                >
+                  <Image
+                    source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
+                    style={styles.nearbyImg}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.nearbyBody}>
+                    <Text style={styles.nearbyTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.nearbyArea} numberOfLines={1}>{item.area_name}</Text>
+                    <View style={styles.nearbyFooter}>
+                      <Text style={styles.nearbyPrice}>
+                        {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
+                        <Text style={styles.nearbyPriceUnit}>/night</Text>
+                      </Text>
+                      {item.average_rating !== null && item.review_count > 0 && (
+                        <View style={styles.ratingRow}>
+                          <Ionicons name="star" size={11} color={COLORS.star} />
+                          <Text style={styles.nearbyRating}>{item.average_rating.toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
-          {/* How it works */}
-          <SectionHead label="How it works" />
-          <View style={styles.howRow}>
-            {[
-              { n: '1', title: 'Search', sub: 'Pick a city & dates', bg: COLORS.chip, fg: COLORS.primary },
-              { n: '2', title: 'Book', sub: 'Reserve instantly', bg: COLORS.chip, fg: COLORS.primary },
-              { n: '3', title: 'Stay', sub: 'Enjoy your stay', bg: COLORS.chip, fg: COLORS.primary },
-            ].map((s, i) => (
-              <React.Fragment key={s.n}>
-                {i > 0 && (
-                  <View style={{ paddingHorizontal: 4, paddingBottom: 20 }}>
-                    <Ionicons name="chevron-forward" size={16} color={COLORS.textMut} />
-                  </View>
-                )}
-                <View style={{ flex: 1, alignItems: 'center' }}>
-                  <View style={[styles.howNum, { backgroundColor: s.bg }]}>
-                    <Text style={[styles.howNumTxt, { color: s.fg }]}>{s.n}</Text>
-                  </View>
-                  <Text style={styles.howTitle}>{s.title}</Text>
-                  <Text style={styles.howSub}>{s.sub}</Text>
-                </View>
-              </React.Fragment>
-            ))}
+          {/* Trust strip */}
+          <View style={styles.trustStrip}>
+            <View style={styles.trustItem}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.trustTxt}>Verified hosts</Text>
+            </View>
+            <View style={styles.trustDot} />
+            <View style={styles.trustItem}>
+              <Ionicons name="lock-closed-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.trustTxt}>Secure payments</Text>
+            </View>
+            <View style={styles.trustDot} />
+            <View style={styles.trustItem}>
+              <Ionicons name="headset-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.trustTxt}>24h support</Text>
+            </View>
           </View>
         </ScrollView>
       )}
@@ -684,28 +732,29 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   cityInitial: { fontSize: 22, ...FONTS.serif, color: COLORS.primary },
   cityName: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec, textAlign: 'center' },
 
-  whyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: SPACING.xl },
-  whyCard: {
-    width: '47%', backgroundColor: COLORS.surface,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, padding: SPACING.md,
+  nearbyRow: { gap: 12, paddingBottom: SPACING.xl },
+  nearbyCard: {
+    width: 200, backgroundColor: COLORS.surface,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
+    overflow: 'hidden', ...SHADOW.sm,
   },
-  whyIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.chip,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-  },
-  whyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
-  whySub: { fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
+  nearbyImg: { width: '100%', height: 120, backgroundColor: COLORS.chip },
+  nearbyBody: { padding: 10 },
+  nearbyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  nearbyArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 6 },
+  nearbyFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  nearbyPrice: { fontSize: 15, ...FONTS.serif, color: COLORS.text },
+  nearbyPriceUnit: { fontSize: 11, ...FONTS.regular, color: COLORS.textSec },
+  nearbyRating: { fontSize: 11, color: COLORS.text, ...FONTS.medium },
+  nearbyEmpty: { fontSize: 13, color: COLORS.textMut, marginBottom: SPACING.xl },
 
-  howRow: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-    borderRadius: RADIUS.lg, paddingVertical: SPACING.md, paddingHorizontal: SPACING.sm, ...SHADOW.sm,
+  trustStrip: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: SPACING.md, marginBottom: SPACING.lg,
   },
-  howNum: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  howNumTxt: { fontSize: 16, ...FONTS.bold },
-  howTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
-  howSub: { fontSize: 11, color: COLORS.textMut, textAlign: 'center', marginTop: 2, lineHeight: 15 },
+  trustItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trustTxt: { fontSize: 11, color: COLORS.textSec, ...FONTS.medium },
+  trustDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: COLORS.textMut, marginHorizontal: 8 },
 
   // ── Cards ──
   card: {
