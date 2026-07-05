@@ -316,10 +316,12 @@ export default function MyStaysScreen() {
   const messageHost = async (b: GuestBooking) => {
     try {
       const convo = await startConversation(b.booking_id);
+      const chatOff = ['cancelled_by_guest', 'cancelled_by_host', 'rejected', 'expired'].includes(b.status);
       navigation.navigate('Chat', {
         conversationId: convo.conversation_id,
         title: b.host_name,
         subtitle: convo.listing_title ?? undefined,
+        chatDisabled: chatOff,
       });
     } catch {}
   };

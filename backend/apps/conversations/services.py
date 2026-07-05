@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.conversations.models import Conversation, Message
+from apps.bookings.models import Booking
 from common.utils import get_display_name, get_initials
 from apps.notifications.models import EventType, NotificationChannel
 from apps.notifications.services import dispatch
@@ -63,17 +64,21 @@ def serialize_message(message, user) -> dict:
 
 def serialize_conversation(conversation, user, *, last_message=None) -> dict:
     other = _counterpart(conversation, user)
-    listing = conversation.booking.listing
+    booking = conversation.booking
+    listing = booking.listing
     if last_message is None:
         last_message = (
             Message.objects.filter(conversation=conversation)
             .order_by("-created_at")
             .first()
         )
+    chat_disabled = booking.status in Booking.CHAT_DISABLED_STATUSES
     return {
         "conversation_id": str(conversation.id),
         "booking_id": str(conversation.booking_id),
-        "booking_code": conversation.booking.booking_code,
+        "booking_code": booking.booking_code,
+        "booking_status": booking.status,
+        "chat_disabled": chat_disabled,
         "listing_title": listing.title if listing else None,
         "counterpart_name": get_display_name(other),
         "counterpart_initials": get_initials(other),
@@ -115,6 +120,10 @@ def get_messages(conversation, user, *, after=None) -> list:
 @transaction.atomic
 def create_message(conversation, sender, body: str) -> Message:
     logger.info("create_message conversation_id=%s sender_id=%s", getattr(conversation, "id", None), getattr(sender, "id", None))
+    booking = conversation.booking
+    if booking.status in Booking.CHAT_DISABLED_STATUSES:
+        from django.core.exceptions import ValidationError
+        raise ValidationError("Messaging is disabled for this booking.")
     message = Message.objects.create(
         conversation=conversation, sender_user=sender, body=body,
     )

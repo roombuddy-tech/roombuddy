@@ -22,7 +22,7 @@ import type { ChatMessage } from '../../types/chat';
 
 const POLL_INTERVAL_MS = 3000;
 
-type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string };
+type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
 
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
@@ -31,7 +31,7 @@ function fmtTime(iso: string): string {
 export default function ChatScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<Record<string, ChatRouteParams>, string>>();
-  const { conversationId, title, subtitle } = route.params;
+  const { conversationId, title, subtitle, chatDisabled } = route.params;
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
@@ -158,24 +158,31 @@ export default function ChatScreen() {
           />
         )}
 
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Type a message"
-            placeholderTextColor={COLORS.textMut}
-            multiline
-            maxLength={2000}
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={onSend}
-            disabled={!draft.trim() || sending}
-          >
-            <Ionicons name="send" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        {chatDisabled ? (
+          <View style={styles.chatDisabledBar}>
+            <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} />
+            <Text style={styles.chatDisabledTxt}>Messaging is disabled for this booking</Text>
+          </View>
+        ) : (
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.input}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Type a message"
+              placeholderTextColor={COLORS.textMut}
+              multiline
+              maxLength={2000}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
+              onPress={onSend}
+              disabled={!draft.trim() || sending}
+            >
+              <Ionicons name="send" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -224,6 +231,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   sendBtnDisabled: { backgroundColor: COLORS.textMut },
+  chatDisabledBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, paddingHorizontal: SPACING.md,
+    borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface,
+  },
+  chatDisabledTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
   headerCenter: { flex: 1, alignItems: 'center' },
   headerSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1, textAlign: 'center' },
 });

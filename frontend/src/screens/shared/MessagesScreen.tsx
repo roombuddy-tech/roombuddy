@@ -69,6 +69,7 @@ export default function MessagesScreen() {
       conversationId: c.conversation_id,
       title: c.counterpart_name,
       subtitle: c.listing_title ?? undefined,
+      chatDisabled: c.chat_disabled,
     });
   };
 

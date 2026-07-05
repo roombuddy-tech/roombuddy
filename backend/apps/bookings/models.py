@@ -45,7 +45,7 @@ class Booking(models.Model):
         COMPLETED = "completed"
 
     # Statuses considered "blocking" when checking date availability
-    BLOCKING_STATUSES = ("accepted", "active")
+    BLOCKING_STATUSES = ("accepted", "active", "completed")
 
     # Statuses that prevent further cancellation (terminal states)
     NON_CANCELLABLE_STATUSES = (
@@ -53,6 +53,13 @@ class Booking(models.Model):
         "cancelled_by_host",
         "completed",
         "no_show",
+        "expired",
+    )
+
+    CHAT_DISABLED_STATUSES = (
+        "cancelled_by_guest",
+        "cancelled_by_host",
+        "rejected",
         "expired",
     )
 
