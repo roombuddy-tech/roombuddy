@@ -841,7 +841,13 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
             "occupation": host_fm.occupation if host_fm else "",
             "hobbies": host_fm.hobbies if host_fm else "",
             "gender": host_fm.gender if host_fm else "",
+            "hometown": host_fm.hometown if host_fm else "",
         },
+        "host_verifications": {
+            "aadhaar": bool(profile and profile.id_verification_status == "approved"),
+            "email": bool(listing.host_user.email_verified_at),
+            "phone": bool(listing.host_user.phone_verified_at),
+        } if profile else {"aadhaar": False, "email": False, "phone": False},
         "food": {
             "kitchen_access": listing.food_kitchen_access,
             "meals_available": listing.food_meals_available,
