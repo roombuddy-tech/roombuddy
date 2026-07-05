@@ -291,9 +291,7 @@ export default function ListingDetailScreen() {
   const title = f?.title || item?.title || 'Listing';
   const areaName = f ? `${f.locality}${f.city ? `, ${f.city}` : ''}` : (item?.area_name ?? '');
   const hostPrice = f ? (parseInt(f.nightlyRate, 10) || 0) : (item?.host_price_per_night ?? 0);
-  const guestPrice = f
-    ? Math.round(hostPrice * (1 + CONFIG.GST_PCT + CONFIG.GUEST_PLATFORM_FEE_PCT))
-    : (item?.guest_price_per_night ?? 0);
+  const guestPrice = f ? hostPrice : (item?.guest_price_per_night ?? 0);
 
   const allPhotos: string[] = f
     ? Object.values((f.photos ?? {}) as Record<string, string[]>).flat().filter(Boolean)
