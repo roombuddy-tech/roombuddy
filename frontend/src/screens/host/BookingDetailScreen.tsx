@@ -90,10 +90,12 @@ export default function BookingDetailScreen() {
     if (!booking) return;
     try {
       const convo = await startConversation(booking.booking_id);
+      const chatOff = ['cancelled_by_guest', 'cancelled_by_host', 'rejected', 'expired'].includes(booking.status);
       navigation.navigate('Chat', {
         conversationId: convo.conversation_id,
         title: booking.guest_name,
         subtitle: convo.listing_title ?? undefined,
+        chatDisabled: chatOff,
       });
     } catch {
       // network error — screen stays as-is; user can retry

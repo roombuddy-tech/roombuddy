@@ -29,16 +29,15 @@
     </td>
   </tr>
 
-  {% if free_cancellation_deadline %}
+  {% if cancellation_policy_detail %}
   <tr>
     <td style="padding:0 24px 24px 24px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fff8e1;border:1px solid #ffe082;border-radius:6px;">
         <tr>
           <td style="padding:14px 16px;">
-            <p style="margin:0 0 4px 0;color:#7a5d00;font-size:13px;font-weight:600;">Free cancellation</p>
+            <p style="margin:0 0 4px 0;color:#7a5d00;font-size:13px;font-weight:600;">Cancellation policy ({{ cancellation_policy_label }})</p>
             <p style="margin:0;color:#7a5d00;font-size:13px;line-height:1.5;">
-              You can cancel for free until {{ free_cancellation_deadline }}.
-              After that, the cancellation fee may apply.
+              {{ cancellation_policy_detail }}
             </p>
           </td>
         </tr>

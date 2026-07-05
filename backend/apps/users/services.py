@@ -843,7 +843,9 @@ def _get_today_activity(user: User, today) -> dict:
             "submitted_at": r.submitted_at.isoformat(),
         }
         for r in Review.objects.filter(
-            reviewee_user=user, review_type=Review.ReviewType.GUEST_TO_HOST
+            reviewee_user=user,
+            review_type=Review.ReviewType.GUEST_TO_HOST,
+            submitted_at__date=today,
         ).select_related("reviewer_user").order_by("-submitted_at")[:3]
     ]
 

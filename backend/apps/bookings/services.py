@@ -422,38 +422,62 @@ def _user_first_name(user) -> str:
 
 
 def _notify_booking_cancelled(booking, cancelled_by: str) -> None:
-    base = {
-        "property_name": booking.listing.title,
-        "booking_id": str(booking.id),
-        "booking_reference": booking.booking_code,
-        "check_in": booking.check_in_date.strftime("%d %b %Y"),
-        "check_out": booking.check_out_date.strftime("%d %b %Y"),
-        "amount": f"{booking.total_guest_pays:.2f}",
-        "msg91_flow_id": "",
-        "msg91_variables": {
-            "var1": booking.booking_code,
-            "var2": booking.listing.title,
-        },
-    }
+    from apps.payments.services import _build_booking_context
+
+    base = _build_booking_context(booking)
+    base["refund_amount"] = f"{booking.refund_amount:,.0f}" if booking.refund_amount else ""
+    base["rejection_reason"] = booking.cancellation_reason or ""
+
+    guest_name = booking.guest_name or ""
+    if not guest_name:
+        gp = getattr(booking.guest_user, "profile", None)
+        if gp:
+            guest_name = f"{gp.first_name or ''} {gp.last_name or ''}".strip()
+    base["guest_name"] = guest_name or "A guest"
 
     if cancelled_by == Booking.CancelledBy.GUEST:
-        event_type = EventType.BOOKING_GUEST_CANCELLED
-        # Notify the host that the guest cancelled
-        recipient = booking.host_user
-    elif cancelled_by == Booking.CancelledBy.HOST:
-        event_type = EventType.BOOKING_HOST_CANCELLED
-        # Notify the guest that the host cancelled
-        recipient = booking.guest_user
-    else:
-        return  # SYSTEM cancellation — skip user notification
+        if booking.host_user:
+            dispatch(
+                event_type=EventType.BOOKING_GUEST_CANCELLED,
+                recipients=[booking.host_user],
+                context={
+                    **base,
+                    "recipient_name": _user_first_name(booking.host_user),
+                },
+                idempotency_event_id=f"cancelled:{booking.id}:host_notif",
+            )
+        if booking.guest_user:
+            dispatch(
+                event_type=EventType.BOOKING_GUEST_CANCELLED,
+                recipients=[booking.guest_user],
+                context={
+                    **base,
+                    "recipient_name": _user_first_name(booking.guest_user),
+                },
+                idempotency_event_id=f"cancelled:{booking.id}:guest_confirm",
+            )
 
-    if recipient:
-        dispatch(
-            event_type=event_type,
-            recipients=[recipient],
-            context={**base, "recipient_name": _user_first_name(recipient)},
-            idempotency_event_id=f"cancelled:{booking.id}:{cancelled_by}",
-        )
+    elif cancelled_by == Booking.CancelledBy.HOST:
+        if booking.guest_user:
+            dispatch(
+                event_type=EventType.BOOKING_HOST_CANCELLED,
+                recipients=[booking.guest_user],
+                context={
+                    **base,
+                    "recipient_name": _user_first_name(booking.guest_user),
+                },
+                idempotency_event_id=f"cancelled:{booking.id}:guest_notif",
+            )
+        if booking.host_user:
+            dispatch(
+                event_type=EventType.BOOKING_HOST_CANCELLED,
+                recipients=[booking.host_user],
+                context={
+                    **base,
+                    "recipient_name": _user_first_name(booking.host_user),
+                },
+                idempotency_event_id=f"cancelled:{booking.id}:host_confirm",
+            )
 
 # ─── Host queries ────────────────────────────────────────────────────────
 
@@ -482,6 +506,9 @@ def get_host_bookings(user: User, status_filter: str = Booking.HostBookingFilter
     statuses = _HOST_BOOKING_FILTERS.get(status_filter)
     if statuses:
         queryset = queryset.filter(status__in=statuses)
+
+    if status_filter == Booking.HostBookingFilter.UPCOMING:
+        queryset = queryset.filter(payment_status=Booking.PaymentStatus.PAID)
 
     return [_booking_to_dict(b) for b in queryset]
 
@@ -702,6 +729,8 @@ def get_guest_bookings(user: User) -> list[dict]:
 def accept_booking(booking: Booking, host: User) -> Booking:
     """Host accepts a pending booking."""
     logger.info("accept_booking booking_id=%s host_id=%s", booking.id, host.id)
+    if booking.payment_status != Booking.PaymentStatus.PAID:
+        raise ValidationError({"error": "Cannot accept a booking that has not been paid for."})
     with transaction.atomic():
         booking.status = Booking.Status.ACCEPTED
         booking.host_responded_at = timezone.now()

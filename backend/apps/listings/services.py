@@ -670,10 +670,26 @@ def search_guest_listings(
             co = date_type.fromisoformat(check_out)
             stay_nights = (co - ci).days
             qs = qs.filter(min_nights__lte=stay_nights)
+
             blocked_ids = ListingBlockedDate.objects.filter(
                 start_date__lt=co, end_date__gt=ci
             ).values_list("listing_id", flat=True)
             qs = qs.exclude(id__in=blocked_ids)
+
+            from apps.bookings.models import Booking
+            from django.utils import timezone
+            now = timezone.now()
+            booked_ids = (
+                Booking.objects.filter(
+                    check_in_date__lt=co,
+                    check_out_date__gt=ci,
+                ).filter(
+                    Q(status__in=Booking.BLOCKING_STATUSES)
+                    | Q(status=Booking.Status.PENDING, expires_at__gt=now)
+                    | Q(status=Booking.Status.PENDING, expires_at__isnull=True)
+                ).values_list("listing_id", flat=True)
+            )
+            qs = qs.exclude(id__in=booked_ids)
         except (ValueError, TypeError):
             pass
 

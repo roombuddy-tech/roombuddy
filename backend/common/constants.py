@@ -61,3 +61,4 @@ class StatusChangeReason:
     CANCELLED_BY_GUEST = "Cancelled by guest"
     CANCELLED_BY_HOST = "Cancelled by host"
     CANCELLED_BY_SYSTEM = "Cancelled by system"
+    HOST_NO_RESPONSE = "Host did not respond within 24 hours (auto-cancelled by cron)"
