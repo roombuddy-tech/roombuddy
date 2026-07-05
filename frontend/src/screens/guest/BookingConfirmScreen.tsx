@@ -86,6 +86,8 @@ export default function BookingConfirmScreen() {
     first_name: string;
     last_name: string;
     gender: string;
+    phone_number?: string;
+    phone_country_code?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -221,7 +223,11 @@ const policyMeta =  POLICY_META.flexible;
               </View>
               <View style={[styles.row, styles.lastRow]}>
                 <Text style={styles.label}>Phone</Text>
-                <Text style={styles.value}>{user?.phone || '—'}</Text>
+                <Text style={styles.value}>
+                  {guestProfile.phone_number
+                    ? `${guestProfile.phone_country_code ?? ''}${guestProfile.phone_number}`
+                    : (user?.phone_number ? `${user.phone_country_code ?? ''}${user.phone_number}` : '—')}
+                </Text>
               </View>
             </>
           ) : (
