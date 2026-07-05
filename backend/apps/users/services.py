@@ -733,7 +733,7 @@ def get_pending_verifications() -> list:
 
 def get_host_dashboard(user: User) -> dict:
     """Computes all dashboard data for a host."""
-    today = timezone.now().date()
+    today = timezone.localdate()
     month_start = today.replace(day=1)
 
     greeting_name = _get_greeting_name(user)
