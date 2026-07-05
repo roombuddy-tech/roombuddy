@@ -5,9 +5,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
+  Linking,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -25,6 +27,7 @@ import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
+import { createUnlockOrder } from '../../services/payments';
 import type { GuestListingDetail } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -124,7 +127,7 @@ function parseNearbyFromDescription(description: string): { cleanDesc: string; n
 export default function GuestListingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut } = route.params;
+  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut, unlockedContact } = route.params;
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
@@ -189,6 +192,8 @@ export default function GuestListingDetailScreen() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
   const [showHostModal, setShowHostModal] = useState(false);
+  const [revealedPhone, setRevealedPhone] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
@@ -222,6 +227,48 @@ export default function GuestListingDetailScreen() {
       .finally(() => setLoading(false));
     getListingReviews(listingId).then(setReviewsData).catch(() => {});
   }, [listingId]);
+
+  // Contact returned after a successful unlock payment.
+  useEffect(() => {
+    if (unlockedContact?.phone) {
+      setRevealedPhone(unlockedContact.phone);
+      navigation.setParams({ unlockedContact: undefined });
+    }
+  }, [unlockedContact]);
+
+  const handleUnlock = useCallback(async () => {
+    if (unlocking || !listing) return;
+    setUnlocking(true);
+    try {
+      const res = await createUnlockOrder(listing.listing_id);
+      if (res.already_unlocked) {
+        // Refresh to pull the real number.
+        const fresh = await getGuestListingDetail(listing.listing_id);
+        setListing(fresh);
+        setRevealedPhone(fresh?.host_phone ?? null);
+        return;
+      }
+      navigation.navigate('RazorpayCheckout', {
+        bookingId: '',
+        bookingCode: '',
+        mode: 'unlock',
+        listingId: listing.listing_id,
+        order: {
+          razorpay_key_id: res.razorpay_key_id,
+          order_id: res.order_id,
+          amount: res.amount,
+          currency: res.currency,
+        },
+      });
+    } catch (err: any) {
+      Alert.alert(
+        'Could not start payment',
+        err?.response?.data?.error || 'Please try again in a moment.',
+      );
+    } finally {
+      setUnlocking(false);
+    }
+  }, [unlocking, listing, navigation]);
 
   const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
 
@@ -588,6 +635,75 @@ export default function GuestListingDetailScreen() {
             </TouchableOpacity>
           ) : null}
 
+          {/* ── Contact host (₹29 unlock) ── */}
+          {(() => {
+            const phone = revealedPhone || (listing.contact_unlocked ? listing.host_phone : null);
+            const unlocked = !!phone;
+            const waDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
+            return (
+              <View style={styles.contactCard}>
+                <View style={styles.contactHead}>
+                  <View style={styles.sectionAccent} />
+                  <Text style={styles.contactEyebrow}>CONTACT HOST</Text>
+                </View>
+                {unlocked ? (
+                  <>
+                    <Text style={styles.contactPhone}>{phone}</Text>
+                    <View style={styles.contactBtnRow}>
+                      <TouchableOpacity
+                        style={styles.contactBtn}
+                        activeOpacity={0.85}
+                        onPress={() => Linking.openURL(`tel:${phone}`)}
+                      >
+                        <Ionicons name="call" size={16} color="#fff" />
+                        <Text style={styles.contactBtnTxt}>Call</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.contactBtn, styles.contactBtnWa]}
+                        activeOpacity={0.85}
+                        onPress={() => Linking.openURL(`https://wa.me/${waDigits}`)}
+                      >
+                        <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                        <Text style={styles.contactBtnTxt}>WhatsApp</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.contactSub}>
+                      Talk to {listing.host_name || 'the host'} directly — ask questions and
+                      clear your doubts before you book.
+                    </Text>
+                    <View style={styles.contactMaskRow}>
+                      <Ionicons name="lock-closed" size={15} color={COLORS.textMut} />
+                      <Text style={styles.contactMask}>
+                        {listing.host_phone_masked || '●●●●●●●●●●'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.unlockBtn}
+                      activeOpacity={0.85}
+                      onPress={handleUnlock}
+                      disabled={unlocking}
+                    >
+                      {unlocking ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons name="lock-open-outline" size={16} color="#fff" />
+                          <Text style={styles.unlockBtnTxt}>
+                            Unlock host contact · ₹{listing.unlock_fee ?? 29}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={styles.unlockNote}>One-time fee. Instant access.</Text>
+                  </>
+                )}
+              </View>
+            );
+          })()}
+
           {/* ── Reviews ── */}
           {hasReviews && (
             <View style={styles.section}>
@@ -888,6 +1004,30 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   miniMapWrap: { borderRadius: RADIUS.lg, overflow: 'hidden', height: 180, marginBottom: 6 },
   miniMap: { width: '100%', height: 180 },
   locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
+
+  contactCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1,
+    borderColor: COLORS.border, padding: SPACING.md, marginBottom: SPACING.lg, ...SHADOW.sm,
+  },
+  contactHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  contactEyebrow: { fontSize: 13, ...FONTS.bold, letterSpacing: 0.8, color: COLORS.text },
+  contactSub: { fontSize: 13, color: COLORS.textSec, lineHeight: 19, marginBottom: 12 },
+  contactMaskRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  contactMask: { fontSize: 16, ...FONTS.semibold, color: COLORS.textMut, letterSpacing: 2 },
+  contactPhone: { fontSize: 20, ...FONTS.bold, color: COLORS.text, marginBottom: 12, letterSpacing: 0.5 },
+  contactBtnRow: { flexDirection: 'row', gap: SPACING.sm },
+  contactBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 12,
+  },
+  contactBtnWa: { backgroundColor: '#25D366' },
+  contactBtnTxt: { color: '#fff', fontSize: 14, ...FONTS.semibold },
+  unlockBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 14,
+  },
+  unlockBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.bold },
+  unlockNote: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: 8 },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
   checkinCard: { flex: 1, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6, ...SHADOW.sm },

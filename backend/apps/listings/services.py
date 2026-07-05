@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
@@ -699,7 +700,17 @@ def search_guest_listings(
     return results
 
 
-def get_guest_listing_detail(listing_id: str) -> dict | None:
+def _mask_phone(phone: str | None) -> str | None:
+    """Mask all but the last 2 digits, e.g. '+91 ●●●●●●●●42'."""
+    if not phone:
+        return None
+    digits = "".join(ch for ch in phone if ch.isdigit())
+    if len(digits) < 2:
+        return "●●●●●●"
+    return "●●●●●●●●" + digits[-2:]
+
+
+def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
 
     try:
         listing = (
@@ -783,6 +794,22 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
                 meal_types_str = line.replace("Meals served: ", "")
                 break
 
+    # ── Host contact (gated behind the ₹29 unlock) ──────────────────────
+    host_full_phone = None
+    host_num = getattr(listing.host_user, "phone_number", "") or ""
+    if host_num:
+        host_cc = getattr(listing.host_user, "phone_country_code", "") or ""
+        host_full_phone = f"{host_cc}{host_num}".strip()
+
+    is_own_listing = bool(viewer and viewer.id == listing.host_user_id)
+    contact_unlocked = is_own_listing
+    if viewer and not is_own_listing:
+        from apps.payments.models import ContactUnlock
+        contact_unlocked = ContactUnlock.objects.filter(
+            guest_user=viewer, listing=listing,
+            status=ContactUnlock.Status.UNLOCKED,
+        ).exists()
+
     return {
         "listing_id": str(listing.id),
         "title": listing.title,
@@ -830,6 +857,10 @@ def get_guest_listing_detail(listing_id: str) -> dict | None:
         "total_bookings": listing.total_bookings,
         "host_name": host_name,
         "host_profile": host_profile_data,
+        "contact_unlocked": contact_unlocked,
+        "host_phone": host_full_phone if contact_unlocked else None,
+        "host_phone_masked": _mask_phone(host_full_phone),
+        "unlock_fee": float(settings.CONTACT_UNLOCK_FEE),
         "area_name": _get_area_name(listing),
         "blocked_dates": [
             {"start_date": bd.start_date.isoformat(), "end_date": bd.end_date.isoformat()}

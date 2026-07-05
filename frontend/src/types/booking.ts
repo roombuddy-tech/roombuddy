@@ -10,6 +10,7 @@ export interface BookingQuote {
     platform_fee_pct: number;
     host_platform_fee: number;
     security_deposit: number;
+    pay_to_host_directly: number;
     total_guest_pays: number;
     total_host_receives: number;
     platform_revenue: number;

@@ -137,7 +137,7 @@ class GuestListingDetailView(APIView):
 
     @extend_schema(tags=["Guest"])
     def get(self, request, listing_id):
-        data = get_guest_listing_detail(str(listing_id))
+        data = get_guest_listing_detail(str(listing_id), viewer=request.user)
         if data is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(data)

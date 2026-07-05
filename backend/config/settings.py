@@ -253,6 +253,13 @@ GST_PCT = _Decimal(os.environ.get("GST_PCT", "12.00"))
 GUEST_PLATFORM_FEE_PCT = _Decimal(os.environ.get("GUEST_PLATFORM_FEE_PCT", "5.00"))
 HOST_PLATFORM_FEE_PCT = _Decimal(os.environ.get("HOST_PLATFORM_FEE_PCT", "5.00"))
 
+# ── Flat fees (early-stage pricing) ──────────────────────────
+# Guests pay only a small flat platform fee to book through the app; rent,
+# deposit and meals are settled directly with the host. A separate one-time
+# fee unlocks the host's phone number on a listing.
+BOOKING_PLATFORM_FEE = _Decimal(os.environ.get("BOOKING_PLATFORM_FEE", "49.00"))
+CONTACT_UNLOCK_FEE = _Decimal(os.environ.get("CONTACT_UNLOCK_FEE", "29.00"))
+
 # ── Payments / Razorpay ──────────────────────────────────────
 # "console" = local dev fake gateway (no Razorpay account needed)
 # "razorpay" = real Razorpay (test or live mode based on key prefix)

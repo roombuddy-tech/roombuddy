@@ -99,5 +99,9 @@ export interface GuestListingDetail {
     hobbies?: string;
     hometown?: string;
   };
+  contact_unlocked: boolean;
+  host_phone: string | null;
+  host_phone_masked: string | null;
+  unlock_fee: number;
   area_name: string;
 }

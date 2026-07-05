@@ -133,6 +133,57 @@ class Refund(models.Model):
         return f"Refund {self.amount} for {self.payment_id}"
 
 
+class ContactUnlock(models.Model):
+    """
+    A one-time payment that unlocks a host's phone number for a single listing.
+
+    Standalone from Payment/Booking: the guest pays a small flat fee (₹29) to
+    reveal the host's contact on a listing, with no booking involved. One row
+    per (guest, listing). Marked `unlocked` once payment is captured.
+    """
+    class Status(models.TextChoices):
+        CREATED = "created"      # order created, awaiting checkout
+        UNLOCKED = "unlocked"    # payment captured, contact revealed
+        FAILED = "failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    guest_user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="contact_unlocks",
+    )
+    listing = models.ForeignKey(
+        "listings.Listing", on_delete=models.CASCADE, related_name="contact_unlocks",
+    )
+    host_user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="contact_unlocks_received",
+    )
+
+    razorpay_order_id = models.CharField(max_length=64, unique=True)
+    razorpay_payment_id = models.CharField(
+        max_length=64, unique=True, null=True, blank=True,
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default="INR")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.CREATED,
+    )
+    raw_response = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    unlocked_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "contact_unlocks"
+        indexes = [
+            models.Index(fields=["guest_user", "listing"], name="idx_unlock_guest_listing"),
+            models.Index(fields=["razorpay_order_id"], name="idx_unlock_order"),
+            models.Index(fields=["status"], name="idx_unlock_status"),
+        ]
+
+    def __str__(self):
+        return f"ContactUnlock {self.guest_user_id}->{self.listing_id} ({self.status})"
+
+
 class WebhookEvent(models.Model):
     """
     Append-only log of every webhook received from Razorpay.

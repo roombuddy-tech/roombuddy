@@ -214,25 +214,30 @@ def generate_booking_invoice(booking) -> bytes:
 
     per_night = float(booking.host_nightly_price)
     price_rows.append([
-        f"Room charges ({fmt_int(per_night)} x {nights} night{'s' if nights > 1 else ''})",
+        f"Room charges ({fmt_int(per_night)} x {nights} night{'s' if nights > 1 else ''}) - pay host directly",
         fmt(booking.subtotal),
     ])
 
     if booking.meal_option_selected and booking.meal_total:
         meal_per_day = float(booking.meal_cost_per_day or 0)
         price_rows.append([
-            f"Meals ({fmt_int(meal_per_day)} x {nights} day{'s' if nights > 1 else ''})",
+            f"Meals ({fmt_int(meal_per_day)} x {nights} day{'s' if nights > 1 else ''}) - pay host directly",
             fmt(booking.meal_total),
         ])
 
-    price_rows.append(["GST (18%)", fmt(booking.gst_amount)])
-    price_rows.append(["Service fee", fmt(booking.platform_fee)])
-
     if booking.security_deposit and float(booking.security_deposit) > 0:
         price_rows.append([
-            "Security deposit (refundable)",
+            "Security deposit (refundable) - pay host directly",
             fmt(booking.security_deposit),
         ])
+
+    pay_to_host = (
+        booking.subtotal
+        + (booking.meal_total or 0)
+        + (booking.security_deposit or 0)
+    )
+    price_rows.append(["Payable to host directly", fmt(pay_to_host)])
+    price_rows.append(["RoomBuddy platform fee (paid online)", fmt(booking.platform_fee)])
 
     n = len(price_rows)
 
@@ -265,7 +270,7 @@ def generate_booking_invoice(booking) -> bytes:
     story.append(Spacer(1, 1 * mm))
 
     # ── Total row ─────────────────────────────────────────────────────────
-    total_data = [["Total Paid", fmt(booking.total_guest_pays)]]
+    total_data = [["Paid online (RoomBuddy fee)", fmt(booking.total_guest_pays)]]
     total_tbl = Table(total_data, colWidths=["70%", "30%"])
     total_tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), ACCENT),
@@ -291,9 +296,12 @@ def generate_booking_invoice(booking) -> bytes:
     }.get(policy, "")
 
     if policy_text:
+        fee_txt = fmt(booking.platform_fee)
         policy_data = [[
             Paragraph(
-                f"<b>Cancellation policy ({policy.title()}):</b> {policy_text}",
+                f"<b>Cancellation policy ({policy.title()}):</b> The {fee_txt} RoomBuddy "
+                f"fee is non-refundable. Rent and deposit are paid to the host directly, so "
+                f"any refund of those follows the host's policy: {policy_text}",
                 ps("cp", fontSize=8, textColor=LIGHT_TEXT, leading=12),
             ),
         ]]

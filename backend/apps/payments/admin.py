@@ -3,10 +3,59 @@ from django.db.models import Sum
 from django.utils import timezone
 from django.utils.html import format_html
 
-from apps.payments.models import Payment, Payout, Refund, WebhookEvent
+from apps.payments.models import ContactUnlock, Payment, Payout, Refund, WebhookEvent
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _user_label(user):
+    if not user:
+        return "—"
+    try:
+        name = f"{user.profile.first_name} {user.profile.last_name}".strip()
+    except Exception:
+        name = ""
+    phone = f"{user.phone_country_code or ''}{user.phone_number or ''}".strip()
+    return (name + (f" ({phone})" if phone else "")) or phone or str(user.id)
+
+
+@admin.register(ContactUnlock)
+class ContactUnlockAdmin(admin.ModelAdmin):
+    list_display = (
+        "created_at",
+        "guest_display",
+        "host_display",
+        "listing_title",
+        "amount",
+        "status",
+        "unlocked_at",
+    )
+    list_filter = ("status", "created_at")
+    search_fields = (
+        "razorpay_order_id",
+        "razorpay_payment_id",
+        "guest_user__phone_number",
+        "guest_user__profile__first_name",
+        "host_user__phone_number",
+        "host_user__profile__first_name",
+        "listing__title",
+    )
+    readonly_fields = ("created_at", "updated_at", "unlocked_at")
+    raw_id_fields = ("guest_user", "host_user", "listing")
+    date_hierarchy = "created_at"
+
+    @admin.display(description="Guest")
+    def guest_display(self, obj):
+        return _user_label(obj.guest_user)
+
+    @admin.display(description="Host")
+    def host_display(self, obj):
+        return _user_label(obj.host_user)
+
+    @admin.display(description="Listing")
+    def listing_title(self, obj):
+        return obj.listing.title if obj.listing_id else "—"
 
 
 @admin.register(Payment)

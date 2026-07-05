@@ -10,7 +10,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
-import { verifyPayment } from '../../services/payments';
+import { verifyPayment, verifyUnlock } from '../../services/payments';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'RazorpayCheckout'>;
 type Rt = RouteProp<GuestStackParamList, 'RazorpayCheckout'>;
@@ -18,13 +18,15 @@ type Rt = RouteProp<GuestStackParamList, 'RazorpayCheckout'>;
 export default function RazorpayCheckoutScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { bookingId, bookingCode, order } = route.params;
+  const { bookingId, bookingCode, order, mode, listingId } = route.params;
+  const isUnlock = mode === 'unlock';
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
   const [verifying, setVerifying] = useState(false);
 
-  const html = useMemo(() => buildCheckoutHtml(order, bookingCode), [order, bookingCode]);
+  const title = isUnlock ? 'Unlock host contact' : `Booking ${bookingCode}`;
+  const html = useMemo(() => buildCheckoutHtml(order, title), [order, title]);
 
   async function onMessage(e: WebViewMessageEvent) {
     let data: any;
@@ -33,12 +35,24 @@ export default function RazorpayCheckoutScreen() {
     if (data.type === 'payment_success') {
       setVerifying(true);
       try {
-        await verifyPayment({
-          orderId: data.razorpay_order_id,
-          paymentId: data.razorpay_payment_id,
-          signature: data.razorpay_signature,
-        });
-        navigation.replace('BookingSuccess', { bookingId, bookingCode });
+        if (isUnlock) {
+          const res = await verifyUnlock({
+            orderId: data.razorpay_order_id,
+            paymentId: data.razorpay_payment_id,
+            signature: data.razorpay_signature,
+          });
+          navigation.navigate('GuestListingDetail', {
+            listingId: listingId ?? res.listing_id,
+            unlockedContact: { name: res.host_name, phone: res.host_phone },
+          });
+        } else {
+          await verifyPayment({
+            orderId: data.razorpay_order_id,
+            paymentId: data.razorpay_payment_id,
+            signature: data.razorpay_signature,
+          });
+          navigation.replace('BookingSuccess', { bookingId, bookingCode });
+        }
       } catch (err: any) {
         Alert.alert(
           'Verification failed',
@@ -98,7 +112,7 @@ export default function RazorpayCheckoutScreen() {
   );
 }
 
-function buildCheckoutHtml(order: any, bookingCode: string): string {
+function buildCheckoutHtml(order: any, label: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -120,7 +134,7 @@ function buildCheckoutHtml(order: any, bookingCode: string): string {
 <body>
   <div class="container">
     <div class="logo">Room<span class="accent">Buddy</span></div>
-    <div class="booking">Booking ${bookingCode}</div>
+    <div class="booking">${label}</div>
     <div class="amount">₹${(order.amount / 100).toLocaleString('en-IN')}</div>
     <button id="payBtn">Pay Now</button>
     <div class="hint">Secured by Razorpay</div>
@@ -139,7 +153,7 @@ function buildCheckoutHtml(order: any, bookingCode: string): string {
         amount: ${order.amount},
         currency: ${JSON.stringify(order.currency)},
         name: "RoomBuddy",
-        description: "Booking ${bookingCode}",
+        description: ${JSON.stringify(label)},
         theme: { color: "#C9A24B" },
         handler: function(response) {
           post({

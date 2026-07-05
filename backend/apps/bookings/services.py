@@ -133,16 +133,17 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
             "code": ErrorCode.MAX_NIGHTS,
         })
 
+    # ── Early-stage flat pricing ────────────────────────────────────────
+    # The guest pays ONLY a small flat platform fee through the app. Rent,
+    # security deposit and meals are settled directly with the host (offline),
+    # so no rent/GST flows through RoomBuddy.
     host_nightly = listing.host_price_per_night
-    gst_per_night = _quantize(host_nightly * settings.GST_PCT / PERCENT_DENOMINATOR)
-    guest_fee_per_night = _quantize(host_nightly * settings.GUEST_PLATFORM_FEE_PCT / PERCENT_DENOMINATOR)
-    host_fee_per_night = _quantize(host_nightly * settings.HOST_PLATFORM_FEE_PCT / PERCENT_DENOMINATOR)
-    guest_nightly = host_nightly + gst_per_night + guest_fee_per_night
+    guest_nightly = host_nightly  # guest pays rent to host directly at this rate
 
     subtotal = _quantize(host_nightly * nights)
-    gst_amount = _quantize(gst_per_night * nights)
-    platform_fee = _quantize(guest_fee_per_night * nights)
-    host_platform_fee = _quantize(host_fee_per_night * nights)
+    gst_amount = Decimal("0")
+    platform_fee = _quantize(settings.BOOKING_PLATFORM_FEE)
+    host_platform_fee = Decimal("0")
     security_deposit = listing.security_deposit
 
     # Meal option
@@ -160,9 +161,12 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
                 meal_types = line.replace("Meals served: ", "")
                 break
 
-    total_guest_pays = _quantize(subtotal + gst_amount + platform_fee + security_deposit + meal_total)
-    total_host_receives = _quantize(subtotal + meal_total - host_platform_fee)
-    platform_revenue = _quantize(platform_fee + host_platform_fee + gst_amount)
+    # What the guest settles directly with the host (not collected by us).
+    pay_to_host_directly = _quantize(subtotal + security_deposit + meal_total)
+    # What the guest actually pays through the app right now.
+    total_guest_pays = platform_fee
+    total_host_receives = _quantize(subtotal + meal_total)
+    platform_revenue = platform_fee
 
     return {
         "listing_id": str(listing.id),
@@ -176,6 +180,7 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
         "platform_fee_pct": float(settings.GUEST_PLATFORM_FEE_PCT),
         "host_platform_fee": float(host_platform_fee),
         "security_deposit": float(security_deposit),
+        "pay_to_host_directly": float(pay_to_host_directly),
         "total_guest_pays": float(total_guest_pays),
         "total_host_receives": float(total_host_receives),
         "platform_revenue": float(platform_revenue),
@@ -331,30 +336,19 @@ def create_booking(
 
 def compute_refund_amount(booking: Booking, cancelled_by: str) -> Decimal:
     """
-    Compute refund amount based on cancellation policy and time-to-check-in.
+    Compute refund of the amount collected through the app.
 
-    `cancelled_by` is one of `Booking.CancelledBy` values.
+    Under flat pricing the guest only pays the platform fee (`total_guest_pays`)
+    online; rent, deposit and meals are settled directly with the host and are
+    therefore not ours to refund.
 
-    - If host or system cancels: full refund (including platform fee).
-    - If guest cancels: per `REFUND_SCHEDULES[policy]`. Platform fee is
-      non-refundable on guest cancellation.
+    - Host or system cancels  → refund the platform fee in full.
+    - Guest cancels           → platform fee is non-refundable (₹0).
     """
     if cancelled_by in (Booking.CancelledBy.HOST, Booking.CancelledBy.SYSTEM):
         return booking.total_guest_pays
 
-    # Guest cancellation: depends on policy + how close to check-in
-    days_to_checkin = (booking.check_in_date - date.today()).days
-
-    meal_total = booking.meal_total or Decimal("0")
-    base_refundable = booking.subtotal + booking.gst_amount + booking.security_deposit + meal_total
-    policy = booking.cancellation_policy or DEFAULT_CANCELLATION_POLICY
-    schedule = REFUND_SCHEDULES.get(policy, REFUND_SCHEDULES[DEFAULT_CANCELLATION_POLICY])
-
-    # Walk thresholds (sorted desc by days remaining); first match wins.
-    for threshold_days, percent in schedule:
-        if days_to_checkin >= threshold_days:
-            return _quantize(base_refundable * percent)
-
+    # Guest cancellation: the platform fee is non-refundable.
     return Decimal("0")
 
 
@@ -773,34 +767,21 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
             EventType.BOOKING_HOST_ACCEPTED if accepted
             else EventType.BOOKING_HOST_REJECTED
         )
-        listing = booking.listing
-        host_user = booking.host_user
-        host_phone = f"{host_user.phone_country_code}{host_user.phone_number}"
+        # Use the canonical context builder so every price field
+        # (platform_fee, pay_to_host_directly, meal_total, security_deposit …)
+        # is present and consistent across email/PDF.
+        base = _build_booking_context(booking)
         dispatch(
             event_type=event,
             recipients=[booking.guest_user],
             context={
-                "property_name": listing.title if listing else "",
-                "booking_id": str(booking.id),
-                "booking_reference": booking.booking_code,
-                "host_name": get_display_name(booking.host_user),
-                "host_phone": host_phone,
+                **base,
                 "recipient_name": _user_first_name(booking.guest_user),
-                "check_in": booking.check_in_date.strftime("%a, %d %b %Y"),
-                "check_out": booking.check_out_date.strftime("%a, %d %b %Y"),
-                "nights": booking.nights,
-                "guest_count": booking.number_of_guests,
-                "per_night_amount": str(int(booking.guest_nightly_price)),
-                "subtotal": str(int(booking.subtotal)),
-                "tax_amount": str(int(booking.gst_amount)),
-                "amount": str(int(booking.total_guest_pays)),
-                "location": getattr(listing.property, "city_name", "") if listing else "",
             },
             idempotency_event_id=f"host_respond:{booking.id}:{'accept' if accepted else 'reject'}",
         )
 
         if accepted:
-            base = _build_booking_context(booking)
             _send_invoice_email(booking, booking.guest_user, base)
     except Exception:
         logger.exception("_notify_host_responded failed booking_id=%s", booking.id)

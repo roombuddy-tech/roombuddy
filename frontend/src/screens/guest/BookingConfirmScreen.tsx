@@ -50,10 +50,10 @@ const POLICY_META: Record<PolicyKey, {
 };
 
 const POLICY_NOTES = [
-  'The platform service fee is non-refundable on guest cancellations.',
-  'Security deposit is included in the refundable amount.',
-  'Refunds are processed within 5–10 business days to your original payment method.',
-  'In extraordinary circumstances (natural disasters, government orders), RoomBuddy may override this policy.',
+  'The platform fee paid online is non-refundable on guest cancellations.',
+  'Rent and the security deposit are paid directly to the host — any refund of those follows the host’s policy shown above.',
+  'The refund percentages above apply to what you settle directly with the host.',
+  'In extraordinary circumstances (natural disasters, government orders), RoomBuddy may help mediate.',
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -271,23 +271,35 @@ const policyMeta =  POLICY_META.flexible;
           </View>
         )}
 
-        {/* Price details */}
+        {/* Pay now (via RoomBuddy) */}
         <View style={styles.card}>
           <View style={styles.eyebrowRow}>
             <View style={styles.accentBar} />
-            <Text style={styles.eyebrow}>Price details</Text>
+            <Text style={styles.eyebrow}>Pay now</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights</Text>
-            <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>GST ({quote.gst_pct}%)</Text>
-            <Text style={styles.priceValue}>₹{quote.gst_amount.toLocaleString('en-IN')}</Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Service fee ({quote.platform_fee_pct}%)</Text>
+            <Text style={styles.priceLabel}>Platform fee</Text>
             <Text style={styles.priceValue}>₹{quote.platform_fee.toLocaleString('en-IN')}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.priceRow}>
+            <Text style={styles.totalLabel}>Payable now ({quote.currency})</Text>
+            <Text style={styles.totalValue}>₹{quote.total_guest_pays.toLocaleString('en-IN')}</Text>
+          </View>
+          <Text style={styles.payNote}>
+            This is all you pay through the app to confirm your request.
+          </Text>
+        </View>
+
+        {/* Pay the host directly */}
+        <View style={styles.card}>
+          <View style={styles.eyebrowRow}>
+            <View style={styles.accentBar} />
+            <Text style={styles.eyebrow}>Pay host directly</Text>
+          </View>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights (rent)</Text>
+            <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
           </View>
           {withMeals && quote.meal_total !== null && quote.meal_total > 0 && (
             <View style={styles.priceRow}>
@@ -305,9 +317,12 @@ const policyMeta =  POLICY_META.flexible;
           )}
           <View style={styles.divider} />
           <View style={styles.priceRow}>
-            <Text style={styles.totalLabel}>Total ({quote.currency})</Text>
-            <Text style={styles.totalValue}>₹{quote.total_guest_pays.toLocaleString('en-IN')}</Text>
+            <Text style={styles.totalLabel}>Payable to host</Text>
+            <Text style={styles.totalValue}>₹{quote.pay_to_host_directly.toLocaleString('en-IN')}</Text>
           </View>
+          <Text style={styles.payNote}>
+            Settle this with the host directly (cash / UPI) at check-in.
+          </Text>
         </View>
 
         {/* Cancellation policy row — tappable */}
@@ -535,6 +550,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 4 },
   totalLabel: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
   totalValue: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
+  payNote: { fontSize: 12, color: COLORS.textMut, marginTop: 8, lineHeight: 17 },
 
   // Policy row (tappable card)
   policyRow: {

@@ -16,17 +16,24 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 
 from apps.bookings.models import Booking
+from apps.listings.models import Listing
 from apps.payments.models import Payout
 from apps.payments.serializers import (
     CreateOrderRequestSerializer,
     CreateOrderResponseSerializer,
+    CreateUnlockOrderRequestSerializer,
+    CreateUnlockOrderResponseSerializer,
     VerifyPaymentRequestSerializer,
     VerifyPaymentResponseSerializer,
+    VerifyUnlockRequestSerializer,
+    VerifyUnlockResponseSerializer,
 )
 from apps.payments.services import (
     create_order_for_booking,
+    create_order_for_unlock,
     handle_webhook,
     verify_and_capture,
+    verify_and_capture_unlock,
 )
 from common.authentication import JWTAuthentication
 from common.constants import WEBHOOK_DEFAULT_EVENT_TYPE
@@ -95,6 +102,54 @@ class VerifyPaymentView(APIView):
             "status": booking.status,
             "payment_status": booking.payment_status,
         })
+
+
+class CreateUnlockOrderView(APIView):
+    """Create a Razorpay order to unlock a host's contact on a listing (₹29)."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Payment"],
+        request=CreateUnlockOrderRequestSerializer,
+        responses={201: CreateUnlockOrderResponseSerializer},
+    )
+    def post(self, request):
+        s = CreateUnlockOrderRequestSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            listing = Listing.objects.select_related("host_user").get(
+                id=s.validated_data["listing_id"],
+            )
+        except Listing.DoesNotExist:
+            return Response(
+                {"error": "Listing not found", "code": ErrorCode.NOT_FOUND},
+                status=http_status.HTTP_404_NOT_FOUND,
+            )
+
+        result = create_order_for_unlock(request.user, listing)
+        return Response(result, status=http_status.HTTP_201_CREATED)
+
+
+class VerifyUnlockView(APIView):
+    """Verify the unlock payment signature and return the host's phone number."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Payment"],
+        request=VerifyUnlockRequestSerializer,
+        responses={200: VerifyUnlockResponseSerializer},
+    )
+    def post(self, request):
+        s = VerifyUnlockRequestSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        result = verify_and_capture_unlock(
+            s.validated_data["razorpay_order_id"],
+            s.validated_data["razorpay_payment_id"],
+            s.validated_data["razorpay_signature"],
+        )
+        return Response(result)
 
 
 class RazorpayWebhookView(APIView):
