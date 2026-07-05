@@ -77,11 +77,7 @@ class Listing(models.Model):
 
     @_property
     def guest_price_per_night(self):
-        return round(
-            self.host_price_per_night * (
-                1 + django_settings.GST_PCT / 100 + django_settings.GUEST_PLATFORM_FEE_PCT / 100
-            ), 2
-        )
+        return self.host_price_per_night
 
     class Meta:
         db_table = "listings"

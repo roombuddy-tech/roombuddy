@@ -30,6 +30,7 @@ class FlatmateInputSerializer(serializers.Serializer):
     gender = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
     occupation = serializers.CharField(required=False, allow_blank=True, default="")
     hobbies = serializers.CharField(required=False, allow_blank=True, default="")
+    hometown = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
 
 
 class PropertyInputSerializer(serializers.Serializer):

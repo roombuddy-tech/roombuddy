@@ -372,10 +372,24 @@ export default function GuestListingDetailScreen() {
                   <Text style={styles.ratingPillCount}>({reviewsData!.total} review{reviewsData!.total !== 1 ? 's' : ''})</Text>
                 </View>
               )}
-              <View style={styles.verifiedPill}>
-                <Ionicons name="checkmark-circle" size={13} color="#047857" />
-                <Text style={styles.verifiedTxt}>Verified</Text>
-              </View>
+              {listing.host_verifications?.aadhaar && (
+                <View style={styles.verifiedPill}>
+                  <Ionicons name="checkmark-circle" size={13} color="#047857" />
+                  <Text style={styles.verifiedTxt}>Aadhaar verified</Text>
+                </View>
+              )}
+              {listing.host_verifications?.email && (
+                <View style={styles.verifiedPill}>
+                  <Ionicons name="checkmark-circle" size={13} color="#047857" />
+                  <Text style={styles.verifiedTxt}>Email verified</Text>
+                </View>
+              )}
+              {listing.host_verifications?.phone && (
+                <View style={styles.verifiedPill}>
+                  <Ionicons name="checkmark-circle" size={13} color="#047857" />
+                  <Text style={styles.verifiedTxt}>Phone verified</Text>
+                </View>
+              )}
               {listing.booking_mode === 'instant' && (
                 <View style={styles.instantPill}>
                   <Ionicons name="flash" size={13} color="#92400E" />
@@ -469,8 +483,10 @@ export default function GuestListingDetailScreen() {
                       <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
                       <View style={styles.hostBadge}><Text style={styles.hostBadgeText}>Host</Text></View>
                     </View>
-                    {listing.host_info.occupation ? <Text style={styles.flatmateDetail}>{listing.host_info.occupation}</Text> : null}
-                    {listing.host_info.hobbies ? <Text style={styles.flatmateDetail}>{listing.host_info.hobbies}</Text> : null}
+                    {listing.host_info.occupation ? <Text style={styles.flatmateDetail}>Occupation: {listing.host_info.occupation}</Text> : null}
+                    {listing.host_info.gender ? <Text style={styles.flatmateDetail}>Gender: {listing.host_info.gender.charAt(0).toUpperCase() + listing.host_info.gender.slice(1)}</Text> : null}
+                    {listing.host_info.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {listing.host_info.hobbies}</Text> : null}
+                    {listing.host_info.hometown ? <Text style={styles.flatmateDetail}>Hometown: {listing.host_info.hometown}</Text> : null}
                   </View>
                 </View>
               )}
@@ -479,9 +495,10 @@ export default function GuestListingDetailScreen() {
                   <View style={styles.flatmateAvatar}><Text style={styles.flatmateInitials}>{initials(fm.name)}</Text></View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.flatmateName}>{fm.name}{fm.age ? `, ${fm.age}` : ''}</Text>
-                    {fm.occupation ? <Text style={styles.flatmateDetail}>{fm.occupation}</Text> : null}
-                    {fm.hobbies ? <Text style={styles.flatmateDetail}>{fm.hobbies}</Text> : null}
-                    {fm.hometown ? <Text style={styles.flatmateDetail}>From {fm.hometown}</Text> : null}
+                    {fm.occupation ? <Text style={styles.flatmateDetail}>Occupation: {fm.occupation}</Text> : null}
+                    {fm.gender ? <Text style={styles.flatmateDetail}>Gender: {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}</Text> : null}
+                    {fm.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {fm.hobbies}</Text> : null}
+                    {fm.hometown ? <Text style={styles.flatmateDetail}>Hometown: {fm.hometown}</Text> : null}
                   </View>
                 </View>
               ))}
