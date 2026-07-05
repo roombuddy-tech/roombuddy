@@ -385,9 +385,9 @@ export default function GuestListingDetailScreen() {
             </View>
             {listing.room.room_features.length > 0 && (
               <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
+                <View style={styles.subHeaderRow}>
                   <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.primary} />
-                  <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>What this room has</Text>
+                  <Text style={styles.subHeaderText}>What this room has</Text>
                 </View>
                 <View style={styles.featureRow}>
                   {listing.room.room_features.map((f) => (
@@ -401,7 +401,7 @@ export default function GuestListingDetailScreen() {
           {nearbyLine && (
             <View style={styles.section}>
               <SectionTitle label="Nearby" />
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border }}>
+              <View style={[styles.card, { flexDirection: 'row', alignItems: 'flex-start', gap: 10 }]}>
                 <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
                 <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
               </View>
@@ -474,9 +474,9 @@ export default function GuestListingDetailScreen() {
                 const catMeta = AMENITY_CATEGORIES[category];
                 return (
                   <View key={category} style={{ marginBottom: SPACING.md }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm }}>
+                    <View style={styles.subHeaderRow}>
                       <Ionicons name={(catMeta?.icon ?? 'list-outline') as any} size={16} color={COLORS.primary} />
-                      <Text style={{ fontSize: 14, ...FONTS.semibold, color: COLORS.text }}>
+                      <Text style={styles.subHeaderText}>
                         {catMeta?.label ?? category}
                       </Text>
                     </View>
@@ -524,7 +524,8 @@ export default function GuestListingDetailScreen() {
                 </View>
               ))}
               {listing.house_rules.custom_rules ? (
-                <View style={{ marginTop: SPACING.sm, backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, padding: SPACING.md }}>
+                <View style={{ marginTop: SPACING.md, backgroundColor: COLORS.raised, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md }}>
+                  <Text style={styles.eyebrowLabel}>Additional rules</Text>
                   <Text style={{ fontSize: 13, color: COLORS.textSec, lineHeight: 20 }}>{listing.house_rules.custom_rules}</Text>
                 </View>
               ) : null}
@@ -665,7 +666,7 @@ export default function GuestListingDetailScreen() {
                       ))}
                       {listing.house_rules.custom_rules && (
                         <View style={styles.modalCustomRules}>
-                          <Ionicons name="document-text-outline" size={16} color={COLORS.textSec} style={{ marginBottom: 4 }} />
+                          <Text style={styles.eyebrowLabel}>Additional rules</Text>
                           <Text style={styles.modalCustomRulesText}>{listing.house_rules.custom_rules}</Text>
                         </View>
                       )}
@@ -833,8 +834,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   body: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
 
   titleBlock: { marginBottom: SPACING.lg },
-  title: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 6, lineHeight: 30 },
-  subtitle: { fontSize: 14, color: COLORS.textSec, marginBottom: 12, lineHeight: 20 },
+  title: { fontSize: 26, ...FONTS.serifMedium, color: COLORS.text, marginBottom: 6, lineHeight: 32, letterSpacing: -0.3 },
+  subtitle: { fontSize: 14, color: COLORS.textSec, ...FONTS.regular, marginBottom: 12, lineHeight: 20 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
 
   ratingPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FEF3C7', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
@@ -846,10 +847,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   instantTxt: { fontSize: 12, ...FONTS.semibold, color: '#92400E' },
 
   section: { marginBottom: SPACING.lg },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  sectionAccent: { width: 3, height: 18, borderRadius: 2, backgroundColor: COLORS.primary },
-  sectionTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
+  sectionAccent: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
+  sectionTitle: { ...FONTS.bold, fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
   description: { fontSize: 14, color: COLORS.textSec, lineHeight: 22 },
+
+  subHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm },
+  subHeaderText: { ...FONTS.semibold, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textSec },
+  eyebrowLabel: { ...FONTS.semibold, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textMut, marginBottom: 6 },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, ...SHADOW.sm },
 
   flatmateCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   flatmateAvatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
@@ -865,10 +871,10 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   foodDesc: { fontSize: 13, color: COLORS.textSec, lineHeight: 20 },
 
   amenityGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  amenityRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
-  amenityText: { fontSize: 14, color: COLORS.text, flex: 1 },
+  amenityRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, paddingRight: SPACING.sm },
+  amenityText: { fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1 },
 
-  apartmentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm },
+  apartmentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm, ...SHADOW.sm },
   apartmentNameTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   spaceList: { gap: 0, marginBottom: SPACING.sm },
   spaceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
@@ -884,11 +890,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
-  checkinCard: { flex: 1, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6 },
-  checkinLabel: { fontSize: 12, color: COLORS.textSec },
-  checkinTime: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  checkinCard: { flex: 1, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6, ...SHADOW.sm },
+  checkinLabel: { fontSize: 12, color: COLORS.textSec, ...FONTS.medium, textAlign: 'center' },
+  checkinTime: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, textAlign: 'center' },
 
-  reviewsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  reviewsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
   breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   breakdownLabel: { width: 116, fontSize: 13, color: COLORS.textSec },
@@ -914,7 +920,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   allReviewsTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
   stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, paddingBottom: 30, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
-  stickyPrice: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
+  stickyPrice: { fontSize: 24, ...FONTS.serifMedium, color: COLORS.text, letterSpacing: -0.3 },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyRating: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
   stickyBookBtn: { backgroundColor: COLORS.accent, paddingVertical: 14, paddingHorizontal: 32, borderRadius: RADIUS.pill, ...SHADOW.sm },
@@ -927,7 +933,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   rulesScroll: { marginBottom: SPACING.md },
   modalRuleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   modalRuleText: { fontSize: 15, color: COLORS.text, ...FONTS.medium },
-  modalCustomRules: { backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, padding: SPACING.md, marginTop: SPACING.sm },
+  modalCustomRules: { backgroundColor: COLORS.raised, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, marginTop: SPACING.md },
   modalCustomRulesText: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
   noRulesText: { fontSize: 14, color: COLORS.textMut, paddingVertical: SPACING.md },
   modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
@@ -941,7 +947,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     padding: SPACING.md, marginBottom: SPACING.lg,
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1, borderColor: COLORS.border, ...SHADOW.sm,
   },
   hostAvatarLg: {
     width: 52, height: 52, borderRadius: 26,

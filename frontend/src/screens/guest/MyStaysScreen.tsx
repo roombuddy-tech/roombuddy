@@ -365,8 +365,11 @@ export default function MyStaysScreen() {
         />
 
         <View style={styles.cardBody}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.listing_title ?? 'Untitled listing'}</Text>
-          <Text style={styles.cardSub}>{[item.area_name, item.city].filter(Boolean).join(', ')}</Text>
+          <Text style={styles.cardTitle} numberOfLines={2}>{item.listing_title ?? 'Untitled listing'}</Text>
+          <View style={styles.cardSub}>
+            <Ionicons name="location-outline" size={13} color={COLORS.textMut} />
+            <Text style={styles.cardSubText} numberOfLines={1}>{[item.area_name, item.city].filter(Boolean).join(', ')}</Text>
+          </View>
 
           <View style={styles.datesRow}>
             <Ionicons name="calendar-outline" size={14} color={COLORS.textSec} />
@@ -530,18 +533,19 @@ export default function MyStaysScreen() {
 const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  headerTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text },
+  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.bg },
+  headerTitle: { fontSize: 32, ...FONTS.serif, color: COLORS.text, letterSpacing: 0.2 },
   listPad: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
 
-  card: { backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm },
-  cardImg: { width: '100%', height: 160, backgroundColor: COLORS.surface },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm },
+  cardImg: { width: '100%', height: 190, backgroundColor: COLORS.chip },
   cardBody: { padding: SPACING.md },
-  cardTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
-  cardSub: { fontSize: 13, color: COLORS.textSec, marginBottom: SPACING.sm },
+  cardTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
+  cardSub: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.sm },
+  cardSubText: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, flex: 1 },
   datesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
   datesText: { fontSize: 13, color: COLORS.text, ...FONTS.medium },
-  nightsText: { fontSize: 12, color: COLORS.textMut, marginLeft: 4 },
+  nightsText: { fontSize: 12, color: COLORS.textMut, marginLeft: 4, ...FONTS.medium },
   statusRow: { flexDirection: 'row', marginBottom: SPACING.sm },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
   statusText: { fontSize: 12, ...FONTS.semibold },
@@ -551,18 +555,18 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   policyPillText: { fontSize: 12, ...FONTS.semibold },
   policyPillRefund: { fontSize: 12, ...FONTS.medium },
 
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  priceLabel: { fontSize: 11, color: COLORS.textMut, ...FONTS.medium },
-  priceValue: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginTop: 1 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
+  priceLabel: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, textTransform: 'uppercase', letterSpacing: 0.6 },
+  priceValue: { fontSize: 22, ...FONTS.serif, color: COLORS.text, marginTop: 2 },
   footerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
-  msgBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9 },
+  msgBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: COLORS.surface },
   msgBtnTxt: { color: COLORS.primary, fontSize: 13, ...FONTS.semibold },
   contactBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 16, paddingVertical: 10 },
   contactBtnTxt: { color: '#fff', fontSize: 13, ...FONTS.semibold },
 
   cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  hostName: { fontSize: 12, color: COLORS.textMut },
+  hostName: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
   cancelLink: { paddingVertical: 4, paddingHorizontal: 2 },
   cancelLinkText: { fontSize: 13, color: COLORS.danger, ...FONTS.medium, textDecorationLine: 'underline' },
 
