@@ -1859,11 +1859,6 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const [rateFocused, setRateFocused] = useState(false);
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
-  const gst = Math.round(rate * CONFIG.GST_PCT);
-  const guestPlatformFee = Math.round(rate * CONFIG.GUEST_PLATFORM_FEE_PCT);
-  const guestTotal = rate + mealCost + gst + guestPlatformFee;
-  const hostFee = Math.round(rate * CONFIG.HOST_PLATFORM_FEE_PCT);
-  const hostEarning = rate + mealCost - hostFee;
 
   const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
 
@@ -1918,26 +1913,15 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         )}
 
         {rate > 0 && (
-          <>
-            <View style={prSt.breakdownBox}>
-              <Text style={prSt.breakdownTitle}>Price breakdown (guest pays)</Text>
-              <PriceRow label="Room rate" value={`₹${rate}`} />
-              {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label={`GST (${CONFIG.GST_PCT * 100}% on room)`} value={`₹${gst}`} />
-              <PriceRow label={`Platform fee (${CONFIG.GUEST_PLATFORM_FEE_PCT * 100}% on room)`} value={`₹${guestPlatformFee}`} />
-              <View style={prSt.divider} />
-              <PriceRow label="Guest total" value={`₹${guestTotal}/night`} bold />
-            </View>
-
-            <View style={prSt.earningsBox}>
-              <Text style={prSt.earningTitle}>You earn</Text>
-              <PriceRow label="Room rate" value={`₹${rate}`} />
-              {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
-              <PriceRow label={`RoomBuddy fee (${CONFIG.HOST_PLATFORM_FEE_PCT * 100}% on room)`} value={`−₹${hostFee}`} muted />
-              <View style={prSt.divider} />
-              <PriceRow label="Your earning" value={`₹${hostEarning}/night`} bold />
-            </View>
-          </>
+          <View style={prSt.breakdownBox}>
+            <Text style={prSt.breakdownTitle}>What guests see</Text>
+            <PriceRow label="Room rate" value={`₹${rate}/night`} />
+            {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
+            <View style={prSt.divider} />
+            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: 4, lineHeight: 18 }}>
+              Guests pay you directly for rent, deposit and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking — you receive 100% of your listed price.
+            </Text>
+          </View>
         )}
 
         <SectionLabel label="Minimum stay" />

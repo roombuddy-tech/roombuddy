@@ -419,6 +419,7 @@ def _notify_booking_cancelled(booking, cancelled_by: str) -> None:
     from apps.payments.services import _build_booking_context
 
     base = _build_booking_context(booking)
+    base["is_cancelled"] = True
     base["refund_amount"] = f"{booking.refund_amount:,.0f}" if booking.refund_amount else ""
     base["rejection_reason"] = booking.cancellation_reason or ""
 

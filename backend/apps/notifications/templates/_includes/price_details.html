@@ -14,6 +14,7 @@
         </td>
       </tr>
 
+      {% if not is_cancelled %}
       <tr>
         <td style="padding:12px 14px 4px 14px;color:#555;font-size:14px;font-weight:600;border-top:1px solid #e8e8e8;">
           Pay the host directly
@@ -40,6 +41,7 @@
         <td style="padding:6px 14px 12px 14px;color:#1a1a1a;font-size:15px;font-weight:600;">Payable to host</td>
         <td style="padding:6px 14px 12px 14px;color:#1a1a1a;font-size:15px;font-weight:600;text-align:right;">₹{{ pay_to_host_directly }}</td>
       </tr>
+      {% endif %}
     </table>
   </td>
 </tr>
