@@ -82,6 +82,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable roombuddy
 sudo systemctl restart roombuddy
 
+log "Installing scheduled-jobs timer (expire + booking lifecycle)"
+chmod +x "$APP_DIR/scripts/run_scheduled_jobs.sh"
+sudo cp "$APP_DIR/deploy/roombuddy-cron.service" /etc/systemd/system/roombuddy-cron.service
+sudo cp "$APP_DIR/deploy/roombuddy-cron.timer" /etc/systemd/system/roombuddy-cron.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now roombuddy-cron.timer
+
 log "Installing nginx config"
 sudo cp "$APP_DIR/deploy/nginx-roombuddy.conf" /etc/nginx/sites-available/roombuddy
 sudo ln -sf /etc/nginx/sites-available/roombuddy /etc/nginx/sites-enabled/roombuddy

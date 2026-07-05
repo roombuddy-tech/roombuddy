@@ -1,0 +1,13 @@
+[Unit]
+Description=Run RoomBuddy scheduled booking jobs every 5 minutes
+
+[Timer]
+# Every 5 minutes. advance_booking_lifecycle only acts when a stay's date
+# boundary is crossed, so running it this often is harmless and removes any
+# timezone guesswork about "run once at midnight".
+OnCalendar=*:0/5
+Persistent=true
+Unit=roombuddy-cron.service
+
+[Install]
+WantedBy=timers.target

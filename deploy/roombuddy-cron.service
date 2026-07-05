@@ -1,0 +1,12 @@
+[Unit]
+Description=RoomBuddy scheduled booking jobs (expire stale + advance lifecycle)
+After=network.target roombuddy.service
+Wants=roombuddy.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/roombuddy/backend
+EnvironmentFile=/etc/roombuddy/env
+ExecStart=/home/ubuntu/roombuddy/scripts/run_scheduled_jobs.sh
