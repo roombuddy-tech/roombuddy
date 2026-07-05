@@ -9,7 +9,7 @@
 type ApiTarget = 'local' | 'aws' | 'prod';
 
 // ⬇⬇⬇  CHANGE THIS LINE TO SWITCH BACKENDS  ⬇⬇⬇
-const API_TARGET: ApiTarget = 'local';
+const API_TARGET: ApiTarget = 'aws';
 
 const API_URLS: Record<ApiTarget, string> = {
   local: 'http://192.168.7.4:8000',
@@ -26,9 +26,6 @@ export const CONFIG = {
   API_TARGET: __DEV__ ? API_TARGET : 'prod',  
   OTP_LENGTH: 6,
   OTP_EXPIRY_SECONDS: 300,
-  GST_PCT: 0.12,
-  GUEST_PLATFORM_FEE_PCT: 0.05,
-  HOST_PLATFORM_FEE_PCT: 0.04,
   // Early-stage flat fees (₹). Guest pays only the platform fee to book; rent,
   // deposit & meals are settled directly with the host. Unlock fee reveals the
   // host's phone number on a listing.
