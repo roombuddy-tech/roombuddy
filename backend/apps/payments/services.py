@@ -531,18 +531,38 @@ def _build_booking_context(booking) -> dict:
     nights = booking.nights or 1
 
     # Free-cancellation deadline derived from the booking's cancellation policy.
-    # FLEXIBLE = until check-in, MODERATE = 5 days before, STRICT = 14 days before.
-    free_cancel_text = "the check-in date"
+    # FLEXIBLE = 100% refund if cancelled 2+ days before check-in; 50% thereafter.
+    # MODERATE = 100% if 7+ days before; 50% if 2–6 days; 0% within 2 days.
+    # STRICT   = 50% if 7+ days before; 0% thereafter.
+    free_cancel_text = ""
+    cancellation_policy_label = ""
+    cancellation_policy_detail = ""
     try:
         policy = booking.cancellation_policy
         if policy == booking.CancellationPolicy.MODERATE:
-            deadline = booking.check_in_date - timedelta(days=5)
+            deadline = booking.check_in_date - timedelta(days=7)
             free_cancel_text = deadline.strftime("%d %b %Y")
+            cancellation_policy_label = "Moderate"
+            cancellation_policy_detail = (
+                f"100% refund if cancelled before {free_cancel_text}. "
+                f"50% refund 2–6 days before check-in. No refund within 2 days."
+            )
         elif policy == booking.CancellationPolicy.STRICT:
-            deadline = booking.check_in_date - timedelta(days=14)
+            deadline = booking.check_in_date - timedelta(days=7)
             free_cancel_text = deadline.strftime("%d %b %Y")
+            cancellation_policy_label = "Strict"
+            cancellation_policy_detail = (
+                f"50% refund if cancelled before {free_cancel_text}. "
+                f"No refund thereafter."
+            )
         else:  # FLEXIBLE or None
-            free_cancel_text = booking.check_in_date.strftime("%d %b %Y")
+            deadline = booking.check_in_date - timedelta(days=2)
+            free_cancel_text = deadline.strftime("%d %b %Y")
+            cancellation_policy_label = "Flexible"
+            cancellation_policy_detail = (
+                f"100% refund if cancelled before {free_cancel_text}. "
+                f"50% refund after that."
+            )
     except Exception:
         logger.exception("_build_booking_context failed")
         pass
@@ -571,6 +591,8 @@ def _build_booking_context(booking) -> dict:
 
         # Cancellation
         "free_cancellation_deadline": free_cancel_text,
+        "cancellation_policy_label": cancellation_policy_label,
+        "cancellation_policy_detail": cancellation_policy_detail,
 
         # Links
         "booking_url": f"{settings.APP_BASE_URL}/bookings/{booking.id}",
