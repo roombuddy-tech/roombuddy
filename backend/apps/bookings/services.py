@@ -475,34 +475,44 @@ def _notify_booking_cancelled(booking, cancelled_by: str) -> None:
 
 # ─── Host queries ────────────────────────────────────────────────────────
 
-# Maps a public filter value to the list of booking statuses it includes.
-_HOST_BOOKING_FILTERS: dict[str, tuple[str, ...]] = {
-    Booking.HostBookingFilter.ACTIVE: (
-        Booking.Status.ACTIVE,
-    ),
-    Booking.HostBookingFilter.UPCOMING: (
-        Booking.Status.PENDING, Booking.Status.ACCEPTED,
-    ),
-    Booking.HostBookingFilter.COMPLETED: (
-        Booking.Status.COMPLETED,
-    ),
-}
-
-
 def get_host_bookings(user: User, status_filter: str = Booking.HostBookingFilter.ALL) -> list[dict]:
-    """Returns list of bookings for a host, optionally filtered by status."""
+    """
+    Returns a host's bookings, bucketed by where the stay sits relative to today
+    rather than by status alone. A paid, confirmed booking is:
+      - ACTIVE     while today is within [check-in, check-out]
+      - UPCOMING   while check-in is still in the future
+      - COMPLETED  once check-out has passed (or it was marked completed)
+
+    This keeps an in-progress stay in "Active" even though its status is still
+    `accepted` (there is no cron that flips accepted → active).
+    """
+    today = timezone.localdate()
     queryset = (
         Booking.objects.filter(host_user=user)
         .select_related("guest_user")
         .order_by("-created_at")
     )
 
-    statuses = _HOST_BOOKING_FILTERS.get(status_filter)
-    if statuses:
-        queryset = queryset.filter(status__in=statuses)
+    paid = Q(payment_status=Booking.PaymentStatus.PAID)
+    # A "confirmed" stay the host has committed to.
+    live = (Booking.Status.ACCEPTED, Booking.Status.ACTIVE)
 
-    if status_filter == Booking.HostBookingFilter.UPCOMING:
-        queryset = queryset.filter(payment_status=Booking.PaymentStatus.PAID)
+    if status_filter == Booking.HostBookingFilter.ACTIVE:
+        queryset = queryset.filter(
+            paid, status__in=live,
+            check_in_date__lte=today, check_out_date__gte=today,
+        )
+    elif status_filter == Booking.HostBookingFilter.UPCOMING:
+        queryset = queryset.filter(
+            paid,
+            status__in=(Booking.Status.PENDING, *live),
+            check_in_date__gt=today,
+        )
+    elif status_filter == Booking.HostBookingFilter.COMPLETED:
+        queryset = queryset.filter(
+            Q(status=Booking.Status.COMPLETED)
+            | Q(paid, status__in=live, check_out_date__lt=today),
+        )
 
     return [_booking_to_dict(b) for b in queryset]
 

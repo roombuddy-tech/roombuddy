@@ -33,6 +33,13 @@ log "Collecting static files"
 log "Reloading Gunicorn"
 sudo systemctl reload roombuddy || sudo systemctl restart roombuddy
 
+log "Installing scheduled-jobs timer"
+chmod +x "$APP_DIR/scripts/run_scheduled_jobs.sh"
+sudo cp "$APP_DIR/deploy/roombuddy-cron.service" /etc/systemd/system/roombuddy-cron.service
+sudo cp "$APP_DIR/deploy/roombuddy-cron.timer" /etc/systemd/system/roombuddy-cron.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now roombuddy-cron.timer
+
 log "Health check"
 for i in {1..15}; do
     if curl -fsS --unix-socket /run/roombuddy/roombuddy.sock -H "X-Forwarded-Proto: https" http://localhost/api/health/ > /dev/null 2>&1; then

@@ -62,3 +62,5 @@ class StatusChangeReason:
     CANCELLED_BY_HOST = "Cancelled by host"
     CANCELLED_BY_SYSTEM = "Cancelled by system"
     HOST_NO_RESPONSE = "Host did not respond within 24 hours (auto-cancelled by cron)"
+    STAY_STARTED = "Stay started on check-in date (auto-activated by cron)"
+    STAY_COMPLETED = "Stay ended after check-out date (auto-completed by cron)"
