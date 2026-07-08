@@ -3,7 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { PALETTES, SHADOWS, ThemeColors, ThemeMode, ThemeShadows } from '../constants/theme';
 
 const STORAGE_KEY = '@roombuddy/themeMode';
-const DEFAULT_MODE: ThemeMode = 'dark';
+const DEFAULT_MODE: ThemeMode = 'light';
 
 interface ThemeContextValue {
   mode: ThemeMode;
