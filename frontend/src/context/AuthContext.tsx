@@ -11,6 +11,7 @@ interface AuthState {
   isProfileComplete: boolean;
   userRole: UserRole;
   user: any;
+  didLogout: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isProfileComplete: false,
     userRole: 'guest',
     user: null,
+    didLogout: false,
   });
 
   const forceLogout = useCallback(() => {
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isProfileComplete: false,
       userRole: 'guest',
       user: null,
+      didLogout: true,
     });
   }, []);
 
@@ -69,16 +72,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isProfileComplete: isComplete,
             userRole: 'guest',
             user: freshUser,
+            didLogout: false,
           });
         } catch {
-          // Backend unreachable or 401 — fall back to local data
-          // (401 will trigger token refresh → forceLogout if refresh also fails)
           setState({
             isLoading: false,
             isAuthenticated: true,
             isProfileComplete: userData.is_profile_complete ?? false,
             userRole: 'guest',
             user: userData,
+            didLogout: false,
           });
         }
       } catch {
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isProfileComplete: userData.is_profile_complete ?? false,
       userRole: 'guest',
       user: userData,
+      didLogout: false,
     });
 
     if (userData.is_profile_complete) {
@@ -119,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isProfileComplete: false,
       userRole: 'guest',
       user: null,
+      didLogout: true,
     });
   }, []);
 

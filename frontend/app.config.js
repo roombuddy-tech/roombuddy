@@ -7,7 +7,7 @@ module.exports = {
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
-    userInterfaceStyle: "dark",
+    userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
       image: "./assets/splash-icon.png",
@@ -20,6 +20,12 @@ module.exports = {
       infoPlist: {
         NSPhotoLibraryUsageDescription:
           "RoomBuddy needs access to your photos to upload room photos for your listing.",
+        NSCameraUsageDescription:
+          "RoomBuddy uses your camera to take photos of your room when creating a listing.",
+        NSLocationWhenInUseUsageDescription:
+          "RoomBuddy uses your location to show nearby room listings and set your city on your profile.",
+        NSLocationAlwaysUsageDescription:
+          "RoomBuddy uses your location to show nearby room listings and set your city on your profile.",
       },
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY_IOS,
@@ -45,6 +51,9 @@ module.exports = {
     extra: {
       googlePlacesApiKeyIos: process.env.GOOGLE_MAPS_API_KEY_IOS,
       googlePlacesApiKeyAndroid: process.env.GOOGLE_MAPS_API_KEY_ANDROID,
+      eas: {
+        projectId: "9d31a02c-25e6-464d-bf93-78b061aa63cf",
+      },
     },
     plugins: ["@react-native-community/datetimepicker", "expo-font"],
   },

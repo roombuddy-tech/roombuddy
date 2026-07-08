@@ -64,9 +64,22 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
+  const canGoBack = navigation.canGoBack();
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
+
+        {canGoBack && (
+          <View style={styles.backRow}>
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color={COLORS.text}
+              onPress={() => navigation.goBack()}
+            />
+          </View>
+        )}
 
         {/* Main */}
         <View style={styles.main}>
@@ -141,6 +154,9 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flex: 1,
     paddingTop: SPACING.xl,
     paddingBottom: SPACING.lg,
+  },
+  backRow: {
+    marginBottom: SPACING.md,
   },
   header: {
     alignItems: 'flex-start',

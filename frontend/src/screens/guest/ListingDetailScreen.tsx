@@ -23,6 +23,7 @@ import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
@@ -128,6 +129,7 @@ export default function GuestListingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut, unlockedContact } = route.params;
+  const { isAuthenticated } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
@@ -237,6 +239,7 @@ export default function GuestListingDetailScreen() {
   }, [unlockedContact]);
 
   const handleUnlock = useCallback(async () => {
+    if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
     if (unlocking || !listing) return;
     setUnlocking(true);
     try {
@@ -772,7 +775,10 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
         </View>
-        <TouchableOpacity style={styles.stickyBookBtn} activeOpacity={0.85} onPress={() => { setBookStep('rules'); setShowBookModal(true); }}>
+        <TouchableOpacity style={styles.stickyBookBtn} activeOpacity={0.85} onPress={() => {
+          if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+          setBookStep('rules'); setShowBookModal(true);
+        }}>
           <Text style={styles.stickyBookBtnText}>Book now</Text>
         </TouchableOpacity>
       </View>

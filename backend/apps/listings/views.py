@@ -15,6 +15,7 @@ from apps.listings.services import (
 )
 from common.authentication import JWTAuthentication
 from common.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 import logging
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,7 @@ class ListingSnoozeView(APIView):
 
 class GuestSearchView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @extend_schema(tags=["Guest"])
     def get(self, request):
@@ -133,11 +134,12 @@ class GuestSearchView(APIView):
 
 class GuestListingDetailView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @extend_schema(tags=["Guest"])
     def get(self, request, listing_id):
-        data = get_guest_listing_detail(str(listing_id), viewer=request.user)
+        viewer = request.user if request.auth else None
+        data = get_guest_listing_detail(str(listing_id), viewer=viewer)
         if data is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(data)

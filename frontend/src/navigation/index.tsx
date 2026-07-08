@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useThemeColors } from '../context/ThemeContext';
 import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 import AuthStack from './AuthStack';
+import BrowseStack from './BrowseStack';
 import GuestStack from './GuestStack';
 import HostStack from './HostStack';
 
@@ -21,7 +22,7 @@ function ProfileIncompleteStack() {
 }
 
 export default function Navigation() {
-  const { isLoading, isAuthenticated, isProfileComplete, userRole } = useAuth();
+  const { isLoading, isAuthenticated, isProfileComplete, userRole, didLogout } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
@@ -35,8 +36,10 @@ export default function Navigation() {
 
   return (
     <NavigationContainer>
-      {!isAuthenticated ? (
+      {!isAuthenticated && didLogout ? (
         <AuthStack />
+      ) : !isAuthenticated ? (
+        <BrowseStack />
       ) : !isProfileComplete ? (
         <ProfileIncompleteStack />
       ) : userRole === 'host' ? (

@@ -68,8 +68,8 @@ function nightCount(ci: string, co: string): number {
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const route = useRoute<RouteProp<GuestTabParamList, 'Home'>>();
-  const { user, switchRole } = useAuth();
+  const route = useRoute<any>();
+  const { user, switchRole, isAuthenticated } = useAuth();
   const { colors: COLORS, shadows: SHADOW } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
@@ -451,19 +451,30 @@ export default function HomeScreen() {
           )}
           <View style={styles.topRight}>
             {!showSearchForm && (
-              <TouchableOpacity style={styles.switchBtn} onPress={() => switchRole('host')} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.switchBtn} onPress={() => {
+                if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+                switchRole('host');
+              }} activeOpacity={0.7}>
                 <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.accent} />
                 <Text style={styles.switchBtnTxt}>Host</Text>
               </TouchableOpacity>
             )}
-            <NotificationBell style={styles.bellBtn} />
-            <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
-              {user?.profile_photo_url ? (
-                <Image source={{ uri: user.profile_photo_url }} style={styles.avatarImg} />
-              ) : (
-                <Text style={styles.avatarTxt}>{initial}</Text>
-              )}
-            </TouchableOpacity>
+            {isAuthenticated ? (
+              <>
+                <NotificationBell style={styles.bellBtn} />
+                <TouchableOpacity style={styles.avatarBtn} onPress={() => setShowProfile(true)}>
+                  {user?.profile_photo_url ? (
+                    <Image source={{ uri: user.profile_photo_url }} style={styles.avatarImg} />
+                  ) : (
+                    <Text style={styles.avatarTxt}>{initial}</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.avatarBtn} onPress={() => (navigation as any).navigate('Login')}>
+                <Ionicons name="person-circle-outline" size={28} color={COLORS.accent} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
@@ -610,7 +621,7 @@ export default function HomeScreen() {
         </ScrollView>
       )}
 
-      <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />
+      {isAuthenticated && <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />}
     </SafeAreaView>
   );
 }
