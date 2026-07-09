@@ -17,6 +17,7 @@ export interface GuestListingCard {
   description?: string;
   latitude: number | null;
   longitude: number | null;
+  distance_km?: number | null;
 }
 
 export interface ListingPhoto {

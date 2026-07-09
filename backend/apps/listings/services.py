@@ -697,6 +697,15 @@ def search_guest_listings(
     qs = qs[:50]
     results = [_listing_to_guest_card(l) for l in qs]
     _attach_cover_photos(qs, results)
+
+    if lat is not None and lng is not None:
+        for r in results:
+            if r["latitude"] and r["longitude"]:
+                r["distance_km"] = _haversine(lat, lng, r["latitude"], r["longitude"])
+            else:
+                r["distance_km"] = None
+        results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
+
     return results
 
 
@@ -910,6 +919,14 @@ def _parse_all_house_rules(rules) -> dict:
         "lock_door": lock_door,
         "custom_rules": "\n".join(remaining) if remaining else None,
     }
+
+def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
+    return round(R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)), 1)
+
 
 def _listing_to_guest_card(listing: Listing) -> dict:
     amenity_names = [

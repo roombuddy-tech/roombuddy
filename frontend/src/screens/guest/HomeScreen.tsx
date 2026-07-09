@@ -339,14 +339,22 @@ export default function HomeScreen() {
             {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
             <Text style={styles.cardPriceUnit}>/night</Text>
           </Text>
-          {item.average_rating !== null && item.review_count > 0 && (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={12} color={COLORS.star} />
-              <Text style={styles.ratingText}>
-                {item.average_rating.toFixed(1)} ({item.review_count})
-              </Text>
-            </View>
-          )}
+          <View style={{ alignItems: 'flex-end' }}>
+            {item.average_rating !== null && item.review_count > 0 && (
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={12} color={COLORS.star} />
+                <Text style={styles.ratingText}>
+                  {item.average_rating.toFixed(1)} ({item.review_count})
+                </Text>
+              </View>
+            )}
+            {item.distance_km != null && (
+              <View style={styles.distanceRow}>
+                <Ionicons name="location-outline" size={11} color={COLORS.textMut} />
+                <Text style={styles.distanceText}>{item.distance_km} km away</Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -534,8 +542,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {/* Popular properties near you */}
-          <SectionHead label={hasLocation ? "Stays in Bangalore" : "Popular properties"} />
-          <Text style={styles.sectionSub}>Based on your current location</Text>
+          <SectionHead label={hasLocation ? "Stays near you" : "Popular properties"} />
+          {hasLocation && <Text style={styles.sectionSub}>Based on your current location</Text>}
           {nearbyLoading ? (
             <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
           ) : nearbyListings.length === 0 ? (
@@ -562,13 +570,19 @@ export default function HomeScreen() {
                         {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
                         <Text style={styles.gridPriceUnit}>/night</Text>
                       </Text>
-                      {item.average_rating !== null && item.review_count > 0 && (
+                      {item.average_rating !== null && item.review_count > 0 ? (
                         <View style={styles.ratingRow}>
                           <Ionicons name="star" size={11} color={COLORS.star} />
                           <Text style={styles.gridRating}>{item.average_rating.toFixed(1)}</Text>
                         </View>
-                      )}
+                      ) : null}
                     </View>
+                    {item.distance_km != null && (
+                      <View style={styles.distanceRow}>
+                        <Ionicons name="location-outline" size={11} color={COLORS.textMut} />
+                        <Text style={styles.distanceText}>{item.distance_km} km away</Text>
+                      </View>
+                    )}
                   </View>
                 </TouchableOpacity>
               ))}
@@ -759,6 +773,8 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   gridPrice: { fontSize: 14, ...FONTS.serif, color: COLORS.text },
   gridPriceUnit: { fontSize: 10, ...FONTS.regular, color: COLORS.textSec },
   gridRating: { fontSize: 11, color: COLORS.text, ...FONTS.medium },
+  distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  distanceText: { fontSize: 11, color: COLORS.textMut, ...FONTS.medium },
   nearbyEmpty: { fontSize: 13, color: COLORS.textMut, marginBottom: SPACING.xl },
 
   trustStrip: {
