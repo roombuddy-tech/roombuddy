@@ -22,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { CONFIG } from '../../constants/config';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -578,6 +579,31 @@ const makeRrStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
 
+function parseTimeString(timeStr: string): Date {
+  const d = new Date();
+  d.setSeconds(0);
+  d.setMilliseconds(0);
+  if (!timeStr) { d.setHours(12, 0); return d; }
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) { d.setHours(12, 0); return d; }
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === 'AM' && h === 12) h = 0;
+  else if (period === 'PM' && h !== 12) h += 12;
+  d.setHours(h, m);
+  return d;
+}
+
+function formatTimeDate(d: Date): string {
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const period = h < 12 ? 'AM' : 'PM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${m < 10 ? '0' : ''}${m} ${period}`;
+}
+
 function TimePicker({
   label,
   value,
@@ -595,6 +621,7 @@ function TimePicker({
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
   const [open, setOpen] = useState(false);
+  const [tempDate, setTempDate] = useState(() => parseTimeString(value));
 
   return (
     <View style={{ marginBottom: 14 }}>
@@ -604,7 +631,7 @@ function TimePicker({
       </Text>
       <TouchableOpacity
         style={tpSt.trigger}
-        onPress={() => setOpen(true)}
+        onPress={() => { setTempDate(parseTimeString(value)); setOpen(true); }}
         activeOpacity={0.7}
       >
         <Text style={[tpSt.triggerTxt, !value && { color: COLORS.textMut }]}>
@@ -618,28 +645,22 @@ function TimePicker({
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
           <View style={tpSt.sheet}>
             <View style={tpSt.sheetHeader}>
-              <Text style={tpSt.sheetTitle}>{label}</Text>
               <TouchableOpacity onPress={() => setOpen(false)}>
-                <Ionicons name="close" size={22} color={COLORS.textSec} />
+                <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={tpSt.sheetTitle}>{label}</Text>
+              <TouchableOpacity onPress={() => { onChange(formatTimeDate(tempDate)); setOpen(false); }}>
+                <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-              {TIMES.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[tpSt.timeRow, value === time && tpSt.timeRowSel]}
-                  onPress={() => { onChange(time); setOpen(false); }}
-                  activeOpacity={0.7}
-                >
-                  {value === time && (
-                    <Ionicons name="checkmark" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
-                  )}
-                  <Text style={[tpSt.timeTxt, value === time && tpSt.timeSel]}>
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <DateTimePicker
+              value={tempDate}
+              mode="time"
+              display="spinner"
+              minuteInterval={30}
+              onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
+              style={{ height: 200 }}
+            />
           </View>
         </View>
       </Modal>
