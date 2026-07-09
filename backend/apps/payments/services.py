@@ -645,7 +645,8 @@ def _get_cover_photo(listing):
 def _get_location_string(listing) -> str:
     """
     Build a human-readable address string from the listing's property.
-    Format: "<address_line1>, <address_line2>, <city_name> - <pincode>"
+    Format: "<apartment_name>, Floor <n>, <address_line1>, <address_line2>,
+             <city_name> - <pincode>"
     Falls back to formatted_address, then city_name.
     """
     prop = getattr(listing, "property", None)
@@ -653,6 +654,14 @@ def _get_location_string(listing) -> str:
         return ""
 
     parts = []
+    if getattr(prop, "apartment_name", None):
+        parts.append(prop.apartment_name.strip())
+    if getattr(prop, "floor_number", None) is not None:
+        floor = prop.floor_number
+        if floor == 0:
+            parts.append("Ground floor")
+        else:
+            parts.append(f"Floor {floor}")
     if prop.address_line1:
         parts.append(prop.address_line1.strip())
     if prop.address_line2:

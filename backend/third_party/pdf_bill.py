@@ -82,6 +82,12 @@ def generate_booking_invoice(booking) -> bytes:
 
     location_parts = []
     if prop:
+        apt = getattr(prop, "apartment_name", None)
+        if apt and apt.strip():
+            location_parts.append(apt.strip())
+        floor = getattr(prop, "floor_number", None)
+        if floor is not None:
+            location_parts.append("Ground floor" if floor == 0 else f"Floor {floor}")
         for part in [
             getattr(prop, "address_line1", None),
             getattr(prop, "address_line2", None),
