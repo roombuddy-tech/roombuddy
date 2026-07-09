@@ -358,11 +358,17 @@ export default function MyStaysScreen() {
         activeOpacity={0.7}
         onPress={() => { if (item.listing_id) navigation.navigate('GuestListingDetail', { listingId: item.listing_id }); }}
       >
-        <Image
-          source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
-          style={styles.cardImg}
-          resizeMode="cover"
-        />
+        <View style={styles.imageWrap}>
+          <Image
+            source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
+            style={styles.cardImg}
+            resizeMode="cover"
+          />
+          <View style={styles.statusOverlay}>
+            <View style={[styles.statusOverlayDot, { backgroundColor: cfg.color }]} />
+            <Text style={styles.statusOverlayTxt}>{cfg.label}</Text>
+          </View>
+        </View>
 
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle} numberOfLines={2}>{item.listing_title ?? 'Untitled listing'}</Text>
@@ -375,13 +381,6 @@ export default function MyStaysScreen() {
             <Ionicons name="calendar-outline" size={14} color={COLORS.textSec} />
             <Text style={styles.datesText}>{fmtDateShort(item.check_in_date)} – {fmtDateShort(item.check_out_date)}</Text>
             <Text style={styles.nightsText}>{item.nights} night{item.nights !== 1 ? 's' : ''}</Text>
-          </View>
-
-          <View style={styles.statusRow}>
-            <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-              <Ionicons name={cfg.icon as any} size={13} color={cfg.color} />
-              <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-            </View>
           </View>
 
           {/* Cancellation policy pill — tappable */}
@@ -538,7 +537,16 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   listPad: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
 
   card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm },
+  imageWrap: { position: 'relative' },
   cardImg: { width: '100%', height: 190, backgroundColor: COLORS.chip },
+  statusOverlay: {
+    position: 'absolute', top: 10, right: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  statusOverlayDot: { width: 6, height: 6, borderRadius: 3 },
+  statusOverlayTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
   cardBody: { padding: SPACING.md },
   cardTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
   cardSub: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.sm },
@@ -546,9 +554,6 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   datesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
   datesText: { fontSize: 13, color: COLORS.text, ...FONTS.medium },
   nightsText: { fontSize: 12, color: COLORS.textMut, marginLeft: 4, ...FONTS.medium },
-  statusRow: { flexDirection: 'row', marginBottom: SPACING.sm },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
-  statusText: { fontSize: 12, ...FONTS.semibold },
 
   // Policy pill
   policyPill: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, marginBottom: SPACING.sm, flexWrap: 'wrap' },
