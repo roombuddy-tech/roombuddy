@@ -533,8 +533,51 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Popular cities */}
+          {/* Popular properties near you */}
+          <SectionHead label={hasLocation ? "Stays in Bangalore" : "Popular properties"} />
+          <Text style={styles.sectionSub}>Based on your current location</Text>
+          {nearbyLoading ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
+          ) : nearbyListings.length === 0 ? (
+            <Text style={styles.nearbyEmpty}>No properties nearby yet</Text>
+          ) : (
+            <View style={styles.gridRow}>
+              {nearbyListings.map((item) => (
+                <TouchableOpacity
+                  key={item.listing_id}
+                  style={styles.gridCard}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id })}
+                >
+                  <Image
+                    source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
+                    style={styles.gridImg}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.gridBody}>
+                    <Text style={styles.gridTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.gridArea} numberOfLines={1}>{item.area_name}</Text>
+                    <View style={styles.gridFooter}>
+                      <Text style={styles.gridPrice}>
+                        {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
+                        <Text style={styles.gridPriceUnit}>/night</Text>
+                      </Text>
+                      {item.average_rating !== null && item.review_count > 0 && (
+                        <View style={styles.ratingRow}>
+                          <Ionicons name="star" size={11} color={COLORS.star} />
+                          <Text style={styles.gridRating}>{item.average_rating.toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Search in other cities */}
           <SectionHead label="Popular cities" />
+          <Text style={styles.sectionSub}>Book a room in another city</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.citiesRow}>
             {POPULAR_CITIES.map((city) => (
               <TouchableOpacity
@@ -555,51 +598,6 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-
-          {/* Near You */}
-          <SectionHead label={hasLocation ? "Near you" : "Explore rooms"} />
-          {nearbyLoading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
-          ) : nearbyListings.length === 0 ? (
-            <Text style={styles.nearbyEmpty}>No properties nearby yet</Text>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.nearbyRow}
-            >
-              {nearbyListings.map((item) => (
-                <TouchableOpacity
-                  key={item.listing_id}
-                  style={styles.nearbyCard}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id })}
-                >
-                  <Image
-                    source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
-                    style={styles.nearbyImg}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.nearbyBody}>
-                    <Text style={styles.nearbyTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.nearbyArea} numberOfLines={1}>{item.area_name}</Text>
-                    <View style={styles.nearbyFooter}>
-                      <Text style={styles.nearbyPrice}>
-                        {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
-                        <Text style={styles.nearbyPriceUnit}>/night</Text>
-                      </Text>
-                      {item.average_rating !== null && item.review_count > 0 && (
-                        <View style={styles.ratingRow}>
-                          <Ionicons name="star" size={11} color={COLORS.star} />
-                          <Text style={styles.nearbyRating}>{item.average_rating.toFixed(1)}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
 
           {/* Trust strip */}
           <View style={styles.trustStrip}>
@@ -732,6 +730,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
   sectionBar: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
   sectionHeadTxt: { fontSize: 13, ...FONTS.bold, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
+  sectionSub: { fontSize: 12, color: COLORS.textMut, marginBottom: SPACING.md, marginTop: -SPACING.sm },
   citiesRow: { gap: 14, paddingBottom: SPACING.xl },
   cityCard: { alignItems: 'center', width: 72 },
   cityCircle: {
@@ -743,20 +742,23 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   cityInitial: { fontSize: 22, ...FONTS.serif, color: COLORS.primary },
   cityName: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec, textAlign: 'center' },
 
-  nearbyRow: { gap: 12, paddingBottom: SPACING.xl },
-  nearbyCard: {
-    width: 200, backgroundColor: COLORS.surface,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
-    overflow: 'hidden', ...SHADOW.sm,
+  gridRow: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',
+    marginBottom: SPACING.xl,
   },
-  nearbyImg: { width: '100%', height: 120, backgroundColor: COLORS.chip },
-  nearbyBody: { padding: 10 },
-  nearbyTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
-  nearbyArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 6 },
-  nearbyFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  nearbyPrice: { fontSize: 15, ...FONTS.serif, color: COLORS.text },
-  nearbyPriceUnit: { fontSize: 11, ...FONTS.regular, color: COLORS.textSec },
-  nearbyRating: { fontSize: 11, color: COLORS.text, ...FONTS.medium },
+  gridCard: {
+    width: '48%' as any, backgroundColor: COLORS.surface,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
+    overflow: 'hidden', marginBottom: SPACING.md, ...SHADOW.sm,
+  },
+  gridImg: { width: '100%', height: 110, backgroundColor: COLORS.chip },
+  gridBody: { padding: 8 },
+  gridTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  gridArea: { fontSize: 11, color: COLORS.textMut, marginBottom: 6 },
+  gridFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  gridPrice: { fontSize: 14, ...FONTS.serif, color: COLORS.text },
+  gridPriceUnit: { fontSize: 10, ...FONTS.regular, color: COLORS.textSec },
+  gridRating: { fontSize: 11, color: COLORS.text, ...FONTS.medium },
   nearbyEmpty: { fontSize: 13, color: COLORS.textMut, marginBottom: SPACING.xl },
 
   trustStrip: {
