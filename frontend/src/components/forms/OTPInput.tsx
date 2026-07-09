@@ -14,18 +14,33 @@ export default function OTPInput({ length = 6, onComplete }: OTPInputProps) {
   const [otp, setOtp] = useState<string[]>(Array(length).fill(''));
   const inputs = useRef<(TextInput | null)[]>([]);
 
+  const fillAll = (digits: string) => {
+    const arr = digits.slice(0, length).split('');
+    while (arr.length < length) arr.push('');
+    setOtp(arr);
+    if (arr.length === length && arr.every(Boolean)) {
+      inputs.current[length - 1]?.focus();
+      setTimeout(() => onComplete(arr.join('')), 500);
+    }
+  };
+
   const handleChange = (text: string, index: number) => {
+    const digits = text.replace(/[^0-9]/g, '');
+
+    if (digits.length > 1) {
+      fillAll(digits);
+      return;
+    }
+
     const newOtp = [...otp];
-    newOtp[index] = text;
+    newOtp[index] = digits;
     setOtp(newOtp);
 
-    // Auto-focus next input
-    if (text && index < length - 1) {
+    if (digits && index < length - 1) {
       inputs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all digits entered
-    if (text && index === length - 1) {
+    if (digits && index === length - 1) {
       const code = newOtp.join('');
       if (code.length === length) {
         onComplete(code);
@@ -50,12 +65,14 @@ export default function OTPInput({ length = 6, onComplete }: OTPInputProps) {
           ref={(ref) => { inputs.current[i] = ref; }}
           style={[styles.box, otp[i] ? styles.boxFilled : null]}
           value={otp[i]}
-          onChangeText={(text) => handleChange(text.replace(/[^0-9]/g, ''), i)}
+          onChangeText={(text) => handleChange(text, i)}
           onKeyPress={(e) => handleKeyPress(e, i)}
           keyboardType="number-pad"
-          maxLength={1}
+          maxLength={i === 0 ? length : 1}
           autoFocus={i === 0}
           selectTextOnFocus
+          textContentType={i === 0 ? 'oneTimeCode' : 'none'}
+          autoComplete={i === 0 ? 'sms-otp' : 'off'}
         />
       ))}
     </View>
