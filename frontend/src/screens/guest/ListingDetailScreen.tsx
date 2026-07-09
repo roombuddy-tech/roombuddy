@@ -196,6 +196,8 @@ export default function GuestListingDetailScreen() {
   const [showHostModal, setShowHostModal] = useState(false);
   const [revealedPhone, setRevealedPhone] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
@@ -273,7 +275,10 @@ export default function GuestListingDetailScreen() {
     }
   }, [unlocking, listing, navigation]);
 
-  const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
+  const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+    setActivePhotoIndex(index);
+  }, []);
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
@@ -345,7 +350,11 @@ export default function GuestListingDetailScreen() {
               keyExtractor={(uri, i) => `${uri}-${i}`}
               horizontal pagingEnabled showsHorizontalScrollIndicator={false}
               onScroll={onPhotoScroll} scrollEventThrottle={16}
-              renderItem={({ item: uri }) => <Image source={{ uri }} style={styles.photo} resizeMode="cover" />}
+              renderItem={({ item: uri, index }) => (
+                <TouchableOpacity activeOpacity={0.9} onPress={() => { setActivePhotoIndex(index); setShowPhotoGallery(true); }}>
+                  <Image source={{ uri }} style={styles.photo} resizeMode="cover" />
+                </TouchableOpacity>
+              )}
             />
           ) : (
             <View style={styles.photoPlaceholder}><Ionicons name="home-outline" size={48} color={COLORS.textMut} /></View>
@@ -783,6 +792,40 @@ export default function GuestListingDetailScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Photo Gallery Modal ── */}
+      {showPhotoGallery && (
+        <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPhotoGallery(false)}>
+          <View style={styles.galleryOverlay}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: activePhotoIndex * SCREEN_W, y: 0 }}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+                setActivePhotoIndex(idx);
+              }}
+              style={{ flex: 1 }}
+            >
+              {photoUrls.map((uri, i) => (
+                <View key={i} style={{ width: SCREEN_W, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                  <Image source={{ uri }} style={styles.galleryPhoto} resizeMode="cover" />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.galleryHeader} pointerEvents="box-none">
+              <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowPhotoGallery(false)}>
+                <Ionicons name="close" size={26} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.galleryCounter}>
+                {activePhotoIndex + 1} / {photoUrls.length}
+              </Text>
+              <View style={{ width: 40 }} />
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* ── Modal ── */}
       <Modal visible={showBookModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -969,6 +1012,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   backBtn: { position: 'absolute', top: 14, left: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', ...SHADOW.sm },
   photoCounter: { position: 'absolute', bottom: 14, right: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
+  galleryOverlay: { flex: 1, backgroundColor: '#000' },
+  galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
+  galleryCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
+  galleryCounter: { fontSize: 16, color: '#fff', ...FONTS.semibold },
+  galleryPhoto: { width: SCREEN_W, height: SCREEN_W },
 
   body: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
 

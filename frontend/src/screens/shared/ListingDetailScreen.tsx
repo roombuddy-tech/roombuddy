@@ -89,6 +89,7 @@ export default function ListingDetailScreen() {
   const [savingDates, setSavingDates] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [listingStatus, setListingStatus] = useState<string>(item?.status ?? 'live');
   const [togglingSnooze, setTogglingSnooze] = useState(false);
   const [reviewsData, setReviewsData] = useState<ListingReviewsResponse | null>(null);
@@ -365,12 +366,14 @@ export default function ListingDetailScreen() {
               initialNumToRender={1}
               windowSize={3}
               removeClippedSubviews={false}
-              renderItem={({ item: uri }) => (
-                <Image
-                  source={{ uri }}
-                  style={styles.coverPhoto}
-                  resizeMode="cover"
-                />
+              renderItem={({ item: uri, index }) => (
+                <TouchableOpacity activeOpacity={0.9} onPress={() => { setActivePhotoIdx(index); setShowPhotoGallery(true); }}>
+                  <Image
+                    source={{ uri }}
+                    style={styles.coverPhoto}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
               )}
             />
           ) : (
@@ -967,6 +970,39 @@ export default function ListingDetailScreen() {
           />
         </SafeAreaView>
       </Modal>
+      {/* ── Photo Gallery Modal ── */}
+      {showPhotoGallery && (
+        <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPhotoGallery(false)}>
+          <View style={styles.galleryOverlay}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: activePhotoIdx * SCREEN_W, y: 0 }}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+                setActivePhotoIdx(idx);
+              }}
+              style={{ flex: 1 }}
+            >
+              {allPhotos.map((uri, i) => (
+                <View key={i} style={{ width: SCREEN_W, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                  <Image source={{ uri }} style={styles.galleryPhoto} resizeMode="cover" />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.galleryHeader} pointerEvents="box-none">
+              <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowPhotoGallery(false)}>
+                <Ionicons name="close" size={26} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.galleryCounter}>
+                {activePhotoIdx + 1} / {allPhotos.length}
+              </Text>
+              <View style={{ width: 40 }} />
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -1002,6 +1038,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderRadius: 12,
   },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
+  galleryOverlay: { flex: 1, backgroundColor: '#000' },
+  galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
+  galleryCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
+  galleryCounter: { fontSize: 16, color: '#fff', ...FONTS.semibold },
+  galleryPhoto: { width: SCREEN_W, height: SCREEN_W },
 
   backBtn: {
     position: 'absolute',
