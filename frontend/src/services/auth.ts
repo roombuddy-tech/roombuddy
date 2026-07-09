@@ -25,8 +25,8 @@ export const authService = {
     first_name: string;
     last_name: string;
     email?: string;
-    gender: string;
-    city: string;
+    gender?: string;
+    city?: string;
   }): Promise<ProfileCompleteResponse> {
     const { data } = await api.post(ENDPOINTS.AUTH.COMPLETE_PROFILE, profile);
     return data;

@@ -30,14 +30,6 @@ import ProfileMenu from '../shared/ProfileMenu';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
 
-const POPULAR_CITIES = [
-  { name: 'Bangalore' },
-  { name: 'Mumbai' },
-  { name: 'Pune' },
-  { name: 'Hyderabad' },
-  { name: 'Delhi NCR' },
-];
-
 const AMENITY_SHORT: Record<string, { icon: string; label: string }> = {
   WiFi: { icon: 'wifi-outline', label: 'WiFi' },
   AC: { icon: 'snow-outline', label: 'AC' },
@@ -102,12 +94,25 @@ export default function HomeScreen() {
     return () => { active = false; };
   }, []);
 
-  const SectionHead = ({ label }: { label: string }) => (
-    <View style={styles.sectionHeadRow}>
-      <View style={styles.sectionBar} />
-      <Text style={styles.sectionHeadTxt}>{label}</Text>
+  const SectionHead = ({ title, subtitle }: { title: string; subtitle?: string }) => (
+    <View style={styles.sectionHead}>
+      <View style={styles.sectionTitleRow}>
+        <View style={styles.sectionBar} />
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      {subtitle ? <Text style={styles.sectionSub}>{subtitle}</Text> : null}
     </View>
   );
+
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const toggleFavorite = useCallback((id: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const [showProfile, setShowProfile] = useState(false);
 
@@ -539,79 +544,133 @@ export default function HomeScreen() {
               <Text style={styles.pillTitle}>Find a room</Text>
               <Text style={styles.pillSub}>Any city · Any dates · Any budget</Text>
             </View>
+            <View style={styles.pillTune}>
+              <Ionicons name="options-outline" size={18} color={COLORS.primary} />
+            </View>
           </TouchableOpacity>
 
           {/* Popular properties near you */}
-          <SectionHead label={hasLocation ? "Stays near you" : "Popular properties"} />
-          {hasLocation && <Text style={styles.sectionSub}>Based on your current location</Text>}
+          <SectionHead title={hasLocation ? 'Stays near you' : 'Popular properties'} />
           {nearbyLoading ? (
             <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
           ) : nearbyListings.length === 0 ? (
-            <Text style={styles.nearbyEmpty}>No properties nearby yet</Text>
+            <View style={styles.emptyNearby}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="location-outline" size={26} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyNearbyTitle}>No stays near you yet</Text>
+              <Text style={styles.nearbyEmpty}>We're adding new rooms every day. Try searching another city.</Text>
+              <TouchableOpacity style={styles.emptyCta} activeOpacity={0.85} onPress={() => setShowSearchForm(true)}>
+                <Ionicons name="search" size={16} color="#fff" />
+                <Text style={styles.emptyCtaTxt}>Search rooms</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={styles.gridRow}>
-              {nearbyListings.map((item) => (
+              {nearbyListings.map((item) => {
+                const hasRating = item.average_rating !== null && item.review_count > 0;
+                const isFav = favorites.has(item.listing_id);
+                return (
                 <TouchableOpacity
                   key={item.listing_id}
                   style={styles.gridCard}
-                  activeOpacity={0.7}
+                  activeOpacity={0.85}
                   onPress={() => navigation.navigate('GuestListingDetail', { listingId: item.listing_id })}
                 >
-                  <Image
-                    source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
-                    style={styles.gridImg}
-                    resizeMode="cover"
-                  />
+                  <View style={styles.gridImgWrap}>
+                    <Image
+                      source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
+                      style={styles.gridImg}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.heartBtn}
+                      hitSlop={8}
+                      activeOpacity={0.8}
+                      onPress={() => toggleFavorite(item.listing_id)}
+                    >
+                      <Ionicons
+                        name={isFav ? 'heart' : 'heart-outline'}
+                        size={18}
+                        color={isFav ? COLORS.accent : '#fff'}
+                      />
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.gridBody}>
                     <Text style={styles.gridTitle} numberOfLines={1}>{item.title}</Text>
                     <Text style={styles.gridArea} numberOfLines={1}>{item.area_name}</Text>
-                    <View style={styles.gridFooter}>
-                      <Text style={styles.gridPrice}>
-                        {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
-                        <Text style={styles.gridPriceUnit}>/night</Text>
-                      </Text>
-                      {item.average_rating !== null && item.review_count > 0 ? (
-                        <View style={styles.ratingRow}>
-                          <Ionicons name="star" size={11} color={COLORS.star} />
-                          <Text style={styles.gridRating}>{item.average_rating.toFixed(1)}</Text>
+                    <View style={styles.gridMetaRow}>
+                      {hasRating ? (
+                        <>
+                          <Ionicons name="star" size={12} color={COLORS.star} />
+                          <Text style={styles.gridMetaStrong}>{item.average_rating!.toFixed(1)}</Text>
+                        </>
+                      ) : (
+                        <View style={styles.newPill}>
+                          <Text style={styles.newPillTxt}>New</Text>
                         </View>
-                      ) : null}
+                      )}
+                      {item.distance_km != null && (
+                        <Text style={styles.gridMetaMuted} numberOfLines={1}>
+                          {' · '}{item.distance_km} km away
+                        </Text>
+                      )}
                     </View>
-                    {item.distance_km != null && (
-                      <View style={styles.distanceRow}>
-                        <Ionicons name="location-outline" size={11} color={COLORS.textMut} />
-                        <Text style={styles.distanceText}>{item.distance_km} km away</Text>
-                      </View>
-                    )}
+                    <Text style={styles.gridPrice}>
+                      {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
+                      <Text style={styles.gridPriceUnit}> /night</Text>
+                    </Text>
                   </View>
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
           )}
 
-          {/* Search in other cities */}
-          <SectionHead label="Popular cities" />
-          <Text style={styles.sectionSub}>Book a room in another city</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.citiesRow}>
-            {POPULAR_CITIES.map((city) => (
-              <TouchableOpacity
-                key={city.name}
-                style={styles.cityCard}
-                onPress={() => {
-                  setQuery(city.name);
-                  setSearchLat(null);
-                  setSearchLng(null);
-                  setShowSearchForm(true);
-                  setShowCalendar(true);
-                }}
-              >
-                <View style={styles.cityCircle}>
-                  <Text style={styles.cityInitial}>{city.name.charAt(0)}</Text>
+          {/* How it works */}
+          <SectionHead title="How RoomBuddy works" />
+          <View style={styles.howWrap}>
+            {[
+              { icon: 'search-outline', title: 'Find your room', desc: 'Browse verified rooms near you or in any city.' },
+              { icon: 'chatbubbles-outline', title: 'Connect with host', desc: 'Unlock the host’s number and get your questions answered.' },
+              { icon: 'home-outline', title: 'Book & move in', desc: 'Reserve securely and settle rent directly with the host.' },
+            ].map((step, i) => (
+              <View key={step.title} style={styles.howStep}>
+                <View style={styles.howIconCol}>
+                  <View style={styles.howIcon}>
+                    <Ionicons name={step.icon as any} size={18} color={COLORS.primary} />
+                  </View>
+                  {i < 2 && <View style={styles.howLine} />}
                 </View>
-                <Text style={styles.cityName}>{city.name}</Text>
-              </TouchableOpacity>
+                <View style={styles.howText}>
+                  <Text style={styles.howTitle}>{step.title}</Text>
+                  <Text style={styles.howDesc}>{step.desc}</Text>
+                </View>
+              </View>
             ))}
-          </ScrollView>
+          </View>
+
+          {/* List your room CTA */}
+          <TouchableOpacity
+            style={styles.hostCta}
+            activeOpacity={0.9}
+            onPress={() => {
+              if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+              switchRole('host');
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hostCtaTitle}>Have a spare room?</Text>
+              <Text style={styles.hostCtaDesc}>List it on RoomBuddy and start earning every month.</Text>
+              <View style={styles.hostCtaBtn}>
+                <Text style={styles.hostCtaBtnTxt}>Become a host</Text>
+                <Ionicons name="arrow-forward" size={14} color={COLORS.accent} />
+              </View>
+            </View>
+            <View style={styles.hostCtaIconWrap}>
+              <Ionicons name="business" size={30} color={COLORS.accent} />
+            </View>
+          </TouchableOpacity>
 
           {/* Trust strip */}
           <View style={styles.trustStrip}>
@@ -740,21 +799,17 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   },
   pillTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   pillSub: { fontSize: 12, color: COLORS.textMut, marginTop: 1 },
-
-  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
-  sectionBar: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
-  sectionHeadTxt: { fontSize: 13, ...FONTS.bold, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
-  sectionSub: { fontSize: 12, color: COLORS.textMut, marginBottom: SPACING.md, marginTop: -SPACING.sm },
-  citiesRow: { gap: 14, paddingBottom: SPACING.xl },
-  cityCard: { alignItems: 'center', width: 72 },
-  cityCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: COLORS.chip,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 6,
+  pillTune: {
+    width: 38, height: 38, borderRadius: 19,
+    borderWidth: 1, borderColor: COLORS.border,
+    justifyContent: 'center', alignItems: 'center',
   },
-  cityEmoji: { fontSize: 26 },
-  cityInitial: { fontSize: 22, ...FONTS.serif, color: COLORS.primary },
-  cityName: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec, textAlign: 'center' },
+
+  sectionHead: { marginBottom: SPACING.md },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionBar: { width: 4, height: 20, borderRadius: 2, backgroundColor: COLORS.primary },
+  sectionTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.3 },
+  sectionSub: { fontSize: 13, color: COLORS.textMut, marginTop: 3, marginLeft: 12 },
 
   gridRow: {
     flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',
@@ -765,17 +820,76 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
     overflow: 'hidden', marginBottom: SPACING.md, ...SHADOW.sm,
   },
-  gridImg: { width: '100%', height: 110, backgroundColor: COLORS.chip },
-  gridBody: { padding: 8 },
-  gridTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
-  gridArea: { fontSize: 11, color: COLORS.textMut, marginBottom: 6 },
-  gridFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  gridPrice: { fontSize: 14, ...FONTS.serif, color: COLORS.text },
-  gridPriceUnit: { fontSize: 10, ...FONTS.regular, color: COLORS.textSec },
-  gridRating: { fontSize: 11, color: COLORS.text, ...FONTS.medium },
+  gridImgWrap: { position: 'relative' },
+  gridImg: { width: '100%', height: 130, backgroundColor: COLORS.chip },
+  heartBtn: {
+    position: 'absolute', top: 8, right: 8,
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  gridBody: { padding: 10 },
+  gridTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
+  gridArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 6 },
+  gridMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6 },
+  gridMetaStrong: { fontSize: 12, color: COLORS.text, ...FONTS.semibold },
+  gridMetaMuted: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium, flexShrink: 1 },
+  newPill: {
+    backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.pill,
+    paddingHorizontal: 7, paddingVertical: 1,
+  },
+  newPillTxt: { fontSize: 10, color: COLORS.primary, ...FONTS.bold, letterSpacing: 0.3 },
+  gridPrice: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  gridPriceUnit: { fontSize: 11, ...FONTS.regular, color: COLORS.textSec },
+  emptyNearby: {
+    alignItems: 'center', paddingVertical: SPACING.xl, paddingHorizontal: SPACING.lg,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md,
+  },
+  emptyIconCircle: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  emptyNearbyTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 3 },
+  nearbyEmpty: { fontSize: 13, color: COLORS.textMut, textAlign: 'center', lineHeight: 19 },
+  emptyCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.pill,
+    paddingHorizontal: 18, paddingVertical: 10, marginTop: SPACING.md,
+  },
+  emptyCtaTxt: { fontSize: 14, color: '#fff', ...FONTS.semibold },
   distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   distanceText: { fontSize: 11, color: COLORS.textMut, ...FONTS.medium },
-  nearbyEmpty: { fontSize: 13, color: COLORS.textMut, marginBottom: SPACING.xl },
+
+  // How it works
+  howWrap: { marginBottom: SPACING.xl },
+  howStep: { flexDirection: 'row', gap: 12 },
+  howIconCol: { alignItems: 'center' },
+  howIcon: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center',
+  },
+  howLine: { width: 2, flex: 1, backgroundColor: COLORS.border, marginVertical: 4 },
+  howText: { flex: 1, paddingBottom: SPACING.lg },
+  howTitle: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: 2, marginTop: 8 },
+  howDesc: { fontSize: 13, color: COLORS.textSec, lineHeight: 19 },
+
+  // Host CTA
+  hostCta: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.accentAlpha, borderRadius: RADIUS.lg,
+    padding: SPACING.lg, marginBottom: SPACING.lg, gap: SPACING.md,
+  },
+  hostCtaTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text, marginBottom: 3 },
+  hostCtaDesc: { fontSize: 13, color: COLORS.textSec, lineHeight: 19, marginBottom: 10 },
+  hostCtaBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  hostCtaBtnTxt: { fontSize: 14, color: COLORS.accent, ...FONTS.bold },
+  hostCtaIconWrap: {
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: COLORS.accentSoft,
+    justifyContent: 'center', alignItems: 'center',
+  },
 
   trustStrip: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
