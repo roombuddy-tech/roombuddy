@@ -351,7 +351,7 @@ export default function GuestListingDetailScreen() {
             <View style={styles.photoPlaceholder}><Ionicons name="home-outline" size={48} color={COLORS.textMut} /></View>
           )}
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+            <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
           </TouchableOpacity>
           {photoUrls.length > 0 && (
             <View style={styles.photoCounter}>

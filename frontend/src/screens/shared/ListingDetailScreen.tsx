@@ -380,7 +380,7 @@ export default function ListingDetailScreen() {
           )}
 
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+            <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
           </TouchableOpacity>
 
           {allPhotos.length > 0 && isPreview ? (
