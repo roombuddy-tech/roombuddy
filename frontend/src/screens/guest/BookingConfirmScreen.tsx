@@ -556,7 +556,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 4 },
   totalLabel: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
   totalValue: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
-  payNote: { fontSize: 12, color: COLORS.textMut, marginTop: 8, lineHeight: 17 },
+  payNote: { fontSize: 12, color: COLORS.textMut, marginTop: 8, lineHeight: 18, paddingBottom: 2 },
 
   // Policy row (tappable card)
   policyRow: {
