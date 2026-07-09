@@ -56,6 +56,10 @@ function mapApiToBooking(d: any): any {
     nights: d.nights,
     total_guest_pays: d.pricing?.total_guest_pays ?? 0,
     total_host_receives: d.pricing?.total_host_receives ?? 0,
+    subtotal: d.pricing?.subtotal ?? 0,
+    meal_option_selected: d.pricing?.meal_option_selected ?? false,
+    meal_cost_per_day: d.pricing?.meal_cost_per_day ?? null,
+    meal_total: d.pricing?.meal_total ?? null,
   };
 }
 
@@ -72,14 +76,17 @@ export default function BookingDetailScreen() {
   const [loading, setLoading] = useState(needsFetch);
 
   useEffect(() => {
-    if (!needsFetch) return;
+    // Always fetch full detail to get complete pricing/meal info, even when
+    // basic booking data was passed via navigation params.
     (async () => {
       try {
         const res = await api.get(`/api/bookings/${paramBooking.booking_id}/`);
         setBooking(mapApiToBooking(res.data));
       } catch {
-        Alert.alert('Error', 'Could not load booking details.');
-        navigation.goBack();
+        if (needsFetch) {
+          Alert.alert('Error', 'Could not load booking details.');
+          navigation.goBack();
+        }
       } finally {
         setLoading(false);
       }
@@ -203,12 +210,28 @@ export default function BookingDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings</Text>
+          <DetailRow
+            styles={styles}
+            label="Rent"
+            value={`₹${(booking.subtotal ?? booking.total_host_receives).toLocaleString('en-IN')}`}
+          />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Meals</Text>
+            <Text style={styles.detailValue}>
+              {booking.meal_option_selected
+                ? `₹${(booking.meal_total ?? 0).toLocaleString('en-IN')}${booking.meal_cost_per_day ? ` (₹${booking.meal_cost_per_day.toLocaleString('en-IN')}/day)` : ''}`
+                : 'Not opted'}
+            </Text>
+          </View>
           <View style={styles.earningsRow}>
             <Text style={styles.earningsLabel}>You receive</Text>
             <Text style={styles.earningsValue}>
               ₹{booking.total_host_receives.toLocaleString('en-IN')}
             </Text>
           </View>
+          <Text style={styles.earningsNote}>
+            Collect directly from the guest (cash / UPI) at check-in.
+          </Text>
         </View>
 
         {bookingStatus === 'pending' && (
@@ -336,6 +359,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   },
   earningsLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   earningsValue: { fontSize: 15, ...FONTS.bold, color: COLORS.primary },
+  earningsNote: { fontSize: 12, color: COLORS.textMut, marginTop: 6, lineHeight: 18 },
 
   actionRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
   actionBtn: {
