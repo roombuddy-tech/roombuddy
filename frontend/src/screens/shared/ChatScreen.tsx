@@ -25,7 +25,11 @@ const POLL_INTERVAL_MS = 3000;
 type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
 
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  return `${day}/${month} ${time}`;
 }
 
 export default function ChatScreen() {
