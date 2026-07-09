@@ -39,8 +39,8 @@ class CompleteProfileSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=100, min_length=2)
     last_name = serializers.CharField(max_length=100, min_length=2)
     email = serializers.EmailField(required=False, allow_blank=True)
-    gender = serializers.ChoiceField(choices=UserProfile.Gender.choices)
-    city = serializers.CharField(max_length=100, min_length=2)
+    gender = serializers.ChoiceField(choices=UserProfile.Gender.choices, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=100, min_length=2, required=False, allow_blank=True)
 
 
 class RefreshTokenSerializer(serializers.Serializer):
@@ -144,8 +144,8 @@ class UpdateProfileSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=100, min_length=2, required=False)
     last_name = serializers.CharField(max_length=100, required=False)
     email = serializers.EmailField(required=False, allow_blank=True)
-    gender = serializers.ChoiceField(choices=UserProfile.Gender.choices, required=False)
-    city = serializers.CharField(max_length=100, min_length=2, required=False)
+    gender = serializers.ChoiceField(choices=UserProfile.Gender.choices, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
 
 
