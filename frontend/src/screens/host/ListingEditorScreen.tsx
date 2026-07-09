@@ -1404,13 +1404,15 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
                   optional
                 />
-                <Field
-                  label="Hometown"
-                  placeholder="e.g. Jaipur"
-                  value={draft.hometown}
-                  onChange={(v) => setDraft((d) => ({ ...d, hometown: v }))}
-                  optional
-                />
+                <View style={{ marginBottom: SPACING.md, zIndex: 10 }}>
+                  <Text style={{ fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 4 }}>Hometown <Text style={{ color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text></Text>
+                  <GooglePlacesInput
+                    value={draft.hometown}
+                    placeholder="e.g. Jaipur"
+                    onSelect={(place) => setDraft((d) => ({ ...d, hometown: place.city || place.description }))}
+                    onChangeText={(text) => setDraft((d) => ({ ...d, hometown: text }))}
+                  />
+                </View>
                 <TouchableOpacity
                   style={fmSt.saveBtn}
                   onPress={saveFlatmate}
