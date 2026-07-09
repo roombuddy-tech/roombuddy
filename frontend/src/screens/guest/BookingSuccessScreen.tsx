@@ -18,6 +18,12 @@ export default function BookingSuccessScreen() {
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
+  function goToMyStays() {
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: 'GuestTabs', params: { screen: 'MyStays' } }] }),
+    );
+  }
+
   function goHome() {
     navigation.dispatch(
       CommonActions.reset({ index: 0, routes: [{ name: 'GuestTabs' }] }),
@@ -44,7 +50,7 @@ export default function BookingSuccessScreen() {
         </View>
       </View>
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryBtn} onPress={goHome}>
+        <TouchableOpacity style={styles.primaryBtn} onPress={goToMyStays}>
           <Text style={styles.primaryText}>View my bookings</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryBtn} onPress={goHome}>
