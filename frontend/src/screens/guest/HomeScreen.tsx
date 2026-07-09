@@ -104,16 +104,6 @@ export default function HomeScreen() {
     </View>
   );
 
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const toggleFavorite = useCallback((id: string) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
   const [showProfile, setShowProfile] = useState(false);
 
   const [showSearchForm, setShowSearchForm] = useState(false);
@@ -569,7 +559,6 @@ export default function HomeScreen() {
             <View style={styles.gridRow}>
               {nearbyListings.map((item) => {
                 const hasRating = item.average_rating !== null && item.review_count > 0;
-                const isFav = favorites.has(item.listing_id);
                 return (
                 <TouchableOpacity
                   key={item.listing_id}
@@ -583,18 +572,12 @@ export default function HomeScreen() {
                       style={styles.gridImg}
                       resizeMode="cover"
                     />
-                    <TouchableOpacity
-                      style={styles.heartBtn}
-                      hitSlop={8}
-                      activeOpacity={0.8}
-                      onPress={() => toggleFavorite(item.listing_id)}
-                    >
-                      <Ionicons
-                        name={isFav ? 'heart' : 'heart-outline'}
-                        size={18}
-                        color={isFav ? COLORS.accent : '#fff'}
-                      />
-                    </TouchableOpacity>
+                    {item.meals_available && (
+                      <View style={styles.gridBadge}>
+                        <Ionicons name="restaurant" size={11} color="#fff" />
+                        <Text style={styles.gridBadgeTxt}>Meals</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.gridBody}>
                     <Text style={styles.gridTitle} numberOfLines={1}>{item.title}</Text>
@@ -822,12 +805,13 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   },
   gridImgWrap: { position: 'relative' },
   gridImg: { width: '100%', height: 130, backgroundColor: COLORS.chip },
-  heartBtn: {
-    position: 'absolute', top: 8, right: 8,
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center', alignItems: 'center',
+  gridBadge: {
+    position: 'absolute', top: 8, left: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 8, paddingVertical: 3,
   },
+  gridBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
   gridBody: { padding: 10 },
   gridTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   gridArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 6 },
