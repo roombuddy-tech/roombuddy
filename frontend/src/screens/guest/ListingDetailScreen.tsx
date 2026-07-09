@@ -294,7 +294,8 @@ export default function GuestListingDetailScreen() {
     );
   }
 
-  const photoUrls = listing.photos.map((p) => p.url).filter(Boolean);
+  const photos = listing.photos.filter((p) => p.url);
+  const photoUrls = photos.map((p) => p.url);
   const subtitleParts = [
     listing.area_name,
     listing.room.bed_type ? `${listing.room.bed_type.charAt(0).toUpperCase()}${listing.room.bed_type.slice(1)} bed` : null,
@@ -344,15 +345,20 @@ export default function GuestListingDetailScreen() {
 
         {/* ── Photos ── */}
         <View style={styles.photoWrap}>
-          {photoUrls.length > 0 ? (
+          {photos.length > 0 ? (
             <FlatList
-              data={photoUrls}
-              keyExtractor={(uri, i) => `${uri}-${i}`}
+              data={photos}
+              keyExtractor={(p, i) => `${p.url}-${i}`}
               horizontal pagingEnabled showsHorizontalScrollIndicator={false}
               onScroll={onPhotoScroll} scrollEventThrottle={16}
-              renderItem={({ item: uri, index }) => (
+              renderItem={({ item: p, index }) => (
                 <TouchableOpacity activeOpacity={0.9} onPress={() => { setActivePhotoIndex(index); setShowPhotoGallery(true); }}>
-                  <Image source={{ uri }} style={styles.photo} resizeMode="cover" />
+                  <Image source={{ uri: p.url }} style={styles.photo} resizeMode="cover" />
+                  {p.area ? (
+                    <View style={styles.photoTag}>
+                      <Text style={styles.photoTagTxt}>{p.area}</Text>
+                    </View>
+                  ) : null}
                 </TouchableOpacity>
               )}
             />
@@ -817,9 +823,14 @@ export default function GuestListingDetailScreen() {
               <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowPhotoGallery(false)}>
                 <Ionicons name="close" size={26} color="#fff" />
               </TouchableOpacity>
-              <Text style={styles.galleryCounter}>
-                {activePhotoIndex + 1} / {photoUrls.length}
-              </Text>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={styles.galleryCounter}>
+                  {activePhotoIndex + 1} / {photoUrls.length}
+                </Text>
+                {photos[activePhotoIndex]?.area ? (
+                  <Text style={styles.galleryTag}>{photos[activePhotoIndex].area}</Text>
+                ) : null}
+              </View>
               <View style={{ width: 40 }} />
             </View>
           </View>
@@ -1011,11 +1022,14 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   photoPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   backBtn: { position: 'absolute', top: 14, left: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', ...SHADOW.sm },
   photoCounter: { position: 'absolute', bottom: 14, right: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
+  photoTag: { position: 'absolute', bottom: 14, left: 14, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
+  photoTagTxt: { fontSize: 12, color: '#fff', ...FONTS.medium, textTransform: 'capitalize' },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
   galleryOverlay: { flex: 1, backgroundColor: '#000' },
   galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
   galleryCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
   galleryCounter: { fontSize: 16, color: '#fff', ...FONTS.semibold },
+  galleryTag: { fontSize: 13, color: 'rgba(255,255,255,0.7)', ...FONTS.medium, marginTop: 2 },
   galleryPhoto: { width: SCREEN_W, height: SCREEN_W },
 
   body: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
