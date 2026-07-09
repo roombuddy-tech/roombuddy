@@ -1,11 +1,27 @@
 from django.contrib import admin
 from apps.users.models import User, UserProfile, UserSession, OTPCode
+from apps.listings.models import Listing
 import logging
 from django.utils.html import format_html
 from django.utils import timezone
 from third_party.storage import get_photo_url
 
 logger = logging.getLogger(__name__)
+
+
+def _sync_listings_for_verification(user, approved: bool) -> int:
+    """Promote/demote a host's listings when their ID verification changes.
+
+    Approve -> pending listings go live. Reject -> live listings go back to pending.
+    Returns the number of listings whose status changed.
+    """
+    if approved:
+        return Listing.objects.filter(
+            host_user=user, status=Listing.Status.PENDING,
+        ).update(status=Listing.Status.LIVE, published_at=timezone.now())
+    return Listing.objects.filter(
+        host_user=user, status=Listing.Status.LIVE,
+    ).update(status=Listing.Status.PENDING, published_at=None)
 
 
 @admin.register(User)
@@ -75,18 +91,38 @@ class UserProfileAdmin(admin.ModelAdmin):
                 obj.id_reviewed_at = timezone.now()
                 obj.id_reviewed_by = str(request.user)
         super().save_model(request, obj, form, change)
+        if change and "id_verification_status" in form.changed_data:
+            if obj.id_verification_status == "approved":
+                changed = _sync_listings_for_verification(obj.user, approved=True)
+                if changed:
+                    self.message_user(request, f"{changed} listing(s) published.")
+            elif obj.id_verification_status == "rejected":
+                changed = _sync_listings_for_verification(obj.user, approved=False)
+                if changed:
+                    self.message_user(request, f"{changed} listing(s) moved back to pending.")
 
     actions = ["approve_verifications"]
 
     @admin.action(description="Approve selected ID verifications")
     def approve_verifications(self, request, queryset):
-        updated = queryset.filter(id_verification_status="pending").update(
-            id_verification_status="approved",
-            id_rejection_reason=None,
-            id_reviewed_at=timezone.now(),
-            id_reviewed_by=str(request.user),
+        pending = list(queryset.filter(id_verification_status="pending"))
+        updated = 0
+        promoted = 0
+        for profile in pending:
+            profile.id_verification_status = "approved"
+            profile.id_rejection_reason = None
+            profile.id_reviewed_at = timezone.now()
+            profile.id_reviewed_by = str(request.user)
+            profile.save(update_fields=[
+                "id_verification_status", "id_rejection_reason",
+                "id_reviewed_at", "id_reviewed_by", "updated_at",
+            ])
+            updated += 1
+            promoted += _sync_listings_for_verification(profile.user, approved=True)
+        self.message_user(
+            request,
+            f"{updated} verification(s) approved, {promoted} listing(s) published.",
         )
-        self.message_user(request, f"{updated} verification(s) approved.")
 
 
 @admin.register(UserSession)
