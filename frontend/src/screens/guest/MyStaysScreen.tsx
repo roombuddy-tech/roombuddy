@@ -55,20 +55,17 @@ const PLATFORM_POLICY = 'flexible';
 
 const POLICY_META = {
   flexible: {
-    label: 'Flexible', color: '#B85C38',
-    tiers: [
-      { window: '2+ days before check-in', refund: '100% refund', highlight: true },
-      { window: 'Less than 2 days before check-in', refund: '50% refund', highlight: false },
-    ],
+    label: 'Free cancellation', color: '#B85C38',
   },
 } as const;
 
 type PolicyKey = keyof typeof POLICY_META;
 
 const POLICY_NOTES = [
-  'Service fee is non-refundable on guest cancellations.',
-  'Security deposit is included in the refundable amount.',
-  'Refunds are processed within 5–10 business days.',
+  'You can cancel anytime before check-in.',
+  'The ₹49 booking fee is non-refundable.',
+  'Rent, security deposit and meals are paid to the host at check-in — nothing is collected in advance.',
+  'If you cancel before check-in, you are not charged anything beyond the ₹49 booking fee.',
 ];
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -89,25 +86,6 @@ const makeStatusConfig = (COLORS: ThemeColors) => ({
 
 function fmtDateShort(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-}
-
-function daysUntilCheckin(checkInDate: string): number {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const ci = new Date(checkInDate + 'T00:00:00');
-  return Math.floor((ci.getTime() - today.getTime()) / 86400000);
-}
-
-function computeRefundLabel(booking: GuestBooking): string {
-  const policy = (booking.cancellation_policy ?? PLATFORM_POLICY) as PolicyKey;
-  const days = daysUntilCheckin(booking.check_in_date);
-  const schedules: Record<PolicyKey, [number, string][]> = {
-    flexible: [[2, '100%'], [0, '50%']],
-  };
-  const schedule = schedules[policy] ?? schedules.flexible;
-  for (const [threshold, label] of schedule) {
-    if (days >= threshold) return label === '0%' ? 'No refund' : `${label} refund`;
-  }
-  return 'No refund';
 }
 
 const CANCELLABLE_STATUSES = ['pending', 'accepted', 'active'];
@@ -143,29 +121,14 @@ function CancellationPolicyModal({
 
           <View style={[styles.modalBadge, { backgroundColor: meta.color + '15', borderColor: meta.color + '30' }]}>
             <Ionicons name="shield-checkmark" size={18} color={meta.color} />
-            <Text style={[styles.modalBadgeLabel, { color: meta.color }]}>{meta.label} cancellation</Text>
+            <Text style={[styles.modalBadgeLabel, { color: meta.color }]}>{meta.label}</Text>
           </View>
 
-          <Text style={styles.sectionLabel}>Refund schedule</Text>
-          <View style={{ marginBottom: SPACING.lg }}>
-            {meta.tiers.map((tier, idx) => (
-              <View key={idx} style={styles.tierRow}>
-                <View style={styles.tierTimeline}>
-                  <View style={[styles.tierDot, { backgroundColor: tier.refund === '100% refund' ? meta.color : COLORS.border }]} />
-                  {idx < meta.tiers.length - 1 && <View style={styles.tierLine} />}
-                </View>
-                <View style={styles.tierContent}>
-                  <Text style={styles.tierWindow}>{tier.window}</Text>
-                  <View style={[styles.tierBadge, {
-                    backgroundColor: tier.refund === '100% refund' ? '#D1FAE5' : '#FEF3C7',
-                  }]}>
-                    <Text style={[styles.tierRefund, {
-                      color: tier.refund === '100% refund' ? '#065F46' : '#92400E',
-                    }]}>{tier.refund}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
+          <View style={styles.freeCancelCard}>
+            <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
+            <Text style={styles.freeCancelText}>
+              Cancel any time before check-in at no charge. You only pay the ₹49 booking fee, which is non-refundable.
+            </Text>
           </View>
 
           <Text style={styles.sectionLabel}>Notes</Text>
@@ -207,9 +170,6 @@ function CancelConfirmModal({
   styles: ReturnType<typeof makeStyles>;
 }) {
   if (!booking) return null;
-  const refundLabel = computeRefundLabel(booking);
-  const days = daysUntilCheckin(booking.check_in_date);
-  const noRefund = refundLabel === 'No refund';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -218,45 +178,18 @@ function CancelConfirmModal({
           <View style={styles.modalHandle} />
 
           <View style={{ alignItems: 'center', marginBottom: SPACING.lg }}>
-            <View style={[styles.cancelIconWrap, { backgroundColor: noRefund ? '#FEE2E2' : '#FEF3C7' }]}>
-              <Ionicons
-                name={noRefund ? 'alert-circle' : 'information-circle'}
-                size={32}
-                color={noRefund ? '#DC2626' : '#B45309'}
-              />
+            <View style={[styles.cancelIconWrap, { backgroundColor: COLORS.primaryAlpha }]}>
+              <Ionicons name="information-circle" size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.modalTitle}>Cancel this booking?</Text>
             <Text style={styles.modalSub}>{booking.listing_title ?? 'Your stay'}</Text>
           </View>
 
-          {/* Refund info */}
-          <View style={[styles.refundCard, {
-            backgroundColor: noRefund ? '#FEF2F2' : '#F0FDF4',
-            borderColor: noRefund ? '#FECACA' : '#BBF7D0',
-          }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={[styles.refundCardLabel, { color: noRefund ? '#DC2626' : '#065F46' }]}>
-                {noRefund ? 'No refund' : 'Refund amount'}
-              </Text>
-              {!noRefund && (
-                <Text style={[styles.refundCardLabel, { color: '#065F46' }]}>{refundLabel}</Text>
-              )}
-            </View>
-            <Text style={[styles.refundCardSub, { color: noRefund ? '#EF4444' : '#047857' }]}>
-              {days >= 7
-                ? `${days} days until check-in — ${refundLabel}`
-                : days >= 2
-                ? `${days} days until check-in — ${refundLabel}`
-                : days >= 0
-                ? `Check-in is in ${days} day${days !== 1 ? 's' : ''} — ${refundLabel}`
-                : 'Check-in has passed'}
-            </Text>
-          </View>
-
-          <View style={styles.refundNote}>
-            <Ionicons name="time-outline" size={14} color={COLORS.textSec} />
-            <Text style={styles.noteText}>
-              Approved refunds take 5–10 business days to your original payment method.
+          {/* Free cancellation info */}
+          <View style={styles.cancelInfoCard}>
+            <Text style={styles.cancelInfoTitle}>Free cancellation</Text>
+            <Text style={styles.cancelInfoText}>
+              You only lose the ₹49 booking fee, which is non-refundable. Rent, deposit and meals are paid to the host at check-in — so there is nothing else to pay.
             </Text>
           </View>
 
@@ -392,7 +325,7 @@ export default function MyStaysScreen() {
             >
               <Ionicons name="shield-checkmark-outline" size={13} color={policyMeta.color} />
               <Text style={[styles.policyPillText, { color: policyMeta.color }]}>
-                {policyMeta.label} cancellation · {computeRefundLabel(item)} if cancelled now
+                {policyMeta.label} before check-in
               </Text>
             </TouchableOpacity>
           )}
@@ -614,10 +547,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
   // Cancel modal
   cancelIconWrap: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
-  refundCard: { borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
-  refundCardLabel: { fontSize: 15, ...FONTS.bold },
-  refundCardSub: { fontSize: 13, lineHeight: 18 },
-  refundNote: { flexDirection: 'row', gap: 8, marginBottom: SPACING.lg, alignItems: 'flex-start' },
+  cancelInfoCard: { backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg },
+  cancelInfoTitle: { fontSize: 14, ...FONTS.bold, color: COLORS.primary, marginBottom: 4 },
+  cancelInfoText: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
+  freeCancelCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg },
+  freeCancelText: { flex: 1, fontSize: 14, color: COLORS.text, ...FONTS.medium, lineHeight: 21 },
   cancelActions: { flexDirection: 'row', gap: SPACING.sm },
   keepBtn: { flex: 1, paddingVertical: 15, borderRadius: RADIUS.md, alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.border },
   keepBtnText: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },

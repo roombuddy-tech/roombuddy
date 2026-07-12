@@ -294,34 +294,27 @@ def generate_booking_invoice(booking) -> bytes:
     story.append(Spacer(1, 6 * mm))
 
     # ── Cancellation policy ───────────────────────────────────────────────
-    policy = booking.cancellation_policy or "flexible"
-    policy_text = {
-        "flexible": "100% refund if cancelled 2+ days before check-in; 50% thereafter.",
-        "moderate": "100% refund if cancelled 7+ days before; 50% refund 2-6 days before; no refund within 2 days.",
-        "strict": "50% refund if cancelled 7+ days before check-in; no refund thereafter.",
-    }.get(policy, "")
-
-    if policy_text:
-        fee_txt = fmt(booking.platform_fee)
-        policy_data = [[
-            Paragraph(
-                f"<b>Cancellation policy ({policy.title()}):</b> The {fee_txt} RoomBuddy "
-                f"fee is non-refundable. Rent and deposit are paid to the host directly, so "
-                f"any refund of those follows the host's policy: {policy_text}",
-                ps("cp", fontSize=8, textColor=LIGHT_TEXT, leading=12),
-            ),
-        ]]
-        policy_tbl = Table(policy_data, colWidths=["100%"])
-        policy_tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), BG_LIGHT),
-            ("BOX", (0, 0), (-1, -1), 0.5, BORDER_LIGHT),
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-        ]))
-        story.append(policy_tbl)
-        story.append(Spacer(1, 6 * mm))
+    fee_txt = fmt(booking.platform_fee)
+    policy_data = [[
+        Paragraph(
+            f"<b>Cancellation policy:</b> You can cancel any time before check-in. "
+            f"The {fee_txt} RoomBuddy booking fee is non-refundable. Rent, security "
+            f"deposit and meals are paid to the host at check-in — nothing is collected "
+            f"in advance, so you are not charged anything else if you cancel before check-in.",
+            ps("cp", fontSize=8, textColor=LIGHT_TEXT, leading=12),
+        ),
+    ]]
+    policy_tbl = Table(policy_data, colWidths=["100%"])
+    policy_tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), BG_LIGHT),
+        ("BOX", (0, 0), (-1, -1), 0.5, BORDER_LIGHT),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+    ]))
+    story.append(policy_tbl)
+    story.append(Spacer(1, 6 * mm))
 
     # ── Footer ────────────────────────────────────────────────────────────
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_LIGHT, spaceAfter=4 * mm))
