@@ -1101,14 +1101,16 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
           value={form.title}
           onChange={(v) => update({ title: v })}
         />
+        <Text style={stSt.hint}>Keep it short and specific, like the example above.</Text>
 
         <Field
           label="Description"
-          placeholder="Describe your space — what makes it special, what guests can expect, nearby landmarks, what your flatmates are like to live with."
+          placeholder="Tell guests what makes your place special — the vibe, what's nearby, and what your flatmates are like."
           value={form.description}
           onChange={(v) => update({ description: v })}
           multiline
         />
+        <Text style={stSt.hint}>A few honest lines help guests feel confident about booking.</Text>
 
         <SectionLabel label="Nearby landmarks" optional />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -2390,6 +2392,7 @@ const makeStStyles = (COLORS: ThemeColors) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
   title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
+  hint: { fontSize: 12, color: COLORS.textMut, marginTop: 6, marginLeft: 2, lineHeight: 17 },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
