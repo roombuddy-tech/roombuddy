@@ -55,7 +55,7 @@ const PLATFORM_POLICY = 'flexible';
 
 const POLICY_META = {
   flexible: {
-    label: 'Flexible', color: '#059669',
+    label: 'Flexible', color: '#B85C38',
     tiers: [
       { window: '2+ days before check-in', refund: '100% refund', highlight: true },
       { window: 'Less than 2 days before check-in', refund: '50% refund', highlight: false },
@@ -392,10 +392,7 @@ export default function MyStaysScreen() {
             >
               <Ionicons name="shield-checkmark-outline" size={13} color={policyMeta.color} />
               <Text style={[styles.policyPillText, { color: policyMeta.color }]}>
-                {policyMeta.label} cancellation
-              </Text>
-              <Text style={[styles.policyPillRefund, { color: policyMeta.color }]}>
-                · {computeRefundLabel(item)} if cancelled now
+                {policyMeta.label} cancellation · {computeRefundLabel(item)} if cancelled now
               </Text>
             </TouchableOpacity>
           )}
@@ -429,7 +426,7 @@ export default function MyStaysScreen() {
                     hostName: item.host_name,
                   })}
                 >
-                  <Ionicons name="star-outline" size={16} color={COLORS.accent} />
+                  <Ionicons name="star-outline" size={16} color={COLORS.primary} />
                   <Text style={styles.reviewBtnTxt}>Leave a review</Text>
                 </TouchableOpacity>
               )}
@@ -475,8 +472,8 @@ export default function MyStaysScreen() {
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIllustration}>
             <View style={styles.emptyHouse}><Ionicons name="home" size={40} color={COLORS.primary} /></View>
-            <View style={styles.emptyCalendar}><Ionicons name="calendar" size={24} color={COLORS.accent} /></View>
-            <View style={styles.emptyHeart}><Ionicons name="heart" size={20} color="#E879A0" /></View>
+            <View style={styles.emptyCalendar}><Ionicons name="calendar" size={24} color={COLORS.primary} /></View>
+            <View style={styles.emptyHeart}><Ionicons name="bed" size={20} color={COLORS.star} /></View>
           </View>
           <Text style={styles.emptyTitle}>No stays yet</Text>
           <Text style={styles.emptySub}>Your bookings will appear here once you{'\n'}find the perfect room</Text>
@@ -532,33 +529,32 @@ export default function MyStaysScreen() {
 const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.bg },
-  headerTitle: { fontSize: 32, ...FONTS.serif, color: COLORS.text, letterSpacing: 0.2 },
-  listPad: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
+  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.lg, backgroundColor: COLORS.bg },
+  headerTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
+  listPad: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xs, paddingBottom: SPACING.xxl },
 
-  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: SPACING.lg, overflow: 'hidden', ...SHADOW.md },
   imageWrap: { position: 'relative' },
-  cardImg: { width: '100%', height: 190, backgroundColor: COLORS.chip },
+  cardImg: { width: '100%', height: 180, backgroundColor: COLORS.chip },
   statusOverlay: {
-    position: 'absolute', top: 10, right: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: RADIUS.pill,
-    paddingHorizontal: 10, paddingVertical: 5,
+    position: 'absolute', top: 12, right: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(20,18,16,0.62)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 11, paddingVertical: 6,
   },
   statusOverlayDot: { width: 6, height: 6, borderRadius: 3 },
   statusOverlayTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
-  cardBody: { padding: SPACING.md },
-  cardTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
-  cardSub: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.sm },
+  cardBody: { padding: SPACING.lg },
+  cardTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: 6, lineHeight: 24 },
+  cardSub: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: SPACING.sm },
   cardSubText: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, flex: 1 },
   datesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
   datesText: { fontSize: 13, color: COLORS.text, ...FONTS.medium },
   nightsText: { fontSize: 12, color: COLORS.textMut, marginLeft: 4, ...FONTS.medium },
 
   // Policy pill
-  policyPill: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, marginBottom: SPACING.sm, flexWrap: 'wrap' },
-  policyPillText: { fontSize: 12, ...FONTS.semibold },
-  policyPillRefund: { fontSize: 12, ...FONTS.medium },
+  policyPill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'stretch', paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, marginBottom: SPACING.sm },
+  policyPillText: { fontSize: 12, ...FONTS.semibold, flex: 1, lineHeight: 17 },
 
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
   priceLabel: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, textTransform: 'uppercase', letterSpacing: 0.6 },
@@ -575,8 +571,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   cancelLink: { paddingVertical: 4, paddingHorizontal: 2 },
   cancelLinkText: { fontSize: 13, color: COLORS.danger, ...FONTS.medium, textDecorationLine: 'underline' },
 
-  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.accent, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9, alignSelf: 'flex-start' },
-  reviewBtnTxt: { color: COLORS.accent, fontSize: 13, ...FONTS.semibold },
+  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9, alignSelf: 'flex-start' },
+  reviewBtnTxt: { color: COLORS.primary, fontSize: 13, ...FONTS.semibold },
   reviewedBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start' },
   reviewedTxt: { fontSize: 13, color: '#B45309', ...FONTS.semibold },
 
@@ -584,8 +580,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: SPACING.xl },
   emptyIllustration: { width: 140, height: 140, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
   emptyHouse: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
-  emptyCalendar: { position: 'absolute', top: 4, right: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.accentAlpha, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
-  emptyHeart: { position: 'absolute', bottom: 12, left: 6, width: 36, height: 36, borderRadius: 18, backgroundColor: '#FCE4EC', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
+  emptyCalendar: { position: 'absolute', top: 4, right: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
+  emptyHeart: { position: 'absolute', bottom: 12, left: 6, width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
   emptyTitle: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22, marginBottom: SPACING.xl },
   emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 28, paddingVertical: 14 },
