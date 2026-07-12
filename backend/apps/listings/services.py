@@ -248,7 +248,11 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
 
         # Remove any photos the host deleted while editing (kept list from client).
         if "kept_photo_urls" in data:
-            _sync_property_photos(prop, data.get("kept_photo_urls") or [])
+            kept = data.get("kept_photo_urls") or []
+            logger.info("update_listing photo sync: %d kept_photo_urls received", len(kept))
+            _sync_property_photos(prop, kept)
+        else:
+            logger.info("update_listing: no kept_photo_urls in payload — skipping photo sync")
 
         PropertyFlatmate.objects.filter(property=prop).delete()
         for fm in d.get("flatmates", []):
