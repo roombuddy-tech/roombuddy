@@ -142,7 +142,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     letterSpacing: -1.5,
   },
   brandAccent: {
-    color: COLORS.accent,
+    color: COLORS.primary,
   },
   tagline: {
     fontSize: 17,

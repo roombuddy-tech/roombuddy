@@ -362,7 +362,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.primaryDark,
     letterSpacing: -0.5,
   },
-  brandAccent: { color: COLORS.accent },
+  brandAccent: { color: COLORS.primary },
   title: {
     fontSize: 24,
     ...FONTS.bold,

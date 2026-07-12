@@ -260,7 +260,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
   brand: { fontSize: 24, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
+  brandAccent: { color: COLORS.primary },
   avatarBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   avatarText: { color: COLORS.onPrimary, fontSize: 14, ...FONTS.semibold },
   topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },

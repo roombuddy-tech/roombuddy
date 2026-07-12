@@ -458,7 +458,7 @@ export default function HomeScreen() {
                 if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
                 switchRole('host');
               }} activeOpacity={0.7}>
-                <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.accent} />
+                <Ionicons name="repeat" size={16} color="#fff" />
                 <Text style={styles.switchBtnTxt}>Host</Text>
               </TouchableOpacity>
             )}
@@ -690,14 +690,14 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     marginBottom: SPACING.md,
   },
   brand: { fontSize: 24, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
+  brandAccent: { color: COLORS.primary },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   switchBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: COLORS.accentAlpha, borderRadius: RADIUS.pill,
-    paddingHorizontal: 11, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: COLORS.accent, borderRadius: RADIUS.pill,
+    paddingHorizontal: 13, paddingVertical: 8,
   },
-  switchBtnTxt: { fontSize: 12, color: COLORS.accent, ...FONTS.semibold },
+  switchBtnTxt: { fontSize: 13, color: '#fff', ...FONTS.bold },
   bellBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center',

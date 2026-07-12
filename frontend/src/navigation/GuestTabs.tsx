@@ -24,7 +24,7 @@ export default function GuestTabs() {
         tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabBarItem,
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMut,
+        tabBarInactiveTintColor: COLORS.textSec,
         tabBarLabelStyle: styles.tabLabel,
       }}
     >
