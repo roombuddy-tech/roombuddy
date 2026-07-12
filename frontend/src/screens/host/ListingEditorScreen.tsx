@@ -251,7 +251,7 @@ function ProgressBar({ step }: { step: number }) {
     <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: SPACING.lg, paddingVertical: 12 }}>
       {Array.from({ length: TOTAL_STEPS }, (_, i) => {
         const idx = i + 1;
-        const bg = idx < step ? COLORS.primary : idx === step ? COLORS.accent : COLORS.border;
+        const bg = idx < step ? COLORS.primary : idx === step ? COLORS.primaryDark : COLORS.border;
         return <View key={idx} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: bg }} />;
       })}
     </View>
@@ -264,7 +264,7 @@ function EditorHeader({ onSaveExit }: { onSaveExit: () => void }) {
   return (
     <View style={hdrSt.row}>
       <Text style={hdrSt.brand}>
-        Room<Text style={{ color: COLORS.accent }}>Buddy</Text>
+        Room<Text style={{ color: COLORS.primary }}>Buddy</Text>
       </Text>
       <TouchableOpacity onPress={onSaveExit} style={hdrSt.saveBtn}>
         <Text style={hdrSt.saveTxt}>Save & exit</Text>
@@ -282,7 +282,7 @@ const makeHdrStyles = (COLORS: ThemeColors) => StyleSheet.create({
     paddingTop: SPACING.sm,
     paddingBottom: 4,
   },
-  brand: { fontSize: 20, ...FONTS.extrabold, color: COLORS.primaryDark },
+  brand: { fontSize: 20, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
   saveBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -517,13 +517,14 @@ function Field({
 const makeFldStyles = (COLORS: ThemeColors) => StyleSheet.create({
   label: { fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 },
   input: {
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
     color: COLORS.text,
-    backgroundColor: COLORS.chip,
+    backgroundColor: COLORS.surface,
   },
   multiline: { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 },
 });
@@ -874,7 +875,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           <View style={{ flex: 1 }}>
             <Field
               label="State"
-              placeholder="Auto-filled from location"
+              placeholder="Auto-filled"
               value={form.state}
               onChange={(v) => update({ state: v })}
             />
@@ -882,7 +883,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           <View style={{ flex: 1 }}>
             <Field
               label="Pincode"
-              placeholder="Auto-filled from location"
+              placeholder="Auto-filled"
               value={form.pincode}
               onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
@@ -913,12 +914,14 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   aptCard: {
     width: '47%',
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  aptCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
+  aptCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   aptLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   aptLabelSel: { color: COLORS.primary },
   aptSub: { fontSize: 11, color: COLORS.textSec, textAlign: 'center' },
@@ -1051,11 +1054,13 @@ const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
   typeCard: {
     flex: 1,
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  typeCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
+  typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   typeTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   typeSub: { fontSize: 12, color: COLORS.textSec, lineHeight: 16 },
 });
@@ -1838,7 +1843,7 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   categoryIcon: { fontSize: 18 },
   categoryName: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
   requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.border },
-  requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
+  requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentSoft },
   doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.success },
   addBtn: {
@@ -2367,7 +2372,7 @@ const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   previewTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 6 },
   price: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   newBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentAlpha },
-  newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.accent },
+  newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.primary },
   tapHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, justifyContent: 'center' },
   tapHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
   summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
