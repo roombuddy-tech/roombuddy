@@ -38,9 +38,16 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const [emailSent, setEmailSent] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [firstNameTouched, setFirstNameTouched] = useState(false);
+  const [lastNameTouched, setLastNameTouched] = useState(false);
+
+  const firstNameError = firstNameTouched && firstName.trim().length > 0 && firstName.trim().length < 2
+    ? 'First name must be at least 2 characters' : '';
+  const lastNameError = lastNameTouched && lastName.trim().length > 0 && lastName.trim().length < 2
+    ? 'Last name must be at least 2 characters' : '';
 
   const isFormValid =
-    firstName.trim().length >= 2 && gender && city.trim().length >= 2 && acceptedTerms;
+    firstName.trim().length >= 2 && lastName.trim().length >= 2 && acceptedTerms;
 
   const handleVerifyEmail = async () => {
     if (!email.trim() || !isValidEmail(email)) {
@@ -79,10 +86,10 @@ export default function ProfileSetupScreen({ navigation }: Props) {
     try {
       await authService.completeProfile({
         first_name: firstName.trim(),
-        last_name: lastName.trim() || firstName.trim(),
+        last_name: lastName.trim(),
         email: email.trim() || undefined,
-        gender,
-        city: city.trim(),
+        gender: gender || undefined,
+        city: city.trim() || undefined,
       });
 
       // Upload photo if selected
@@ -109,10 +116,10 @@ export default function ProfileSetupScreen({ navigation }: Props) {
       // This triggers navigation to Guest/Host stack via AuthContext
       await completeProfile({
         first_name: firstName.trim(),
-        last_name: lastName.trim() || firstName.trim(),
-        display_name: `${firstName.trim()} ${lastName.trim() || firstName.trim()}`.trim(),
-        city: city.trim(),
-        gender,
+        last_name: lastName.trim(),
+        display_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+        city: city.trim() || undefined,
+        gender: gender || undefined,
         profile_photo_url: profilePhotoUrl,
       });
     } catch (err: any) {
@@ -193,25 +200,29 @@ export default function ProfileSetupScreen({ navigation }: Props) {
         <View style={styles.field}>
           <Text style={styles.label}>First name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, firstNameError ? styles.inputError : null]}
             value={firstName}
             onChangeText={setFirstName}
+            onBlur={() => setFirstNameTouched(true)}
             placeholder="Enter your first name"
             placeholderTextColor={COLORS.textMut}
             autoFocus
           />
+          {firstNameError ? <Text style={styles.errorText}>{firstNameError}</Text> : null}
         </View>
 
         {/* Last name */}
         <View style={styles.field}>
           <Text style={styles.label}>Last name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, lastNameError ? styles.inputError : null]}
             value={lastName}
             onChangeText={setLastName}
+            onBlur={() => setLastNameTouched(true)}
             placeholder="Enter your last name"
             placeholderTextColor={COLORS.textMut}
           />
+          {lastNameError ? <Text style={styles.errorText}>{lastNameError}</Text> : null}
         </View>
 
         {/* Email */}
@@ -351,7 +362,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.primaryDark,
     letterSpacing: -0.5,
   },
-  brandAccent: { color: COLORS.accent },
+  brandAccent: { color: COLORS.primary },
   title: {
     fontSize: 24,
     ...FONTS.bold,
@@ -389,6 +400,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     color: COLORS.text,
     backgroundColor: COLORS.bg,
+    ...FONTS.medium,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 4,
     ...FONTS.medium,
   },
   pillRow: { flexDirection: 'row', gap: SPACING.sm },

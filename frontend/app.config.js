@@ -19,13 +19,11 @@ module.exports = {
       supportsTablet: true,
       infoPlist: {
         NSPhotoLibraryUsageDescription:
-          "RoomBuddy needs access to your photos to upload room photos for your listing.",
+          "RoomBuddy needs access to your photos so you can upload pictures of your room when creating a listing — for example, photos of the bedroom and bathroom that guests see before booking.",
         NSCameraUsageDescription:
-          "RoomBuddy uses your camera to take photos of your room when creating a listing.",
+          "RoomBuddy uses your camera so you can take photos of your room while creating a listing — for example, snapping a picture of the bedroom to add to your listing.",
         NSLocationWhenInUseUsageDescription:
-          "RoomBuddy uses your location to show nearby room listings and set your city on your profile.",
-        NSLocationAlwaysUsageDescription:
-          "RoomBuddy uses your location to show nearby room listings and set your city on your profile.",
+          "RoomBuddy uses your location to show rooms available near you — for example, listings within a few kilometres of where you are — and to set your city when you search for a stay. Location is only used while you are using the app and is never shared with hosts.",
       },
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY_IOS,
@@ -55,6 +53,17 @@ module.exports = {
         projectId: "9d31a02c-25e6-464d-bf93-78b061aa63cf",
       },
     },
-    plugins: ["@react-native-community/datetimepicker", "expo-font"],
+    plugins: [
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          locationWhenInUsePermission:
+            "RoomBuddy uses your location to show rooms available near you — for example, listings within a few kilometres of where you are — and to set your city when you search for a stay. Location is only used while you are using the app and is never shared with hosts.",
+          isAndroidBackgroundLocationEnabled: false,
+        },
+      ],
+    ],
   },
 };

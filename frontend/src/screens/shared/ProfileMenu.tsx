@@ -112,8 +112,8 @@ const handlePickPhoto = async () => {
           onPress: async () => {
             try {
               await api.delete(ENDPOINTS.USER.DELETE_ACCOUNT);
+              await logout();
               Alert.alert('Account deleted', 'Your account has been deleted.');
-              logout();
             } catch {
               Alert.alert('Error', 'Could not delete account. Please contact support.');
             }

@@ -39,20 +39,18 @@ const POLICY_META: Record<PolicyKey, {
   tiers: { window: string; refund: string; highlight: boolean }[];
 }> = {
   flexible: {
-    label: 'Flexible',
-    tagline: 'Easy cancellations for last-minute changes.',
-    color: '#059669',
-    tiers: [
-      { window: '2+ days before check-in', refund: '100% refund', highlight: true },
-      { window: 'Less than 2 days before check-in', refund: '50% refund', highlight: false },
-    ],
+    label: 'Free cancellation',
+    tagline: 'Cancel anytime before check-in.',
+    color: '#B85C38',
+    tiers: [],
   },
 };
 
 const POLICY_NOTES = [
-  'The platform fee paid online is non-refundable on guest cancellations.',
-  'Rent and the security deposit are paid directly to the host — any refund of those follows the host’s policy shown above.',
-  'The refund percentages above apply to what you settle directly with the host.',
+  'You can cancel anytime before check-in.',
+  'The ₹49 booking fee is paid online and is non-refundable.',
+  'Rent, security deposit and any meals are paid directly to the host at check-in — nothing is collected in advance.',
+  'If you cancel before check-in, you are not charged anything beyond the ₹49 booking fee.',
   'In extraordinary circumstances (natural disasters, government orders), RoomBuddy may help mediate.',
 ];
 
@@ -174,7 +172,7 @@ const policyMeta =  POLICY_META.flexible;
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>CONFIRM AND PAY</Text>
+        <Text style={styles.headerTitle}>Confirm and pay</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -340,11 +338,11 @@ const policyMeta =  POLICY_META.flexible;
           <View style={[styles.policyBadge, { backgroundColor: policyMeta.color + '18' }]}>
             <Ionicons name="shield-checkmark-outline" size={16} color={policyMeta.color} />
             <Text style={[styles.policyBadgeText, { color: policyMeta.color }]}>
-              {policyMeta.label} cancellation
+              {policyMeta.label}
             </Text>
           </View>
           <View style={styles.policyRowRight}>
-            <Text style={styles.policyRowHint}>See refund details</Text>
+            <Text style={styles.policyRowHint}>See details</Text>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textSec} />
           </View>
         </TouchableOpacity>
@@ -429,44 +427,12 @@ function CancellationPolicyModal({
             <Text style={[styles.modalPolicyLabel, { color: meta.color }]}>{meta.label}</Text>
           </View>
 
-          {/* Refund tiers */}
-          <Text style={styles.modalSectionLabel}>Refund schedule</Text>
-          <View style={styles.tiersContainer}>
-            {meta.tiers.map((tier, idx) => (
-              <View key={idx} style={styles.tierRow}>
-                {/* Timeline dot + line */}
-                <View style={styles.tierTimeline}>
-                  <View style={[
-                    styles.tierDot,
-                    { backgroundColor: tier.highlight ? meta.color : COLORS.border }
-                  ]} />
-                  {idx < meta.tiers.length - 1 && <View style={styles.tierLine} />}
-                </View>
-                {/* Content */}
-                <View style={styles.tierContent}>
-                  <Text style={styles.tierWindow}>{tier.window}</Text>
-                  <View style={[
-                    styles.tierRefundBadge,
-                    {
-                      backgroundColor: tier.refund === 'No refund'
-                        ? '#FEE2E2'
-                        : tier.highlight ? '#D1FAE5' : '#FEF3C7'
-                    }
-                  ]}>
-                    <Text style={[
-                      styles.tierRefundText,
-                      {
-                        color: tier.refund === 'No refund'
-                          ? '#DC2626'
-                          : tier.highlight ? '#065F46' : '#92400E'
-                      }
-                    ]}>
-                      {tier.refund}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ))}
+          {/* How it works */}
+          <View style={styles.freeCancelCard}>
+            <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
+            <Text style={styles.freeCancelText}>
+              Cancel any time before check-in at no charge. You only pay the ₹49 booking fee, which is non-refundable.
+            </Text>
           </View>
 
           {/* Notes */}
@@ -513,13 +479,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     backgroundColor: COLORS.bg, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text, letterSpacing: 1, textTransform: 'uppercase' },
+  headerTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.3 },
 
   scroll: { padding: SPACING.md, paddingBottom: 120 },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW.sm,
+    padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOW.md,
   },
 
   // Uppercase eyebrow with accent bar
@@ -556,7 +521,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 4 },
   totalLabel: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
   totalValue: { fontSize: 16, color: COLORS.text, ...FONTS.bold },
-  payNote: { fontSize: 12, color: COLORS.textMut, marginTop: 8, lineHeight: 17 },
+  payNote: { fontSize: 12, color: COLORS.textMut, marginTop: 8, lineHeight: 18, paddingBottom: 2 },
 
   // Policy row (tappable card)
   policyRow: {
@@ -623,6 +588,13 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderWidth: 1, marginBottom: SPACING.lg,
   },
   modalPolicyLabel: { fontSize: 15, ...FONTS.bold },
+
+  freeCancelCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md,
+    padding: SPACING.md, marginBottom: SPACING.lg,
+  },
+  freeCancelText: { flex: 1, fontSize: 14, color: COLORS.text, ...FONTS.medium, lineHeight: 21 },
 
   modalSectionLabel: {
     fontSize: 12, ...FONTS.semibold, color: COLORS.textSec,

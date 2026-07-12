@@ -47,7 +47,12 @@ export default function NotificationsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      load().then(() => {
+        const now = new Date().toISOString();
+        markAllNotificationsRead()
+          .then(() => setItems((prev) => prev.map((x) => x.read_at ? x : { ...x, read_at: now })))
+          .catch(() => {});
+      });
     }, [load]),
   );
 

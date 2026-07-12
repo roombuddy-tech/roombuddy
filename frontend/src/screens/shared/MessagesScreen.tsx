@@ -73,38 +73,49 @@ export default function MessagesScreen() {
     });
   };
 
-  const renderItem = ({ item }: { item: Conversation }) => (
-    <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => openThread(item)}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarTxt}>{item.counterpart_initials}</Text>
-      </View>
-      <View style={styles.rowMain}>
-        <View style={styles.rowTop}>
-          <Text style={styles.name} numberOfLines={1}>{item.counterpart_name}</Text>
-          <Text style={styles.time}>{fmtRelative(item.last_message_at)}</Text>
+  const renderItem = ({ item }: { item: Conversation }) => {
+    const isUnread = item.unread_count > 0;
+    return (
+      <TouchableOpacity
+        style={[styles.row, isUnread && styles.rowUnread]}
+        activeOpacity={0.6}
+        onPress={() => openThread(item)}
+      >
+        <View style={styles.avatar}>
+          <Text style={styles.avatarTxt}>{item.counterpart_initials}</Text>
         </View>
-        {item.listing_title && (
-          <View style={styles.listingRow}>
-            <Ionicons name="home-outline" size={12} color={COLORS.textMut} />
-            <Text style={styles.listing} numberOfLines={1}>{item.listing_title}</Text>
+        <View style={styles.rowMain}>
+          <View style={styles.rowTop}>
+            <Text style={[styles.name, isUnread && styles.nameUnread]} numberOfLines={1}>
+              {item.counterpart_name}
+            </Text>
+            <Text style={[styles.time, isUnread && styles.timeUnread]}>
+              {fmtRelative(item.last_message_at)}
+            </Text>
           </View>
-        )}
-        <View style={styles.rowBottom}>
-          <Text
-            style={[styles.preview, item.unread_count > 0 && styles.previewUnread]}
-            numberOfLines={1}
-          >
-            {item.last_message ?? 'No messages yet'}
-          </Text>
-          {item.unread_count > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeTxt}>{item.unread_count}</Text>
+          {item.listing_title && (
+            <View style={styles.listingRow}>
+              <Ionicons name="home-outline" size={12} color={COLORS.textMut} />
+              <Text style={styles.listing} numberOfLines={1}>{item.listing_title}</Text>
             </View>
           )}
+          <View style={styles.rowBottom}>
+            <Text
+              style={[styles.preview, isUnread && styles.previewUnread]}
+              numberOfLines={1}
+            >
+              {item.last_message ?? 'No messages yet'}
+            </Text>
+            {isUnread && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeTxt}>{item.unread_count}</Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -122,6 +133,7 @@ export default function MessagesScreen() {
         data={items}
         keyExtractor={(c) => c.conversation_id}
         renderItem={renderItem}
+        ItemSeparatorComponent={() => <View style={styles.sep} />}
         contentContainerStyle={items.length === 0 ? styles.emptyPad : undefined}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
@@ -129,7 +141,7 @@ export default function MessagesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="chatbubble-outline" size={36} color={COLORS.textMut} />
+              <Ionicons name="chatbubbles-outline" size={36} color={COLORS.primary} />
             </View>
             <Text style={styles.emptyTitle}>No messages yet</Text>
             <Text style={styles.emptySub}>
@@ -146,41 +158,44 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm,
+    paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md,
   },
   headerTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
 
   row: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg, paddingVertical: 14,
   },
+  rowUnread: { backgroundColor: COLORS.primaryAlpha },
+  sep: { height: 1, backgroundColor: COLORS.border, marginLeft: 88 },
   avatar: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 52, height: 52, borderRadius: 26,
     backgroundColor: COLORS.primaryAlpha,
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
-  avatarTxt: { fontSize: 16, ...FONTS.bold, color: COLORS.primary },
+  avatarTxt: { fontSize: 17, ...FONTS.bold, color: COLORS.primary },
   rowMain: { flex: 1 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, flex: 1, marginRight: 8 },
-  time: { fontSize: 12, color: COLORS.textMut },
+  nameUnread: { ...FONTS.bold },
+  time: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
+  timeUnread: { color: COLORS.primary, ...FONTS.semibold },
   rowBottom: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 3,
+    alignItems: 'center', marginTop: 4,
   },
   preview: { fontSize: 14, color: COLORS.textSec, flex: 1, marginRight: 8 },
   previewUnread: { color: COLORS.text, ...FONTS.medium },
   badge: {
     minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6,
-    backgroundColor: COLORS.accent, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center',
   },
   badgeTxt: { color: '#fff', fontSize: 11, ...FONTS.bold },
 
   emptyPad: { flexGrow: 1 },
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
   emptyIcon: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.chip,
+    width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryAlpha,
     justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg,
   },
   emptyTitle: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },

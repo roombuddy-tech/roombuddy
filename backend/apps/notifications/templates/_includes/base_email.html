@@ -20,13 +20,17 @@ content, cta_url, cta_label, footer_extra.
 
         <!-- Header band -->
         <tr>
-          <td style="padding:20px 24px;background-color:{% block hero_color %}#0a84ff{% endblock %};text-align:left;">
-            <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">RoomBuddy</span>
-            {% if booking_reference %}
-            <span style="float:right;color:rgba(255,255,255,0.85);font-size:13px;">
-              Confirmation: <strong style="color:#ffffff;">{{ booking_reference }}</strong>
-            </span>
-            {% endif %}
+          <td style="padding:20px 24px;background-color:{% block hero_color %}#0a84ff{% endblock %};">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="text-align:left;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;vertical-align:middle;">RoomBuddy</td>
+                {% if booking_reference %}
+                <td style="text-align:right;color:rgba(255,255,255,0.85);font-size:13px;vertical-align:middle;">
+                  Confirmation: <strong style="color:#ffffff;">{{ booking_reference }}</strong>
+                </td>
+                {% endif %}
+              </tr>
+            </table>
           </td>
         </tr>
 

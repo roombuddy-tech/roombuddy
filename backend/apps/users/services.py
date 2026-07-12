@@ -276,8 +276,8 @@ def complete_user_profile(user: User, data: dict) -> dict:
         defaults={
             "first_name": data["first_name"],
             "last_name": data["last_name"],
-            "gender": data["gender"],
-            "city": data["city"],
+            "gender": data.get("gender", ""),
+            "city": data.get("city", ""),
         },
     )
 
@@ -1111,7 +1111,7 @@ def delete_user_account(user: User) -> None:
 
     # Mark user as deleted
     user.status = User.Status.DELETED
-    user.email = ""
+    user.email = f"deleted_{user.id}@deleted.roombuddy.co.in"
     user.save(update_fields=["status", "email"])
 
     logger.info("delete_user_account completed for user_id=%s", user.id)

@@ -11,6 +11,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -22,6 +23,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { CONFIG } from '../../constants/config';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -250,7 +252,7 @@ function ProgressBar({ step }: { step: number }) {
     <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: SPACING.lg, paddingVertical: 12 }}>
       {Array.from({ length: TOTAL_STEPS }, (_, i) => {
         const idx = i + 1;
-        const bg = idx < step ? COLORS.primary : idx === step ? COLORS.accent : COLORS.border;
+        const bg = idx < step ? COLORS.primary : idx === step ? COLORS.primaryDark : COLORS.border;
         return <View key={idx} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: bg }} />;
       })}
     </View>
@@ -263,7 +265,7 @@ function EditorHeader({ onSaveExit }: { onSaveExit: () => void }) {
   return (
     <View style={hdrSt.row}>
       <Text style={hdrSt.brand}>
-        Room<Text style={{ color: COLORS.accent }}>Buddy</Text>
+        Room<Text style={{ color: COLORS.primary }}>Buddy</Text>
       </Text>
       <TouchableOpacity onPress={onSaveExit} style={hdrSt.saveBtn}>
         <Text style={hdrSt.saveTxt}>Save & exit</Text>
@@ -281,7 +283,7 @@ const makeHdrStyles = (COLORS: ThemeColors) => StyleSheet.create({
     paddingTop: SPACING.sm,
     paddingBottom: 4,
   },
-  brand: { fontSize: 20, ...FONTS.extrabold, color: COLORS.primaryDark },
+  brand: { fontSize: 20, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
   saveBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -413,16 +415,16 @@ function Chip({
 const makeCpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: RADIUS.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: COLORS.border,
     marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.bg,
+    marginBottom: 10,
+    backgroundColor: COLORS.surface,
   },
   sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
+  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
   lblSel: { color: '#fff' },
 });
 
@@ -444,7 +446,7 @@ function AmenityChip({
       activeOpacity={0.7}
       style={[acSt.chip, selected && acSt.sel]}
     >
-      <Ionicons name={iconName} size={13} color={selected ? '#fff' : COLORS.textSec} style={{ marginRight: 5 }} />
+      <Ionicons name={iconName} size={14} color={selected ? '#fff' : COLORS.primary} style={{ marginRight: 6 }} />
       <Text style={[acSt.lbl, selected && acSt.lblSel]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -454,17 +456,17 @@ const makeAcStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: RADIUS.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: COLORS.border,
     marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.bg,
+    marginBottom: 10,
+    backgroundColor: COLORS.surface,
   },
   sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
+  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
   lblSel: { color: '#fff' },
 });
 
@@ -503,7 +505,7 @@ function Field({
       <TextInput
         style={[fldSt.input, multiline && fldSt.multiline]}
         placeholder={placeholder}
-        placeholderTextColor="#C8D0DA"
+        placeholderTextColor={COLORS.textMut}
         value={value}
         onChangeText={onChange}
         multiline={multiline}
@@ -516,13 +518,14 @@ function Field({
 const makeFldStyles = (COLORS: ThemeColors) => StyleSheet.create({
   label: { fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 },
   input: {
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
     color: COLORS.text,
-    backgroundColor: COLORS.chip,
+    backgroundColor: COLORS.surface,
   },
   multiline: { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 },
 });
@@ -578,6 +581,31 @@ const makeRrStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
 
+function parseTimeString(timeStr: string): Date {
+  const d = new Date();
+  d.setSeconds(0);
+  d.setMilliseconds(0);
+  if (!timeStr) { d.setHours(12, 0); return d; }
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) { d.setHours(12, 0); return d; }
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === 'AM' && h === 12) h = 0;
+  else if (period === 'PM' && h !== 12) h += 12;
+  d.setHours(h, m);
+  return d;
+}
+
+function formatTimeDate(d: Date): string {
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const period = h < 12 ? 'AM' : 'PM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${m < 10 ? '0' : ''}${m} ${period}`;
+}
+
 function TimePicker({
   label,
   value,
@@ -595,6 +623,7 @@ function TimePicker({
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
   const [open, setOpen] = useState(false);
+  const [tempDate, setTempDate] = useState(() => parseTimeString(value));
 
   return (
     <View style={{ marginBottom: 14 }}>
@@ -604,7 +633,7 @@ function TimePicker({
       </Text>
       <TouchableOpacity
         style={tpSt.trigger}
-        onPress={() => setOpen(true)}
+        onPress={() => { setTempDate(parseTimeString(value)); setOpen(true); }}
         activeOpacity={0.7}
       >
         <Text style={[tpSt.triggerTxt, !value && { color: COLORS.textMut }]}>
@@ -618,28 +647,22 @@ function TimePicker({
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
           <View style={tpSt.sheet}>
             <View style={tpSt.sheetHeader}>
-              <Text style={tpSt.sheetTitle}>{label}</Text>
               <TouchableOpacity onPress={() => setOpen(false)}>
-                <Ionicons name="close" size={22} color={COLORS.textSec} />
+                <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={tpSt.sheetTitle}>{label}</Text>
+              <TouchableOpacity onPress={() => { onChange(formatTimeDate(tempDate)); setOpen(false); }}>
+                <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-              {TIMES.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[tpSt.timeRow, value === time && tpSt.timeRowSel]}
-                  onPress={() => { onChange(time); setOpen(false); }}
-                  activeOpacity={0.7}
-                >
-                  {value === time && (
-                    <Ionicons name="checkmark" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
-                  )}
-                  <Text style={[tpSt.timeTxt, value === time && tpSt.timeSel]}>
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <DateTimePicker
+              value={tempDate}
+              mode="time"
+              display="spinner"
+              minuteInterval={30}
+              onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
+              style={{ height: 200 }}
+            />
           </View>
         </View>
       </Modal>
@@ -652,11 +675,12 @@ const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    backgroundColor: COLORS.chip,
+    backgroundColor: COLORS.surface,
   },
   triggerTxt: { fontSize: 15, color: COLORS.text },
   overlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
@@ -710,16 +734,19 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       </View>
 
       {[
-        { icon: 'create-outline' as const, label: 'Property & room details' },
-        { icon: 'people-outline' as const, label: 'Flatmate profiles' },
-        { icon: 'camera-outline' as const, label: 'Photos' },
-        { icon: 'pricetag-outline' as const, label: 'Pricing & availability' },
+        { icon: 'create-outline' as const, label: 'Property & room details', desc: 'Address, room type & amenities' },
+        { icon: 'people-outline' as const, label: 'Flatmate profiles', desc: 'Who else lives there' },
+        { icon: 'camera-outline' as const, label: 'Photos', desc: 'Show off your space' },
+        { icon: 'pricetag-outline' as const, label: 'Pricing & availability', desc: 'Set your rate & calendar' },
       ].map((s) => (
         <View key={s.label} style={wlSt.card}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
             <Ionicons name={s.icon} size={20} color={COLORS.primary} />
           </View>
-          <Text style={{ fontSize: 15, ...FONTS.medium, color: COLORS.text }}>{s.label}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text }}>{s.label}</Text>
+            <Text style={{ fontSize: 13, color: COLORS.textSec, marginTop: 2 }}>{s.desc}</Text>
+          </View>
         </View>
       ))}
 
@@ -739,12 +766,10 @@ const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
     backgroundColor: COLORS.surface,
-    ...SHADOW.sm,
+    ...SHADOW.md,
   },
   cta: {
     backgroundColor: COLORS.primary,
@@ -852,7 +877,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           <View style={{ flex: 1 }}>
             <Field
               label="State"
-              placeholder="Auto-filled from location"
+              placeholder="Auto-filled"
               value={form.state}
               onChange={(v) => update({ state: v })}
             />
@@ -860,7 +885,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           <View style={{ flex: 1 }}>
             <Field
               label="Pincode"
-              placeholder="Auto-filled from location"
+              placeholder="Auto-filled"
               value={form.pincode}
               onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
@@ -891,12 +916,14 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   aptCard: {
     width: '47%',
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  aptCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
+  aptCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   aptLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
   aptLabelSel: { color: COLORS.primary },
   aptSub: { fontSize: 11, color: COLORS.textSec, textAlign: 'center' },
@@ -1029,11 +1056,13 @@ const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
   typeCard: {
     flex: 1,
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  typeCardSel: { borderColor: COLORS.primary, borderWidth: 2 },
+  typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
   typeTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 4 },
   typeSub: { fontSize: 12, color: COLORS.textSec, lineHeight: 16 },
 });
@@ -1074,14 +1103,16 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
           value={form.title}
           onChange={(v) => update({ title: v })}
         />
+        <Text style={stSt.hint}>Keep it short and specific, like the example above.</Text>
 
         <Field
           label="Description"
-          placeholder="Describe your space — what makes it special, what guests can expect, nearby landmarks, what your flatmates are like to live with."
+          placeholder="Tell guests what makes your place special — the vibe, what's nearby, and what your flatmates are like."
           value={form.description}
           onChange={(v) => update({ description: v })}
           multiline
         />
+        <Text style={stSt.hint}>A few honest lines help guests feel confident about booking.</Text>
 
         <SectionLabel label="Nearby landmarks" optional />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -1359,11 +1390,9 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
           >
             <View style={fmSt.modalSheet} onStartShouldSetResponder={() => true}>
               <View style={fmSt.dragHandleWrap}><View style={fmSt.dragHandle} /></View>
-              {editingId && (
-                <View style={fmSt.modalHeader}>
-                  <Text style={fmSt.modalTitle}>Edit flatmate</Text>
-                </View>
-              )}
+              <View style={fmSt.modalHeader}>
+                <Text style={fmSt.modalTitle}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
+              </View>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Field
                   label="Name"
@@ -1404,13 +1433,17 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
                   optional
                 />
-                <Field
-                  label="Hometown"
-                  placeholder="e.g. Jaipur"
-                  value={draft.hometown}
-                  onChange={(v) => setDraft((d) => ({ ...d, hometown: v }))}
-                  optional
-                />
+                <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
+                  <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 }}>
+                    Hometown <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+                  </Text>
+                  <GooglePlacesInput
+                    value={draft.hometown}
+                    placeholder="e.g. Jaipur"
+                    onSelect={(place) => setDraft((d) => ({ ...d, hometown: place.city || place.description }))}
+                    onChangeText={(text) => setDraft((d) => ({ ...d, hometown: text }))}
+                  />
+                </View>
                 <TouchableOpacity
                   style={fmSt.saveBtn}
                   onPress={saveFlatmate}
@@ -1439,33 +1472,32 @@ const makeFmStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    marginBottom: SPACING.sm,
-    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: COLORS.primaryAlpha,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    marginRight: 12,
   },
-  avatarTxt: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
-  name: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  avatarTxt: { fontSize: 15, ...FONTS.bold, color: COLORS.primary },
+  name: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   detail: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
   addCard: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: SPACING.xl,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     borderStyle: 'dashed',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.lg,
     gap: 6,
   },
   addTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.primary },
@@ -1560,17 +1592,19 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
       ))}
 
       <SectionLabel label="Food options for guests" optional />
-      <RuleRow
-        label="Guests can use the kitchen"
-        value={form.kitchenAccess}
-        onChange={(v) => update({ kitchenAccess: v })}
-      />
-      <RuleRow
-        label="I can provide home-cooked meals (extra charge)"
-        value={form.homeCooked}
-        onChange={(v) => update({ homeCooked: v })}
-        noBorder
-      />
+      <View style={amSt.foodCard}>
+        <RuleRow
+          label="Guests can use the kitchen"
+          value={form.kitchenAccess}
+          onChange={(v) => update({ kitchenAccess: v })}
+        />
+        <RuleRow
+          label="I can provide home-cooked meals (extra charge)"
+          value={form.homeCooked}
+          onChange={(v) => update({ homeCooked: v })}
+          noBorder
+        />
+      </View>
 
       {form.homeCooked && (
         <View style={amSt.mealBox}>
@@ -1603,12 +1637,19 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
 }
 
 const makeAmStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  foodCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
   mealBox: {
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginTop: SPACING.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
 });
 
@@ -1629,7 +1670,14 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
     if (useCamera) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow camera access to take photos.');
+        Alert.alert(
+          'Permission needed',
+          'Please allow camera access in Settings to take photos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
         return;
       }
       setLoading(category);
@@ -1645,7 +1693,14 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to your photo library.');
+        Alert.alert(
+          'Permission needed',
+          'Please allow photo access in Settings to add photos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
         return;
       }
       setLoading(category);
@@ -1731,7 +1786,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                 )}
                 {hasPhotos && (
                   <View style={phSt.doneBadge}>
-                    <Ionicons name="checkmark" size={11} color={COLORS.success} />
+                    <Ionicons name="checkmark" size={11} color={COLORS.primary} />
                     <Text style={phSt.doneTxt}>{photos.length} photo{photos.length > 1 ? 's' : ''}</Text>
                   </View>
                 )}
@@ -1784,7 +1839,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                   onPress={() => openSourcePicker(cat.key)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="image-outline" size={18} color={COLORS.textMut} />
+                  <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
                   <Text style={phSt.emptyPromptTxt}>Tap to add photos</Text>
                 </TouchableOpacity>
               )}
@@ -1802,21 +1857,22 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   tipTxt: { fontSize: 12, color: COLORS.primaryDark, lineHeight: 18 },
 
   categoryCard: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
     backgroundColor: COLORS.surface,
     overflow: 'hidden',
+    ...SHADOW.md,
   },
-  categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
-  categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
+  categoryCardFilled: { borderColor: COLORS.primary },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 14, gap: 8 },
   categoryIcon: { fontSize: 18 },
-  categoryName: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
-  requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.border },
-  requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.accent },
-  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentSoft },
-  doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.success },
+  categoryName: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  requiredBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
+  requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
+  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
+  doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
   addBtn: {
     width: 34,
     height: 34,
@@ -1840,12 +1896,14 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     gap: 8,
     marginHorizontal: SPACING.md,
     marginBottom: SPACING.md,
-    paddingVertical: 16,
-    borderRadius: RADIUS.sm,
-    borderWidth: 0,
-    backgroundColor: COLORS.warm,
+    paddingVertical: 24,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    backgroundColor: 'transparent',
   },
-  emptyPromptTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
+  emptyPromptTxt: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
 
 });
 
@@ -1890,7 +1948,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             onChangeText={(v) => update({ nightlyRate: v.replace(/[^0-9]/g, '') })}
             keyboardType="number-pad"
             placeholder={rateFocused ? '' : '850'}
-            placeholderTextColor="#D4D9DF"
+            placeholderTextColor={COLORS.textMut}
             onFocus={() => setRateFocused(true)}
             onBlur={() => setRateFocused(false)}
           />
@@ -1977,11 +2035,17 @@ function PriceRow({
 }
 
 const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 4, backgroundColor: COLORS.chip, borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
-  rupee: { fontSize: 36, ...FONTS.bold, color: COLORS.text },
-  rateInput: { fontSize: 52, ...FONTS.extrabold, color: COLORS.text, minWidth: 100, textAlign: 'center' },
-  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 10 },
-  breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
+  rateRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginBottom: SPACING.lg, gap: 4,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.xl,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  rupee: { fontSize: 34, ...FONTS.bold, color: COLORS.primary, alignSelf: 'flex-start', paddingTop: 8 },
+  rateInput: { fontSize: 52, ...FONTS.extrabold, color: COLORS.primary, minWidth: 90, textAlign: 'center' },
+  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 12 },
+  breakdownBox: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
   earningsBox: { backgroundColor: 'rgba(34,197,94,0.07)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   earningTitle: { fontSize: 13, ...FONTS.semibold, color: '#16A34A', marginBottom: 8 },
@@ -1989,9 +2053,9 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   tooltipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm, paddingHorizontal: 2 },
   tooltipText: { flex: 1, fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
   minStayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.border },
+  minStayBtn: { width: '31%', paddingVertical: 13, alignItems: 'center', borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
   minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  minStayTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
+  minStayTxt: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
   minStayTxtSel: { color: '#fff', ...FONTS.semibold },
 });
 
@@ -2019,20 +2083,22 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>House Rules</Text>
         <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
-        <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
+        <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
           Common rules
         </Text>
 
-        <RuleRow label="No smoking inside the apartment" value={form.noSmoking} onChange={(v) => update({ noSmoking: v })} />
-        <RuleRow label="No loud music after 10 PM" value={form.noLoudMusic} onChange={(v) => update({ noLoudMusic: v })} />
-        <RuleRow label="No pets allowed" value={form.noPets} onChange={(v) => update({ noPets: v })} />
-        <RuleRow label="No parties or events" value={form.noParties} onChange={(v) => update({ noParties: v })} />
-        <RuleRow label="Guests must remove shoes indoors" value={form.shoesOff} onChange={(v) => update({ shoesOff: v })} />
-        <RuleRow label="Keep kitchen clean after use" value={form.kitchenClean} onChange={(v) => update({ kitchenClean: v })} />
-        <RuleRow label="No alcohol in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
-        <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} noBorder />
+        <View style={stSt.rulesCard}>
+          <RuleRow label="No smoking inside the apartment" value={form.noSmoking} onChange={(v) => update({ noSmoking: v })} />
+          <RuleRow label="No loud music after 10 PM" value={form.noLoudMusic} onChange={(v) => update({ noLoudMusic: v })} />
+          <RuleRow label="No pets allowed" value={form.noPets} onChange={(v) => update({ noPets: v })} />
+          <RuleRow label="No parties or events" value={form.noParties} onChange={(v) => update({ noParties: v })} />
+          <RuleRow label="Guests must remove shoes indoors" value={form.shoesOff} onChange={(v) => update({ shoesOff: v })} />
+          <RuleRow label="Keep kitchen clean after use" value={form.kitchenClean} onChange={(v) => update({ kitchenClean: v })} />
+          <RuleRow label="No alcohol in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
+          <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} noBorder />
+        </View>
 
-        <View style={{ marginTop: SPACING.md }} />
+        <View style={{ marginTop: SPACING.lg }} />
         <TimePicker
           label="Check-in time"
           value={form.checkInTime}
@@ -2290,19 +2356,24 @@ function StepReview({
         </View>
       </TouchableOpacity>
 
-      {SUMMARY_ROWS.map((row) => (
-        <View key={row.label} style={rvSt.summaryRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={rvSt.summaryLabel}>{row.label}</Text>
-            <Text style={rvSt.summaryValue} numberOfLines={2}>
-              {row.value || '—'}
-            </Text>
+      <View style={rvSt.summaryCard}>
+        {SUMMARY_ROWS.map((row, i) => (
+          <View
+            key={row.label}
+            style={[rvSt.summaryRow, i === SUMMARY_ROWS.length - 1 && { borderBottomWidth: 0 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={rvSt.summaryLabel}>{row.label}</Text>
+              <Text style={rvSt.summaryValue} numberOfLines={2}>
+                {row.value || '—'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => goToStep(row.step)} style={rvSt.editBtn}>
+              <Text style={rvSt.editTxt}>Edit</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => goToStep(row.step)} style={rvSt.editBtn}>
-            <Text style={rvSt.editTxt}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+        ))}
+      </View>
 
       <TouchableOpacity
         style={[rvSt.publishBtn, submitting && { opacity: 0.7 }]}
@@ -2335,7 +2406,8 @@ function StepReview({
 }
 
 const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.sm },
+  previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.md },
+  summaryCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.md },
   coverPhoto: { width: '100%', height: 150, borderRadius: 0 },
   photoPlaceholder: { height: 150, backgroundColor: COLORS.warm, borderRadius: 0, justifyContent: 'center', alignItems: 'center' },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
@@ -2343,7 +2415,7 @@ const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   previewTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 6 },
   price: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   newBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentAlpha },
-  newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.accent },
+  newTxt: { fontSize: 11, ...FONTS.semibold, color: COLORS.primary },
   tapHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, justifyContent: 'center' },
   tapHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
   summaryRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: SPACING.sm },
@@ -2361,6 +2433,13 @@ const makeStStyles = (COLORS: ThemeColors) => StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
   title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
+  hint: { fontSize: 12, color: COLORS.textMut, marginTop: 6, marginLeft: 2, lineHeight: 17 },
+  rulesCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',

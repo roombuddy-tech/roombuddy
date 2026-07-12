@@ -20,6 +20,7 @@ interface Props {
   value: string;
   placeholder?: string;
   onSelect: (place: PlaceResult) => void;
+  onChangeText?: (text: string) => void;
 }
 
 function extractComponent(details: GooglePlaceDetail, type: string): string {
@@ -27,7 +28,7 @@ function extractComponent(details: GooglePlaceDetail, type: string): string {
   return comp?.long_name ?? '';
 }
 
-export default function GooglePlacesInput({ value, placeholder, onSelect }: Props) {
+export default function GooglePlacesInput({ value, placeholder, onSelect, onChangeText }: Props) {
   const ref = useRef<any>(null);
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
@@ -75,6 +76,7 @@ export default function GooglePlacesInput({ value, placeholder, onSelect }: Prop
         }}
         textInputProps={{
           placeholderTextColor: COLORS.textMut,
+          onChangeText: onChangeText,
         }}
         styles={{
           textInputContainer: styles.inputContainer,

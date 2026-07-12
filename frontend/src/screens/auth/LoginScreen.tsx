@@ -169,7 +169,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     letterSpacing: -0.5,
   },
   brandAccent: {
-    color: COLORS.accent,
+    color: COLORS.primary,
   },
   main: {
     flex: 1,

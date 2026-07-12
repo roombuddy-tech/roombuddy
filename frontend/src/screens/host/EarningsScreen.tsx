@@ -140,9 +140,9 @@ export default function EarningsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return COLORS.success;
-      case 'pending': return COLORS.primary;
-      case 'processing': return COLORS.accent;
+      case 'completed': return COLORS.primary;
+      case 'pending': return COLORS.textSec;
+      case 'processing': return COLORS.star;
       case 'failed': return COLORS.danger;
       default: return COLORS.textMut;
     }
@@ -195,15 +195,21 @@ export default function EarningsScreen() {
 
         {/* Payout summary cards */}
         <View style={styles.payoutSummaryRow}>
-          <View style={[styles.payoutSummaryCard, { backgroundColor: '#E6F5EC', borderColor: '#A8DBBA' }]}>
-            <Text style={[styles.payoutSummaryLabel, { color: COLORS.success }]}>Paid out</Text>
-            <Text style={[styles.payoutSummaryValue, { color: COLORS.success }]}>
+          <View style={styles.payoutSummaryCard}>
+            <View style={styles.payoutSummaryTop}>
+              <Ionicons name="checkmark-circle-outline" size={15} color={COLORS.textSec} />
+              <Text style={styles.payoutSummaryLabel}>Paid out</Text>
+            </View>
+            <Text style={styles.payoutSummaryValue}>
               {formatCurrency(ps?.total_paid_out || 0)}
             </Text>
           </View>
-          <View style={[styles.payoutSummaryCard, { backgroundColor: COLORS.accentSoft, borderColor: COLORS.border }]}>
-            <Text style={[styles.payoutSummaryLabel, { color: COLORS.accent }]}>Pending</Text>
-            <Text style={[styles.payoutSummaryValue, { color: COLORS.accent }]}>
+          <View style={styles.payoutSummaryCard}>
+            <View style={styles.payoutSummaryTop}>
+              <Ionicons name="time-outline" size={15} color={COLORS.primary} />
+              <Text style={styles.payoutSummaryLabel}>Pending</Text>
+            </View>
+            <Text style={[styles.payoutSummaryValue, { color: COLORS.primary }]}>
               {formatCurrency((ps?.pending_amount || 0) + (ps?.unpaid_amount || 0))}
             </Text>
           </View>
@@ -232,11 +238,11 @@ export default function EarningsScreen() {
         {/* No payout account warning */}
         {!d?.payout.bank_name && !d?.payout.upi_id && (
           <TouchableOpacity style={styles.warningCard} activeOpacity={0.7} onPress={() => setShowPaymentProfile(true)}>
-            <Ionicons name="alert-circle-outline" size={18} color={COLORS.accent} />
+            <Ionicons name="alert-circle-outline" size={18} color={COLORS.primary} />
             <Text style={styles.warningText}>
               Add a bank account or UPI to receive payouts. Tap to add now.
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.accent} />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
           </TouchableOpacity>
         )}
 
@@ -346,7 +352,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   scrollContent: { paddingBottom: SPACING.xl },
 
-  pageTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.lg },
+  pageTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5, marginTop: SPACING.sm, marginBottom: SPACING.lg },
 
   // Lifetime card
   lifetimeCard: {
@@ -361,15 +367,17 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   lifetimeSub: { fontSize: 14, color: 'rgba(251,244,236,0.55)', ...FONTS.medium },
 
   // Payout summary row
-  payoutSummaryRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.md },
+  payoutSummaryRow: { flexDirection: 'row', gap: 12, marginBottom: SPACING.md },
   payoutSummaryCard: {
     flex: 1,
-    borderWidth: 1,
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
+    ...SHADOW.md,
   },
-  payoutSummaryLabel: { fontSize: 11, ...FONTS.semibold, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 },
-  payoutSummaryValue: { fontSize: 22, ...FONTS.bold },
+  payoutSummaryTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  payoutSummaryLabel: { fontSize: 12, ...FONTS.semibold, color: COLORS.textSec },
+  payoutSummaryValue: { fontSize: 22, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.3 },
 
   // Payout history button
   payoutHistoryBtn: {
@@ -377,11 +385,10 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
+    ...SHADOW.md,
   },
   payoutHistoryLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   payoutHistoryIcon: {
@@ -410,7 +417,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   warningText: { flex: 1, fontSize: 13, color: COLORS.primaryDark, lineHeight: 19 },
 
   // Section
-  sectionTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.3, marginTop: SPACING.md, marginBottom: SPACING.md },
 
   // Monthly
   monthCard: {
@@ -418,15 +425,14 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
+    ...SHADOW.md,
   },
   monthName: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   monthBookings: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
-  monthEarnings: { fontSize: 18, ...FONTS.serif, color: COLORS.primary },
+  monthEarnings: { fontSize: 18, ...FONTS.bold, color: COLORS.primary },
   emptyMonth: { paddingVertical: SPACING.xl, alignItems: 'center' },
   emptyText: { fontSize: 14, color: COLORS.textMut },
 

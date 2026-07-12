@@ -31,28 +31,19 @@ interface BookingItem {
   total_host_receives: number;
 }
 
-const AVATAR_PALETTE = [
-  { bg: 'rgba(34,197,94,0.15)', text: '#16A34A' },
-  { bg: 'rgba(59,130,246,0.15)', text: '#2563EB' },
-  { bg: 'rgba(234,179,8,0.15)', text: '#B45309' },
-  { bg: 'rgba(168,85,247,0.15)', text: '#7C3AED' },
-  { bg: 'rgba(239,68,68,0.15)', text: '#DC2626' },
-  { bg: 'rgba(20,184,166,0.15)', text: '#0F766E' },
-];
-
 const FILTERS = ['All', 'Active', 'Upcoming', 'Completed'];
 
-const makeStatusColors = (COLORS: ThemeColors): Record<string, { text: string; bg: string }> => ({
-  active: { text: COLORS.success, bg: COLORS.accentSoft },
-  accepted: { text: COLORS.success, bg: COLORS.accentSoft },
-  pending: { text: COLORS.primaryDark, bg: COLORS.raised },
-  upcoming: { text: COLORS.primaryDark, bg: COLORS.raised },
-  completed: { text: COLORS.textSec, bg: COLORS.chip },
-  cancelled_by_guest: { text: COLORS.danger, bg: COLORS.raised },
-  cancelled_by_host: { text: COLORS.danger, bg: COLORS.raised },
-  rejected: { text: COLORS.danger, bg: COLORS.raised },
-  expired: { text: COLORS.textMut, bg: COLORS.chip },
-  no_show: { text: COLORS.danger, bg: COLORS.raised },
+const makeStatusColors = (COLORS: ThemeColors): Record<string, string> => ({
+  active: COLORS.primary,
+  accepted: COLORS.primary,
+  upcoming: COLORS.primary,
+  pending: COLORS.star,
+  completed: COLORS.textSec,
+  cancelled_by_guest: COLORS.danger,
+  cancelled_by_host: COLORS.danger,
+  rejected: COLORS.danger,
+  expired: COLORS.textMut,
+  no_show: COLORS.danger,
 });
 
 function formatDateRange(checkIn: string, checkOut: string): string {
@@ -147,9 +138,8 @@ export default function BookingsScreen() {
             <Text style={styles.emptySub}>When guests book your room, they'll appear here.</Text>
           </View>
         ) : (
-          bookings.map((b, idx) => {
-            const statusStyle = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
-            const avatarColor = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
+          bookings.map((b) => {
+            const statusColor = STATUS_COLORS[b.status] || COLORS.textSec;
             return (
               <TouchableOpacity
                 key={b.booking_id}
@@ -159,8 +149,8 @@ export default function BookingsScreen() {
               >
                 {/* Row 1: Avatar + Name + Status */}
                 <View style={styles.cardTopRow}>
-                  <View style={[styles.guestAvatar, { backgroundColor: avatarColor.bg }]}>
-                    <Text style={[styles.guestInitials, { color: avatarColor.text }]}>{b.guest_initials}</Text>
+                  <View style={styles.guestAvatar}>
+                    <Text style={styles.guestInitials}>{b.guest_initials}</Text>
                   </View>
                   <View style={styles.bookingDetails}>
                     <Text style={styles.guestName}>{b.guest_name}</Text>
@@ -168,9 +158,11 @@ export default function BookingsScreen() {
                       {b.listing_title ? `${b.listing_title} · ` : ''}{b.nights} night{b.nights === 1 ? '' : 's'}
                     </Text>
                   </View>
-                  <Text style={[styles.statusBadge, { color: statusStyle.text }]}>
-                    {formatStatus(b.status)}
-                  </Text>
+                  <View style={[styles.statusPill, { backgroundColor: statusColor + '18' }]}>
+                    <Text style={[styles.statusBadge, { color: statusColor }]}>
+                      {formatStatus(b.status)}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Row 2: Date range + Price */}
@@ -194,13 +186,13 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md, marginTop: SPACING.sm },
   topLeft: { flexDirection: 'row', alignItems: 'baseline' },
   brand: { fontSize: 22, ...FONTS.extrabold, color: COLORS.primaryDark, letterSpacing: -0.5 },
-  brandAccent: { color: COLORS.accent },
+  brandAccent: { color: COLORS.primary },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
   avatarBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 15, ...FONTS.bold },
 
-  sectionTitle: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5, marginTop: SPACING.sm, marginBottom: SPACING.md },
 
   filterRow: { marginBottom: SPACING.lg, maxHeight: 44 },
   filterContent: { gap: 8 },
@@ -216,15 +208,16 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   emptyTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center' },
 
-  bookingCard: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.sm },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
-  cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
-  guestAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  guestInitials: { fontSize: 15, ...FONTS.bold },
+  bookingCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW.md },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
+  cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
+  guestAvatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  guestInitials: { fontSize: 15, ...FONTS.bold, color: COLORS.primary },
   bookingDetails: { flex: 1 },
-  guestName: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  guestName: { fontSize: 16, ...FONTS.semibold, color: COLORS.text },
   bookingMeta: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
   dateRange: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
-  bookingPrice: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
-  statusBadge: { fontSize: 13, ...FONTS.semibold },
+  bookingPrice: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  statusPill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: RADIUS.pill },
+  statusBadge: { fontSize: 12, ...FONTS.semibold },
 });

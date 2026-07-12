@@ -55,20 +55,17 @@ const PLATFORM_POLICY = 'flexible';
 
 const POLICY_META = {
   flexible: {
-    label: 'Flexible', color: '#059669',
-    tiers: [
-      { window: '2+ days before check-in', refund: '100% refund', highlight: true },
-      { window: 'Less than 2 days before check-in', refund: '50% refund', highlight: false },
-    ],
+    label: 'Free cancellation', color: '#B85C38',
   },
 } as const;
 
 type PolicyKey = keyof typeof POLICY_META;
 
 const POLICY_NOTES = [
-  'Service fee is non-refundable on guest cancellations.',
-  'Security deposit is included in the refundable amount.',
-  'Refunds are processed within 5–10 business days.',
+  'You can cancel anytime before check-in.',
+  'The ₹49 booking fee is non-refundable.',
+  'Rent, security deposit and meals are paid to the host at check-in — nothing is collected in advance.',
+  'If you cancel before check-in, you are not charged anything beyond the ₹49 booking fee.',
 ];
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -89,25 +86,6 @@ const makeStatusConfig = (COLORS: ThemeColors) => ({
 
 function fmtDateShort(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-}
-
-function daysUntilCheckin(checkInDate: string): number {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const ci = new Date(checkInDate + 'T00:00:00');
-  return Math.floor((ci.getTime() - today.getTime()) / 86400000);
-}
-
-function computeRefundLabel(booking: GuestBooking): string {
-  const policy = (booking.cancellation_policy ?? PLATFORM_POLICY) as PolicyKey;
-  const days = daysUntilCheckin(booking.check_in_date);
-  const schedules: Record<PolicyKey, [number, string][]> = {
-    flexible: [[2, '100%'], [0, '50%']],
-  };
-  const schedule = schedules[policy] ?? schedules.flexible;
-  for (const [threshold, label] of schedule) {
-    if (days >= threshold) return label === '0%' ? 'No refund' : `${label} refund`;
-  }
-  return 'No refund';
 }
 
 const CANCELLABLE_STATUSES = ['pending', 'accepted', 'active'];
@@ -143,29 +121,14 @@ function CancellationPolicyModal({
 
           <View style={[styles.modalBadge, { backgroundColor: meta.color + '15', borderColor: meta.color + '30' }]}>
             <Ionicons name="shield-checkmark" size={18} color={meta.color} />
-            <Text style={[styles.modalBadgeLabel, { color: meta.color }]}>{meta.label} cancellation</Text>
+            <Text style={[styles.modalBadgeLabel, { color: meta.color }]}>{meta.label}</Text>
           </View>
 
-          <Text style={styles.sectionLabel}>Refund schedule</Text>
-          <View style={{ marginBottom: SPACING.lg }}>
-            {meta.tiers.map((tier, idx) => (
-              <View key={idx} style={styles.tierRow}>
-                <View style={styles.tierTimeline}>
-                  <View style={[styles.tierDot, { backgroundColor: tier.refund === '100% refund' ? meta.color : COLORS.border }]} />
-                  {idx < meta.tiers.length - 1 && <View style={styles.tierLine} />}
-                </View>
-                <View style={styles.tierContent}>
-                  <Text style={styles.tierWindow}>{tier.window}</Text>
-                  <View style={[styles.tierBadge, {
-                    backgroundColor: tier.refund === '100% refund' ? '#D1FAE5' : '#FEF3C7',
-                  }]}>
-                    <Text style={[styles.tierRefund, {
-                      color: tier.refund === '100% refund' ? '#065F46' : '#92400E',
-                    }]}>{tier.refund}</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
+          <View style={styles.freeCancelCard}>
+            <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
+            <Text style={styles.freeCancelText}>
+              Cancel any time before check-in at no charge. You only pay the ₹49 booking fee, which is non-refundable.
+            </Text>
           </View>
 
           <Text style={styles.sectionLabel}>Notes</Text>
@@ -207,9 +170,6 @@ function CancelConfirmModal({
   styles: ReturnType<typeof makeStyles>;
 }) {
   if (!booking) return null;
-  const refundLabel = computeRefundLabel(booking);
-  const days = daysUntilCheckin(booking.check_in_date);
-  const noRefund = refundLabel === 'No refund';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -218,45 +178,18 @@ function CancelConfirmModal({
           <View style={styles.modalHandle} />
 
           <View style={{ alignItems: 'center', marginBottom: SPACING.lg }}>
-            <View style={[styles.cancelIconWrap, { backgroundColor: noRefund ? '#FEE2E2' : '#FEF3C7' }]}>
-              <Ionicons
-                name={noRefund ? 'alert-circle' : 'information-circle'}
-                size={32}
-                color={noRefund ? '#DC2626' : '#B45309'}
-              />
+            <View style={[styles.cancelIconWrap, { backgroundColor: COLORS.primaryAlpha }]}>
+              <Ionicons name="information-circle" size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.modalTitle}>Cancel this booking?</Text>
             <Text style={styles.modalSub}>{booking.listing_title ?? 'Your stay'}</Text>
           </View>
 
-          {/* Refund info */}
-          <View style={[styles.refundCard, {
-            backgroundColor: noRefund ? '#FEF2F2' : '#F0FDF4',
-            borderColor: noRefund ? '#FECACA' : '#BBF7D0',
-          }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={[styles.refundCardLabel, { color: noRefund ? '#DC2626' : '#065F46' }]}>
-                {noRefund ? 'No refund' : 'Refund amount'}
-              </Text>
-              {!noRefund && (
-                <Text style={[styles.refundCardLabel, { color: '#065F46' }]}>{refundLabel}</Text>
-              )}
-            </View>
-            <Text style={[styles.refundCardSub, { color: noRefund ? '#EF4444' : '#047857' }]}>
-              {days >= 7
-                ? `${days} days until check-in — ${refundLabel}`
-                : days >= 2
-                ? `${days} days until check-in — ${refundLabel}`
-                : days >= 0
-                ? `Check-in is in ${days} day${days !== 1 ? 's' : ''} — ${refundLabel}`
-                : 'Check-in has passed'}
-            </Text>
-          </View>
-
-          <View style={styles.refundNote}>
-            <Ionicons name="time-outline" size={14} color={COLORS.textSec} />
-            <Text style={styles.noteText}>
-              Approved refunds take 5–10 business days to your original payment method.
+          {/* Free cancellation info */}
+          <View style={styles.cancelInfoCard}>
+            <Text style={styles.cancelInfoTitle}>Free cancellation</Text>
+            <Text style={styles.cancelInfoText}>
+              You only lose the ₹49 booking fee, which is non-refundable. Rent, deposit and meals are paid to the host at check-in — so there is nothing else to pay.
             </Text>
           </View>
 
@@ -358,11 +291,17 @@ export default function MyStaysScreen() {
         activeOpacity={0.7}
         onPress={() => { if (item.listing_id) navigation.navigate('GuestListingDetail', { listingId: item.listing_id }); }}
       >
-        <Image
-          source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
-          style={styles.cardImg}
-          resizeMode="cover"
-        />
+        <View style={styles.imageWrap}>
+          <Image
+            source={item.cover_photo_url ? { uri: item.cover_photo_url } : require('../../../assets/icon.png')}
+            style={styles.cardImg}
+            resizeMode="cover"
+          />
+          <View style={styles.statusOverlay}>
+            <View style={[styles.statusOverlayDot, { backgroundColor: cfg.color }]} />
+            <Text style={styles.statusOverlayTxt}>{cfg.label}</Text>
+          </View>
+        </View>
 
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle} numberOfLines={2}>{item.listing_title ?? 'Untitled listing'}</Text>
@@ -377,13 +316,6 @@ export default function MyStaysScreen() {
             <Text style={styles.nightsText}>{item.nights} night{item.nights !== 1 ? 's' : ''}</Text>
           </View>
 
-          <View style={styles.statusRow}>
-            <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-              <Ionicons name={cfg.icon as any} size={13} color={cfg.color} />
-              <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-            </View>
-          </View>
-
           {/* Cancellation policy pill — tappable */}
           {canCancel && (
             <TouchableOpacity
@@ -393,10 +325,7 @@ export default function MyStaysScreen() {
             >
               <Ionicons name="shield-checkmark-outline" size={13} color={policyMeta.color} />
               <Text style={[styles.policyPillText, { color: policyMeta.color }]}>
-                {policyMeta.label} cancellation
-              </Text>
-              <Text style={[styles.policyPillRefund, { color: policyMeta.color }]}>
-                · {computeRefundLabel(item)} if cancelled now
+                {policyMeta.label} before check-in
               </Text>
             </TouchableOpacity>
           )}
@@ -430,7 +359,7 @@ export default function MyStaysScreen() {
                     hostName: item.host_name,
                   })}
                 >
-                  <Ionicons name="star-outline" size={16} color={COLORS.accent} />
+                  <Ionicons name="star-outline" size={16} color={COLORS.primary} />
                   <Text style={styles.reviewBtnTxt}>Leave a review</Text>
                 </TouchableOpacity>
               )}
@@ -476,8 +405,8 @@ export default function MyStaysScreen() {
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIllustration}>
             <View style={styles.emptyHouse}><Ionicons name="home" size={40} color={COLORS.primary} /></View>
-            <View style={styles.emptyCalendar}><Ionicons name="calendar" size={24} color={COLORS.accent} /></View>
-            <View style={styles.emptyHeart}><Ionicons name="heart" size={20} color="#E879A0" /></View>
+            <View style={styles.emptyCalendar}><Ionicons name="calendar" size={24} color={COLORS.primary} /></View>
+            <View style={styles.emptyHeart}><Ionicons name="bed" size={20} color={COLORS.star} /></View>
           </View>
           <Text style={styles.emptyTitle}>No stays yet</Text>
           <Text style={styles.emptySub}>Your bookings will appear here once you{'\n'}find the perfect room</Text>
@@ -533,27 +462,32 @@ export default function MyStaysScreen() {
 const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.bg },
-  headerTitle: { fontSize: 32, ...FONTS.serif, color: COLORS.text, letterSpacing: 0.2 },
-  listPad: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
+  header: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.lg, backgroundColor: COLORS.bg },
+  headerTitle: { fontSize: 30, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
+  listPad: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xs, paddingBottom: SPACING.xxl },
 
-  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, overflow: 'hidden', ...SHADOW.sm },
-  cardImg: { width: '100%', height: 190, backgroundColor: COLORS.chip },
-  cardBody: { padding: SPACING.md },
-  cardTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
-  cardSub: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SPACING.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, marginBottom: SPACING.lg, overflow: 'hidden', ...SHADOW.md },
+  imageWrap: { position: 'relative' },
+  cardImg: { width: '100%', height: 180, backgroundColor: COLORS.chip },
+  statusOverlay: {
+    position: 'absolute', top: 12, right: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(20,18,16,0.62)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 11, paddingVertical: 6,
+  },
+  statusOverlayDot: { width: 6, height: 6, borderRadius: 3 },
+  statusOverlayTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
+  cardBody: { padding: SPACING.lg },
+  cardTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: 6, lineHeight: 24 },
+  cardSub: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: SPACING.sm },
   cardSubText: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, flex: 1 },
   datesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
   datesText: { fontSize: 13, color: COLORS.text, ...FONTS.medium },
   nightsText: { fontSize: 12, color: COLORS.textMut, marginLeft: 4, ...FONTS.medium },
-  statusRow: { flexDirection: 'row', marginBottom: SPACING.sm },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
-  statusText: { fontSize: 12, ...FONTS.semibold },
 
   // Policy pill
-  policyPill: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, marginBottom: SPACING.sm, flexWrap: 'wrap' },
-  policyPillText: { fontSize: 12, ...FONTS.semibold },
-  policyPillRefund: { fontSize: 12, ...FONTS.medium },
+  policyPill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'stretch', paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, marginBottom: SPACING.sm },
+  policyPillText: { fontSize: 12, ...FONTS.semibold, flex: 1, lineHeight: 17 },
 
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
   priceLabel: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, textTransform: 'uppercase', letterSpacing: 0.6 },
@@ -570,8 +504,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   cancelLink: { paddingVertical: 4, paddingHorizontal: 2 },
   cancelLinkText: { fontSize: 13, color: COLORS.danger, ...FONTS.medium, textDecorationLine: 'underline' },
 
-  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.accent, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9, alignSelf: 'flex-start' },
-  reviewBtnTxt: { color: COLORS.accent, fontSize: 13, ...FONTS.semibold },
+  reviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9, alignSelf: 'flex-start' },
+  reviewBtnTxt: { color: COLORS.primary, fontSize: 13, ...FONTS.semibold },
   reviewedBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: SPACING.sm, backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start' },
   reviewedTxt: { fontSize: 13, color: '#B45309', ...FONTS.semibold },
 
@@ -579,8 +513,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: SPACING.xl },
   emptyIllustration: { width: 140, height: 140, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
   emptyHouse: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
-  emptyCalendar: { position: 'absolute', top: 4, right: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.accentAlpha, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
-  emptyHeart: { position: 'absolute', bottom: 12, left: 6, width: 36, height: 36, borderRadius: 18, backgroundColor: '#FCE4EC', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
+  emptyCalendar: { position: 'absolute', top: 4, right: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
+  emptyHeart: { position: 'absolute', bottom: 12, left: 6, width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
   emptyTitle: { fontSize: 22, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.sm },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22, marginBottom: SPACING.xl },
   emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 28, paddingVertical: 14 },
@@ -613,10 +547,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
   // Cancel modal
   cancelIconWrap: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
-  refundCard: { borderWidth: 1, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
-  refundCardLabel: { fontSize: 15, ...FONTS.bold },
-  refundCardSub: { fontSize: 13, lineHeight: 18 },
-  refundNote: { flexDirection: 'row', gap: 8, marginBottom: SPACING.lg, alignItems: 'flex-start' },
+  cancelInfoCard: { backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg },
+  cancelInfoTitle: { fontSize: 14, ...FONTS.bold, color: COLORS.primary, marginBottom: 4 },
+  cancelInfoText: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
+  freeCancelCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg },
+  freeCancelText: { flex: 1, fontSize: 14, color: COLORS.text, ...FONTS.medium, lineHeight: 21 },
   cancelActions: { flexDirection: 'row', gap: SPACING.sm },
   keepBtn: { flex: 1, paddingVertical: 15, borderRadius: RADIUS.md, alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.border },
   keepBtnText: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },

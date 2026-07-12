@@ -196,6 +196,8 @@ export default function GuestListingDetailScreen() {
   const [showHostModal, setShowHostModal] = useState(false);
   const [revealedPhone, setRevealedPhone] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
@@ -273,7 +275,10 @@ export default function GuestListingDetailScreen() {
     }
   }, [unlocking, listing, navigation]);
 
-  const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
+  const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+    setActivePhotoIndex(index);
+  }, []);
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
@@ -289,7 +294,8 @@ export default function GuestListingDetailScreen() {
     );
   }
 
-  const photoUrls = listing.photos.map((p) => p.url).filter(Boolean);
+  const photos = listing.photos.filter((p) => p.url);
+  const photoUrls = photos.map((p) => p.url);
   const subtitleParts = [
     listing.area_name,
     listing.room.bed_type ? `${listing.room.bed_type.charAt(0).toUpperCase()}${listing.room.bed_type.slice(1)} bed` : null,
@@ -339,19 +345,28 @@ export default function GuestListingDetailScreen() {
 
         {/* ── Photos ── */}
         <View style={styles.photoWrap}>
-          {photoUrls.length > 0 ? (
+          {photos.length > 0 ? (
             <FlatList
-              data={photoUrls}
-              keyExtractor={(uri, i) => `${uri}-${i}`}
+              data={photos}
+              keyExtractor={(p, i) => `${p.url}-${i}`}
               horizontal pagingEnabled showsHorizontalScrollIndicator={false}
               onScroll={onPhotoScroll} scrollEventThrottle={16}
-              renderItem={({ item: uri }) => <Image source={{ uri }} style={styles.photo} resizeMode="cover" />}
+              renderItem={({ item: p, index }) => (
+                <TouchableOpacity activeOpacity={0.9} onPress={() => { setActivePhotoIndex(index); setShowPhotoGallery(true); }}>
+                  <Image source={{ uri: p.url }} style={styles.photo} resizeMode="cover" />
+                  {p.area ? (
+                    <View style={styles.photoTag}>
+                      <Text style={styles.photoTagTxt}>{p.area}</Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              )}
             />
           ) : (
             <View style={styles.photoPlaceholder}><Ionicons name="home-outline" size={48} color={COLORS.textMut} /></View>
           )}
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+            <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
           </TouchableOpacity>
           {photoUrls.length > 0 && (
             <View style={styles.photoCounter}>
@@ -377,19 +392,19 @@ export default function GuestListingDetailScreen() {
               )}
               {listing.host_verifications?.aadhaar && (
                 <View style={styles.verifiedPill}>
-                  <Ionicons name="checkmark-circle" size={13} color="#047857" />
+                  <Ionicons name="checkmark-circle" size={13} color={COLORS.primary} />
                   <Text style={styles.verifiedTxt}>Aadhaar verified</Text>
                 </View>
               )}
               {listing.host_verifications?.email && (
                 <View style={styles.verifiedPill}>
-                  <Ionicons name="checkmark-circle" size={13} color="#047857" />
+                  <Ionicons name="checkmark-circle" size={13} color={COLORS.primary} />
                   <Text style={styles.verifiedTxt}>Email verified</Text>
                 </View>
               )}
               {listing.host_verifications?.phone && (
                 <View style={styles.verifiedPill}>
-                  <Ionicons name="checkmark-circle" size={13} color="#047857" />
+                  <Ionicons name="checkmark-circle" size={13} color={COLORS.primary} />
                   <Text style={styles.verifiedTxt}>Phone verified</Text>
                 </View>
               )}
@@ -465,9 +480,18 @@ export default function GuestListingDetailScreen() {
           {nearbyLine && (
             <View style={styles.section}>
               <SectionTitle label="Nearby" />
-              <View style={[styles.card, { flexDirection: 'row', alignItems: 'flex-start', gap: 10 }]}>
-                <Ionicons name="location-outline" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
-                <Text style={{ fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1, lineHeight: 21 }}>{nearbyLine.replace('Nearby: ', '')}</Text>
+              <View style={styles.nearbyWrap}>
+                {nearbyLine
+                  .replace(/^Nearby:\s*/i, '')
+                  .split(/[,•·|]/)
+                  .map((it) => it.trim())
+                  .filter(Boolean)
+                  .map((it, i) => (
+                    <View key={i} style={styles.nearbyChip}>
+                      <Ionicons name="location" size={13} color={COLORS.primary} />
+                      <Text style={styles.nearbyChipText}>{it}</Text>
+                    </View>
+                  ))}
               </View>
             </View>
           )}
@@ -571,7 +595,7 @@ export default function GuestListingDetailScreen() {
                   initialRegion={{ latitude: listing.property.latitude, longitude: listing.property.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
                   scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
                 >
-                  <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(13,115,119,0.12)" strokeColor="rgba(13,115,119,0.3)" strokeWidth={1} />
+                  <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(184,92,56,0.12)" strokeColor="rgba(184,92,56,0.35)" strokeWidth={1} />
                 </MapView>
               </View>
               <Text style={styles.locationDisclaimer}>
@@ -783,6 +807,45 @@ export default function GuestListingDetailScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ── Photo Gallery Modal ── */}
+      {showPhotoGallery && (
+        <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPhotoGallery(false)}>
+          <View style={styles.galleryOverlay}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: activePhotoIndex * SCREEN_W, y: 0 }}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+                setActivePhotoIndex(idx);
+              }}
+              style={{ flex: 1 }}
+            >
+              {photoUrls.map((uri, i) => (
+                <View key={i} style={{ width: SCREEN_W, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                  <Image source={{ uri }} style={styles.galleryPhoto} resizeMode="cover" />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.galleryHeader} pointerEvents="box-none">
+              <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowPhotoGallery(false)}>
+                <Ionicons name="close" size={26} color="#fff" />
+              </TouchableOpacity>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={styles.galleryCounter}>
+                  {activePhotoIndex + 1} / {photoUrls.length}
+                </Text>
+                {photos[activePhotoIndex]?.area ? (
+                  <Text style={styles.galleryTag}>{photos[activePhotoIndex].area}</Text>
+                ) : null}
+              </View>
+              <View style={{ width: 40 }} />
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* ── Modal ── */}
       <Modal visible={showBookModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -968,7 +1031,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   photoPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   backBtn: { position: 'absolute', top: 14, left: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', ...SHADOW.sm },
   photoCounter: { position: 'absolute', bottom: 14, right: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
+  photoTag: { position: 'absolute', bottom: 14, left: 14, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
+  photoTagTxt: { fontSize: 12, color: '#fff', ...FONTS.medium, textTransform: 'capitalize' },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
+  galleryOverlay: { flex: 1, backgroundColor: '#000' },
+  galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
+  galleryCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
+  galleryCounter: { fontSize: 16, color: '#fff', ...FONTS.semibold },
+  galleryTag: { fontSize: 13, color: 'rgba(255,255,255,0.7)', ...FONTS.medium, marginTop: 2 },
+  galleryPhoto: { width: SCREEN_W, height: SCREEN_W },
 
   body: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg },
 
@@ -980,8 +1051,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   ratingPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FEF3C7', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
   ratingPillTxt: { fontSize: 13, ...FONTS.semibold, color: '#92400E' },
   ratingPillCount: { fontSize: 12, color: '#B45309', ...FONTS.regular },
-  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,185,129,0.10)', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  verifiedTxt: { fontSize: 12, ...FONTS.semibold, color: '#047857' },
+  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  verifiedTxt: { fontSize: 12, ...FONTS.semibold, color: COLORS.primary },
   instantPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,184,0,0.12)', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
   instantTxt: { fontSize: 12, ...FONTS.semibold, color: '#92400E' },
 
@@ -994,7 +1065,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   subHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm },
   subHeaderText: { ...FONTS.semibold, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textSec },
   eyebrowLabel: { ...FONTS.semibold, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textMut, marginBottom: 6 },
-  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, ...SHADOW.sm },
+  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, ...SHADOW.md },
 
   flatmateCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   flatmateAvatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
@@ -1005,7 +1076,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   hostBadgeText: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
 
   foodChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.sm },
-  foodChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: RADIUS.md, backgroundColor: COLORS.primaryAlpha, borderWidth: 1, borderColor: 'rgba(13,115,119,0.15)' },
+  foodChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   foodChipText: { fontSize: 13, color: COLORS.primary, ...FONTS.medium },
   foodDesc: { fontSize: 13, color: COLORS.textSec, lineHeight: 20 },
 
@@ -1013,24 +1084,27 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   amenityRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, paddingRight: SPACING.sm },
   amenityText: { fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1 },
 
-  apartmentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm, ...SHADOW.sm },
-  apartmentNameTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  apartmentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
+  apartmentNameTxt: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   spaceList: { gap: 0, marginBottom: SPACING.sm },
   spaceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   spaceRowIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
   spaceRowLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   spaceRowSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1 },
-  featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  featureChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
-  featureChipText: { fontSize: 12, color: COLORS.textSec },
+  featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  featureChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, ...SHADOW.sm },
+  featureChipText: { fontSize: 12, color: COLORS.text, ...FONTS.medium },
+  nearbyWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  nearbyChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
+  nearbyChipText: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
 
   miniMapWrap: { borderRadius: RADIUS.lg, overflow: 'hidden', height: 180, marginBottom: 6 },
   miniMap: { width: '100%', height: 180 },
   locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
 
   contactCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1,
-    borderColor: COLORS.border, padding: SPACING.md, marginBottom: SPACING.lg, ...SHADOW.sm,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: SPACING.lg, marginBottom: SPACING.lg, ...SHADOW.md,
   },
   contactHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   contactEyebrow: { fontSize: 13, ...FONTS.bold, letterSpacing: 0.8, color: COLORS.text },
@@ -1053,9 +1127,9 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   unlockNote: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: 8 },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
-  checkinCard: { flex: 1, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', gap: 6, ...SHADOW.sm },
+  checkinCard: { flex: 1, paddingVertical: SPACING.lg, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, alignItems: 'center', gap: 8, ...SHADOW.md },
   checkinLabel: { fontSize: 12, color: COLORS.textSec, ...FONTS.medium, textAlign: 'center' },
-  checkinTime: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, textAlign: 'center' },
+  checkinTime: { fontSize: 16, ...FONTS.bold, color: COLORS.text, textAlign: 'center' },
 
   reviewsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
   breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
@@ -1086,7 +1160,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   stickyPrice: { fontSize: 24, ...FONTS.serifMedium, color: COLORS.text, letterSpacing: -0.3 },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyRating: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
-  stickyBookBtn: { backgroundColor: COLORS.accent, paddingVertical: 14, paddingHorizontal: 32, borderRadius: RADIUS.pill, ...SHADOW.sm },
+  stickyBookBtn: { backgroundColor: COLORS.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: RADIUS.pill, ...SHADOW.sm },
   stickyBookBtnText: { color: '#fff', fontSize: 16, ...FONTS.bold },
 
   modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
@@ -1102,15 +1176,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   calendarHint: { fontSize: 14, color: COLORS.primary, ...FONTS.medium, textAlign: 'center', marginBottom: SPACING.sm },
   modalHint: { fontSize: 12, color: COLORS.textMut, marginTop: SPACING.sm },
-  modalBtn: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: RADIUS.pill, alignItems: 'center', marginTop: SPACING.md },
+  modalBtn: { backgroundColor: COLORS.primary, paddingVertical: 16, borderRadius: RADIUS.pill, alignItems: 'center', marginTop: SPACING.md },
   modalBtnDisabled: { backgroundColor: COLORS.border },
   modalBtnText: { color: '#fff', fontSize: 16, ...FONTS.bold },
 
   hostCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    padding: SPACING.md, marginBottom: SPACING.lg,
+    padding: SPACING.lg, marginBottom: SPACING.lg,
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOW.sm,
+    ...SHADOW.md,
   },
   hostAvatarLg: {
     width: 52, height: 52, borderRadius: 26,

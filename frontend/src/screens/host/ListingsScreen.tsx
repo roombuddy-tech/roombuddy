@@ -43,10 +43,10 @@ interface DraftData {
 }
 
 const makeStatusConfig = (COLORS: ThemeColors): Record<string, { label: string; color: string }> => ({
-  live: { label: 'Listed', color: COLORS.success },
-  hidden: { label: 'Hidden', color: COLORS.primary },
-  pending: { label: 'Pending', color: COLORS.primary },
-  draft: { label: 'Draft', color: COLORS.primary },
+  live: { label: 'Listed', color: COLORS.primary },
+  hidden: { label: 'Hidden', color: COLORS.star },
+  pending: { label: 'Pending', color: COLORS.star },
+  draft: { label: 'Draft', color: COLORS.star },
   paused: { label: 'Paused', color: COLORS.textMut },
   snoozed: { label: 'Snoozed', color: COLORS.textMut },
   delisted: { label: 'Delisted', color: COLORS.danger },
@@ -189,7 +189,7 @@ export default function ListingsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.pageTitle}>My listings</Text>
+        <Text style={styles.pageTitle}>My Listings</Text>
 
         {loading ? (
           <View style={styles.loadingArea}>
@@ -442,47 +442,45 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
 
   listingCard: {
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
     overflow: 'hidden',
-    ...SHADOW.sm,
+    ...SHADOW.md,
   },
 
   photoContainer: { position: 'relative' },
-  photo: { width: '100%', height: 160 },
+  photo: { width: '100%', height: 170 },
   photoPlaceholder: { backgroundColor: COLORS.warm, justifyContent: 'center', alignItems: 'center' },
   photoEmoji: { fontSize: 32 },
 
   statusOverlay: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 12,
+    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.52)',
+    gap: 6,
+    backgroundColor: 'rgba(20,18,16,0.62)',
     borderRadius: RADIUS.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
   },
   statusOverlayDot: { width: 6, height: 6, borderRadius: 3 },
   statusOverlayTxt: { fontSize: 12, ...FONTS.semibold, color: '#fff' },
 
-  detailsContainer: { padding: SPACING.md },
+  detailsContainer: { padding: SPACING.lg },
 
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
-  listingTitle: { fontSize: 16, ...FONTS.semibold, color: COLORS.text, flex: 1, marginRight: 8 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 },
+  listingTitle: { fontSize: 17, ...FONTS.semibold, color: COLORS.text, flex: 1, marginRight: 8 },
 
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 12, ...FONTS.medium },
 
-  areaName: { fontSize: 13, color: COLORS.textSec, marginBottom: 6 },
+  areaName: { fontSize: 13, color: COLORS.textSec, marginBottom: 10 },
 
   bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  price: { fontSize: 17, ...FONTS.serif, color: COLORS.text },
+  price: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
   priceUnit: { fontSize: 12, ...FONTS.regular, color: COLORS.textSec },
 
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -511,7 +509,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     justifyContent: 'center', alignItems: 'center',
     marginBottom: SPACING.md,
   },
-  emptyTitle: { fontSize: 20, ...FONTS.serif, color: COLORS.text, marginBottom: SPACING.xs },
+  emptyTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
   emptySub: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', paddingHorizontal: SPACING.xl },
 
   // ── Verification banner ──

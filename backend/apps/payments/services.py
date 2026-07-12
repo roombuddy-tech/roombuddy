@@ -645,7 +645,8 @@ def _get_cover_photo(listing):
 def _get_location_string(listing) -> str:
     """
     Build a human-readable address string from the listing's property.
-    Format: "<address_line1>, <address_line2>, <city_name> - <pincode>"
+    Format: "<apartment_name>, Floor <n>, <address_line1>, <address_line2>,
+             <city_name> - <pincode>"
     Falls back to formatted_address, then city_name.
     """
     prop = getattr(listing, "property", None)
@@ -653,6 +654,14 @@ def _get_location_string(listing) -> str:
         return ""
 
     parts = []
+    if getattr(prop, "apartment_name", None):
+        parts.append(prop.apartment_name.strip())
+    if getattr(prop, "floor_number", None) is not None:
+        floor = prop.floor_number
+        if floor == 0:
+            parts.append("Ground floor")
+        else:
+            parts.append(f"Floor {floor}")
     if prop.address_line1:
         parts.append(prop.address_line1.strip())
     if prop.address_line2:
@@ -679,39 +688,18 @@ def _build_booking_context(booking) -> dict:
     listing = booking.listing
     nights = booking.nights or 1
 
-    # Free-cancellation deadline derived from the booking's cancellation policy.
-    # FLEXIBLE = 100% refund if cancelled 2+ days before check-in; 50% thereafter.
-    # MODERATE = 100% if 7+ days before; 50% if 2–6 days; 0% within 2 days.
-    # STRICT   = 50% if 7+ days before; 0% thereafter.
+    # Free cancellation: guests pay only the (non-refundable) platform fee online;
+    # rent, deposit and meals are settled with the host at check-in, with nothing
+    # collected in advance — so there is nothing else to refund on cancellation.
     free_cancel_text = ""
-    cancellation_policy_label = ""
-    cancellation_policy_detail = ""
+    cancellation_policy_label = "Free cancellation"
+    cancellation_policy_detail = (
+        "You can cancel any time before check-in. Rent, deposit and meals are paid "
+        "to the host at check-in — nothing is collected in advance, so you are not "
+        "charged anything else if you cancel before check-in."
+    )
     try:
-        policy = booking.cancellation_policy
-        if policy == booking.CancellationPolicy.MODERATE:
-            deadline = booking.check_in_date - timedelta(days=7)
-            free_cancel_text = deadline.strftime("%d %b %Y")
-            cancellation_policy_label = "Moderate"
-            cancellation_policy_detail = (
-                f"100% refund if cancelled before {free_cancel_text}. "
-                f"50% refund 2–6 days before check-in. No refund within 2 days."
-            )
-        elif policy == booking.CancellationPolicy.STRICT:
-            deadline = booking.check_in_date - timedelta(days=7)
-            free_cancel_text = deadline.strftime("%d %b %Y")
-            cancellation_policy_label = "Strict"
-            cancellation_policy_detail = (
-                f"50% refund if cancelled before {free_cancel_text}. "
-                f"No refund thereafter."
-            )
-        else:  # FLEXIBLE or None
-            deadline = booking.check_in_date - timedelta(days=2)
-            free_cancel_text = deadline.strftime("%d %b %Y")
-            cancellation_policy_label = "Flexible"
-            cancellation_policy_detail = (
-                f"100% refund if cancelled before {free_cancel_text}. "
-                f"50% refund after that."
-            )
+        free_cancel_text = booking.check_in_date.strftime("%d %b %Y")
     except Exception:
         logger.exception("_build_booking_context failed")
         pass
@@ -857,12 +845,11 @@ def _send_invoice_email(booking, guest, context: dict) -> None:
         return
 
     # Build template context — reuse existing context + invoice-specific fields
-    policy = booking.cancellation_policy or "flexible"
-    policy_text = {
-        "flexible": "100% refund if cancelled 2+ days before check-in; 50% refund thereafter.",
-        "moderate": "100% refund if cancelled 7+ days before; 50% refund 2–6 days before; no refund within 2 days.",
-        "strict":   "50% refund if cancelled 7+ days before check-in; no refund thereafter.",
-    }.get(policy, "")
+    policy_text = (
+        "You can cancel any time before check-in. Rent, deposit and meals are paid "
+        "to the host at check-in — nothing is collected in advance, so you are not "
+        "charged anything else if you cancel before check-in."
+    )
 
     template_context = {
         **context,
