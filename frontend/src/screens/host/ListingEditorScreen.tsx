@@ -1947,7 +1947,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             onChangeText={(v) => update({ nightlyRate: v.replace(/[^0-9]/g, '') })}
             keyboardType="number-pad"
             placeholder={rateFocused ? '' : '850'}
-            placeholderTextColor="#D4D9DF"
+            placeholderTextColor={COLORS.textMut}
             onFocus={() => setRateFocused(true)}
             onBlur={() => setRateFocused(false)}
           />
@@ -2034,11 +2034,17 @@ function PriceRow({
 }
 
 const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
-  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg, gap: 4, backgroundColor: COLORS.chip, borderRadius: RADIUS.md, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
-  rupee: { fontSize: 36, ...FONTS.bold, color: COLORS.text },
-  rateInput: { fontSize: 52, ...FONTS.extrabold, color: COLORS.text, minWidth: 100, textAlign: 'center' },
-  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 10 },
-  breakdownBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
+  rateRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginBottom: SPACING.lg, gap: 4,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.xl,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  rupee: { fontSize: 34, ...FONTS.bold, color: COLORS.primary, alignSelf: 'flex-start', paddingTop: 8 },
+  rateInput: { fontSize: 52, ...FONTS.extrabold, color: COLORS.primary, minWidth: 90, textAlign: 'center' },
+  perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 12 },
+  breakdownBox: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
   earningsBox: { backgroundColor: 'rgba(34,197,94,0.07)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   earningTitle: { fontSize: 13, ...FONTS.semibold, color: '#16A34A', marginBottom: 8 },
@@ -2046,9 +2052,9 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   tooltipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: SPACING.sm, paddingHorizontal: 2 },
   tooltipText: { flex: 1, fontSize: 12, color: COLORS.textMut, lineHeight: 17 },
   minStayGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  minStayBtn: { width: '31%', paddingVertical: 12, alignItems: 'center', borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.border },
+  minStayBtn: { width: '31%', paddingVertical: 13, alignItems: 'center', borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
   minStayBtnSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  minStayTxt: { fontSize: 13, ...FONTS.medium, color: COLORS.textSec },
+  minStayTxt: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
   minStayTxtSel: { color: '#fff', ...FONTS.semibold },
 });
 
