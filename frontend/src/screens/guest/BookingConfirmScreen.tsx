@@ -41,7 +41,7 @@ const POLICY_META: Record<PolicyKey, {
   flexible: {
     label: 'Flexible',
     tagline: 'Easy cancellations for last-minute changes.',
-    color: '#059669',
+    color: '#B85C38',
     tiers: [
       { window: '2+ days before check-in', refund: '100% refund', highlight: true },
       { window: 'Less than 2 days before check-in', refund: '50% refund', highlight: false },
@@ -174,7 +174,7 @@ const policyMeta =  POLICY_META.flexible;
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>CONFIRM AND PAY</Text>
+        <Text style={styles.headerTitle}>Confirm and pay</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -513,13 +513,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     backgroundColor: COLORS.bg, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text, letterSpacing: 1, textTransform: 'uppercase' },
+  headerTitle: { fontSize: 17, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.3 },
 
   scroll: { padding: SPACING.md, paddingBottom: 120 },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW.sm,
+    padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOW.md,
   },
 
   // Uppercase eyebrow with accent bar
