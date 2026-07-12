@@ -644,7 +644,9 @@ def search_guest_listings(
         return combined
 
     if lat is not None and lng is not None:
-        effective_radius = max(radius_km, 15.0)
+        # Early-stage: widen the floor so guests still see listings even when
+        # nothing is within a tight radius of their location.
+        effective_radius = max(radius_km, 100.0)
         delta_lat = effective_radius / 111.0
         delta_lng = effective_radius / (111.0 * math.cos(math.radians(lat)))
         geo_filter = Q(
