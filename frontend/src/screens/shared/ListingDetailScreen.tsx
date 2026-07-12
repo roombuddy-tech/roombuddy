@@ -327,6 +327,7 @@ export default function ListingDetailScreen() {
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 
   const previewSubtitle = isPreview && f ? [
+    f.city || f.locality,
     f.bedType ? `${f.bedType.charAt(0).toUpperCase()}${f.bedType.slice(1)} bed` : null,
     (f.amenities as string[])?.includes('AC') ? 'AC' : null,
     f.bathroom === 'attached' ? 'Attached bath' : f.bathroom === 'shared' ? 'Shared bath' : null,
@@ -407,13 +408,6 @@ export default function ListingDetailScreen() {
             <>
               {/* ── Title & location ── */}
               <Text style={styles.title}>{title}</Text>
-              <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={14} color={COLORS.textSec} />
-                <Text style={styles.locationTxt}>
-                  {[f.locality, f.city, f.state].filter(Boolean).join(', ')}
-                  {f.pincode ? ` – ${f.pincode}` : ''}
-                </Text>
-              </View>
               <Text style={styles.subtitle}>{previewSubtitle}</Text>
 
               {/* Badges */}
@@ -490,7 +484,7 @@ export default function ListingDetailScreen() {
                   </View>
                   {f.roomFeatures && f.roomFeatures.length > 0 && (
                     <>
-                      <Text style={styles.subSectionLabel}>Room has</Text>
+                      <Text style={styles.subSectionLabel}>What this room has</Text>
                       <View style={styles.featureRow}>
                         {f.roomFeatures.map((feat: string) => (
                           <View key={feat} style={styles.featureChip}>
@@ -508,16 +502,17 @@ export default function ListingDetailScreen() {
               {f.nearbyLandmarks && f.nearbyLandmarks.length > 0 && (
                 <>
                   <Divider />
-                  <SectionHeader title="Nearby landmarks" />
-                  {f.nearbyLandmarks.map((lm: string, i: number) => (
-                    <View key={i} style={styles.landmarkRow}>
-                      <Ionicons name="navigate-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.landmarkTxt}>{lm}</Text>
-                      {i === 0 && f.distanceToLandmark ? (
-                        <Text style={styles.landmarkDist}>{f.distanceToLandmark}</Text>
-                      ) : null}
-                    </View>
-                  ))}
+                  <SectionHeader title="Nearby" />
+                  <View style={styles.nearbyWrap}>
+                    {f.nearbyLandmarks.map((lm: string, i: number) => (
+                      <View key={i} style={styles.nearbyChip}>
+                        <Ionicons name="location" size={13} color={COLORS.primary} />
+                        <Text style={styles.nearbyChipText}>
+                          {lm}{i === 0 && f.distanceToLandmark ? ` (${f.distanceToLandmark} min walk)` : ''}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
                 </>
               )}
 
@@ -1081,9 +1076,9 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   priceUnit: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec },
   guestPrice: { fontSize: 13, color: COLORS.textSec, marginTop: 4 },
 
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  sectionAccent: { width: 3, height: 18, borderRadius: 2, backgroundColor: COLORS.primary },
-  sectionHeader: { fontSize: 17, ...FONTS.bold, color: COLORS.text },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md },
+  sectionAccent: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
+  sectionHeader: { fontSize: 13, ...FONTS.bold, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
 
   description: { fontSize: 14, color: COLORS.textSec, lineHeight: 20 },
 
@@ -1099,11 +1094,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   spaceRowIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
   spaceRowLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   spaceRowSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1 },
-  featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: SPACING.sm },
+  featureRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.sm },
 
   amenitiesGrid: { gap: 4 },
-  amenityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  amenityTxt: { fontSize: 14, color: COLORS.text },
+  amenityRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, paddingRight: SPACING.sm },
+  amenityTxt: { fontSize: 14, color: COLORS.text, ...FONTS.medium, flex: 1 },
 
   foodChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: SPACING.sm },
   foodChip: {
@@ -1251,29 +1246,25 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
-  apartmentNameTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  apartmentNameTxt: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
 
-  subSectionLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: SPACING.sm, marginTop: SPACING.sm },
+  subSectionLabel: { fontSize: 11, ...FONTS.semibold, color: COLORS.textSec, letterSpacing: 1, textTransform: 'uppercase', marginBottom: SPACING.sm, marginTop: SPACING.sm },
   featureChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     backgroundColor: COLORS.surface,
+    ...SHADOW.sm,
   },
-  featureChipTxt: { fontSize: 12, color: COLORS.textSec },
+  featureChipTxt: { fontSize: 12, color: COLORS.text, ...FONTS.medium },
+  nearbyWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  nearbyChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
+  nearbyChipText: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
 
   landmarkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   landmarkTxt: { flex: 1, fontSize: 14, color: COLORS.text },
@@ -1296,8 +1287,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
 
   amenityGroup: { marginBottom: SPACING.md },
   amenityGroupHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm },
-  amenityGroupLabel: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
-  amenityGroupGrid: { paddingLeft: SPACING.sm },
+  amenityGroupLabel: { fontSize: 11, ...FONTS.semibold, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textSec },
+  amenityGroupGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingLeft: SPACING.sm },
 
   addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: SPACING.sm },
   addressTxt: { flex: 1, fontSize: 13, color: COLORS.textSec, lineHeight: 18 },
