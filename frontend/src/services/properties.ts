@@ -73,12 +73,18 @@ export async function uploadAllPropertyPhotos(
   const total = queue.length;
 
   for (const { uri, category, isCover } of queue) {
-    try {
-      await uploadPropertyPhoto(propertyId, uri, category, isCover);
-      uploaded++;
-    } catch {
-      failed++;
+    let ok = false;
+    // One retry — large photos over a flaky connection often fail the first try.
+    for (let attempt = 0; attempt < 2 && !ok; attempt++) {
+      try {
+        await uploadPropertyPhoto(propertyId, uri, category, isCover);
+        ok = true;
+      } catch {
+        // retry once
+      }
     }
+    if (ok) uploaded++;
+    else failed++;
     onProgress?.(uploaded + failed, total);
   }
 

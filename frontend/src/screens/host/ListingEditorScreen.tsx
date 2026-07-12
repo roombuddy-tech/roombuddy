@@ -1685,7 +1685,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
         const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
         if (!result.canceled) {
           const uris = result.assets.map((a) => a.uri);
-          update({ photos: { ...form.photos, [category]: [...(form.photos[category] ?? []), ...uris] } });
+          update((prev) => ({ photos: { ...prev.photos, [category]: [...(prev.photos[category] ?? []), ...uris] } }));
         }
       } finally {
         setLoading(null);
@@ -1712,7 +1712,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
         });
         if (!result.canceled) {
           const uris = result.assets.map((a) => a.uri);
-          update({ photos: { ...form.photos, [category]: [...(form.photos[category] ?? []), ...uris] } });
+          update((prev) => ({ photos: { ...prev.photos, [category]: [...(prev.photos[category] ?? []), ...uris] } }));
         }
       } finally {
         setLoading(null);
@@ -1747,8 +1747,9 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
   };
 
   const removePhoto = (category: string, index: number) => {
-    const updated = (form.photos[category] ?? []).filter((_, i) => i !== index);
-    update({ photos: { ...form.photos, [category]: updated } });
+    update((prev) => ({
+      photos: { ...prev.photos, [category]: (prev.photos[category] ?? []).filter((_, i) => i !== index) },
+    }));
   };
 
   const isValid = (form.photos.bedroom?.length ?? 0) > 0 && (form.photos.bathroom?.length ?? 0) > 0;

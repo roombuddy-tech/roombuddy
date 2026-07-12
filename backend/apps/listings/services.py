@@ -15,8 +15,43 @@ from apps.properties.models import PropertyPhoto
 import logging
 import math
 from datetime import date as date_type
-from third_party.storage import get_photo_url
+from urllib.parse import urlparse
+from third_party.storage import get_photo_url, delete_image
 from third_party.maps import geocode_address
+
+
+def _photo_storage_key(url: str) -> str:
+    """Stable key for a photo URL — strips the domain and any presign query
+    string so a client's (signed) URL matches the stored (unsigned) URL."""
+    return urlparse(url or "").path.lstrip("/")
+
+
+def _sync_property_photos(prop, kept_photo_urls) -> None:
+    """Delete any of a property's photos that the host removed while editing.
+
+    `kept_photo_urls` is the list of photo URLs the host still wants. Any
+    existing PropertyPhoto not in that list is deleted (DB row + storage file).
+    If the cover photo was removed, the first remaining photo becomes the cover.
+    """
+    kept_keys = {_photo_storage_key(u) for u in (kept_photo_urls or [])}
+    existing = list(PropertyPhoto.objects.filter(property=prop))
+    to_delete = [p for p in existing if _photo_storage_key(p.url) not in kept_keys]
+    if not to_delete:
+        return
+
+    cover_removed = any(p.is_cover for p in to_delete)
+    for p in to_delete:
+        try:
+            delete_image(_photo_storage_key(p.url))
+        except Exception:
+            logger.exception("Failed to delete storage file for photo %s", p.id)
+        p.delete()
+
+    if cover_removed and not PropertyPhoto.objects.filter(property=prop, is_cover=True).exists():
+        nxt = PropertyPhoto.objects.filter(property=prop).order_by("sort_order", "uploaded_at").first()
+        if nxt:
+            nxt.is_cover = True
+            nxt.save(update_fields=["is_cover"])
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +245,10 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
                 prop.formatted_address = geo["formatted_address"]
                 prop.google_place_id = geo.get("google_place_id", "")
                 prop.save(update_fields=["latitude", "longitude", "formatted_address", "google_place_id"])
+
+        # Remove any photos the host deleted while editing (kept list from client).
+        if "kept_photo_urls" in data:
+            _sync_property_photos(prop, data.get("kept_photo_urls") or [])
 
         PropertyFlatmate.objects.filter(property=prop).delete()
         for fm in d.get("flatmates", []):
