@@ -163,7 +163,10 @@ export async function toggleSnooze(listingId: string): Promise<{ listing_id: str
   return res.data;
 }
 
-export async function updateListing(listingId: string, form: Parameters<typeof createListing>[0]): Promise<CreateListingResponse> {
+export async function updateListing(
+  listingId: string,
+  form: Parameters<typeof createListing>[0] & { photos?: Record<string, string[]> },
+): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
   const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge
@@ -238,6 +241,11 @@ export async function updateListing(listingId: string, form: Parameters<typeof c
       start_date: bd.startDate,
       end_date: bd.endDate,
     })),
+    // Existing (already-uploaded) photos the host still wants. The backend
+    // deletes any of the listing's photos not in this list.
+    kept_photo_urls: Object.values(form.photos ?? {})
+      .flat()
+      .filter((u) => typeof u === 'string' && u.startsWith('http')),
   };
 
   const res = await api.patch<CreateListingResponse>(ENDPOINTS.HOST.LISTING_DETAIL(listingId), body);

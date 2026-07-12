@@ -6,10 +6,20 @@ from PIL import Image
 from pathlib import Path
 from django.conf import settings
 
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except Exception:
+    logging.getLogger(__name__).warning("pillow-heif not available; HEIC uploads will fail")
+
 
 logger = logging.getLogger(__name__)
 
-MAX_IMAGE_SIZE_MB = 5
+# Generous input cap — we always re-encode to a 1200px JPEG, so the stored file
+# is small regardless. A high limit just lets high-res phone/internet photos
+# through; it's a DoS guard, not a quality gate.
+MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
 
