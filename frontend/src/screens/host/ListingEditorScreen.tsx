@@ -504,7 +504,7 @@ function Field({
       <TextInput
         style={[fldSt.input, multiline && fldSt.multiline]}
         placeholder={placeholder}
-        placeholderTextColor="#C8D0DA"
+        placeholderTextColor={COLORS.textMut}
         value={value}
         onChangeText={onChange}
         multiline={multiline}
@@ -1388,11 +1388,9 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
           >
             <View style={fmSt.modalSheet} onStartShouldSetResponder={() => true}>
               <View style={fmSt.dragHandleWrap}><View style={fmSt.dragHandle} /></View>
-              {editingId && (
-                <View style={fmSt.modalHeader}>
-                  <Text style={fmSt.modalTitle}>Edit flatmate</Text>
-                </View>
-              )}
+              <View style={fmSt.modalHeader}>
+                <Text style={fmSt.modalTitle}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
+              </View>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Field
                   label="Name"
@@ -1433,8 +1431,10 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
                   optional
                 />
-                <View style={{ marginBottom: SPACING.md, zIndex: 10 }}>
-                  <Text style={{ fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 4 }}>Hometown <Text style={{ color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text></Text>
+                <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
+                  <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 }}>
+                    Hometown <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+                  </Text>
                   <GooglePlacesInput
                     value={draft.hometown}
                     placeholder="e.g. Jaipur"
@@ -1470,33 +1470,32 @@ const makeFmStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    marginBottom: SPACING.sm,
-    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: COLORS.primaryAlpha,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    marginRight: 12,
   },
-  avatarTxt: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
-  name: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  avatarTxt: { fontSize: 15, ...FONTS.bold, color: COLORS.primary },
+  name: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   detail: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
   addCard: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: SPACING.xl,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     borderStyle: 'dashed',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.lg,
     gap: 6,
   },
   addTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.primary },
