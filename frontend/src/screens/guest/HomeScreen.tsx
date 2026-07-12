@@ -458,7 +458,7 @@ export default function HomeScreen() {
                 if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
                 switchRole('host');
               }} activeOpacity={0.7}>
-                <Ionicons name="repeat" size={16} color="#fff" />
+                <Ionicons name="repeat" size={16} color={COLORS.surface} />
                 <Text style={styles.switchBtnTxt}>Host</Text>
               </TouchableOpacity>
             )}
@@ -647,11 +647,11 @@ export default function HomeScreen() {
               <Text style={styles.hostCtaDesc}>List it on RoomBuddy and start earning every month.</Text>
               <View style={styles.hostCtaBtn}>
                 <Text style={styles.hostCtaBtnTxt}>Become a host</Text>
-                <Ionicons name="arrow-forward" size={14} color={COLORS.accent} />
+                <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
               </View>
             </View>
             <View style={styles.hostCtaIconWrap}>
-              <Ionicons name="business" size={30} color={COLORS.accent} />
+              <Ionicons name="business" size={30} color={COLORS.primary} />
             </View>
           </TouchableOpacity>
 
@@ -694,10 +694,10 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   switchBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: COLORS.accent, borderRadius: RADIUS.pill,
-    paddingHorizontal: 13, paddingVertical: 8,
+    backgroundColor: COLORS.text, borderRadius: RADIUS.pill,
+    paddingHorizontal: 14, paddingVertical: 8,
   },
-  switchBtnTxt: { fontSize: 13, color: '#fff', ...FONTS.bold },
+  switchBtnTxt: { fontSize: 13, color: COLORS.surface, ...FONTS.semibold },
   bellBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center',
@@ -800,21 +800,21 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   },
   gridCard: {
     width: '48%' as any, backgroundColor: COLORS.surface,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg,
-    overflow: 'hidden', marginBottom: SPACING.md, ...SHADOW.sm,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden', marginBottom: SPACING.md, ...SHADOW.md,
   },
   gridImgWrap: { position: 'relative' },
-  gridImg: { width: '100%', height: 130, backgroundColor: COLORS.chip },
+  gridImg: { width: '100%', height: 134, backgroundColor: COLORS.chip },
   gridBadge: {
     position: 'absolute', top: 8, left: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: RADIUS.pill,
-    paddingHorizontal: 8, paddingVertical: 3,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(20,18,16,0.5)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 9, paddingVertical: 4,
   },
   gridBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
-  gridBody: { padding: 10 },
-  gridTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 2 },
-  gridArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 6 },
+  gridBody: { padding: 12 },
+  gridTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 3 },
+  gridArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 8 },
   gridMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6 },
   gridMetaStrong: { fontSize: 12, color: COLORS.text, ...FONTS.semibold },
   gridMetaMuted: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium, flexShrink: 1 },
@@ -862,16 +862,16 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   // Host CTA
   hostCta: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.accentAlpha, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.lg,
     padding: SPACING.lg, marginBottom: SPACING.lg, gap: SPACING.md,
   },
   hostCtaTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text, marginBottom: 3 },
   hostCtaDesc: { fontSize: 13, color: COLORS.textSec, lineHeight: 19, marginBottom: 10 },
   hostCtaBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  hostCtaBtnTxt: { fontSize: 14, color: COLORS.accent, ...FONTS.bold },
+  hostCtaBtnTxt: { fontSize: 14, color: COLORS.primary, ...FONTS.bold },
   hostCtaIconWrap: {
     width: 60, height: 60, borderRadius: 30,
-    backgroundColor: COLORS.accentSoft,
+    backgroundColor: COLORS.surface,
     justifyContent: 'center', alignItems: 'center',
   },
 
