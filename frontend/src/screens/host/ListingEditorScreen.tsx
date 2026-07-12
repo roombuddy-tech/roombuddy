@@ -675,11 +675,12 @@ const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    backgroundColor: COLORS.chip,
+    backgroundColor: COLORS.surface,
   },
   triggerTxt: { fontSize: 15, color: COLORS.text },
   overlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
@@ -2082,20 +2083,22 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         <Text style={stSt.title}>House Rules</Text>
         <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
-        <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: 4 }}>
+        <Text style={{ fontSize: 15, ...FONTS.bold, color: COLORS.text, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
           Common rules
         </Text>
 
-        <RuleRow label="No smoking inside the apartment" value={form.noSmoking} onChange={(v) => update({ noSmoking: v })} />
-        <RuleRow label="No loud music after 10 PM" value={form.noLoudMusic} onChange={(v) => update({ noLoudMusic: v })} />
-        <RuleRow label="No pets allowed" value={form.noPets} onChange={(v) => update({ noPets: v })} />
-        <RuleRow label="No parties or events" value={form.noParties} onChange={(v) => update({ noParties: v })} />
-        <RuleRow label="Guests must remove shoes indoors" value={form.shoesOff} onChange={(v) => update({ shoesOff: v })} />
-        <RuleRow label="Keep kitchen clean after use" value={form.kitchenClean} onChange={(v) => update({ kitchenClean: v })} />
-        <RuleRow label="No alcohol in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
-        <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} noBorder />
+        <View style={stSt.rulesCard}>
+          <RuleRow label="No smoking inside the apartment" value={form.noSmoking} onChange={(v) => update({ noSmoking: v })} />
+          <RuleRow label="No loud music after 10 PM" value={form.noLoudMusic} onChange={(v) => update({ noLoudMusic: v })} />
+          <RuleRow label="No pets allowed" value={form.noPets} onChange={(v) => update({ noPets: v })} />
+          <RuleRow label="No parties or events" value={form.noParties} onChange={(v) => update({ noParties: v })} />
+          <RuleRow label="Guests must remove shoes indoors" value={form.shoesOff} onChange={(v) => update({ shoesOff: v })} />
+          <RuleRow label="Keep kitchen clean after use" value={form.kitchenClean} onChange={(v) => update({ kitchenClean: v })} />
+          <RuleRow label="No alcohol in common areas" value={form.noAlcohol} onChange={(v) => update({ noAlcohol: v })} />
+          <RuleRow label="Lock the door when leaving" value={form.lockDoor} onChange={(v) => update({ lockDoor: v })} noBorder />
+        </View>
 
-        <View style={{ marginTop: SPACING.md }} />
+        <View style={{ marginTop: SPACING.lg }} />
         <TimePicker
           label="Check-in time"
           value={form.checkInTime}
@@ -2425,6 +2428,12 @@ const makeStStyles = (COLORS: ThemeColors) => StyleSheet.create({
   title: { fontSize: 26, ...FONTS.bold, color: COLORS.text, marginBottom: 6 },
   sub: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.sm, lineHeight: 20 },
   hint: { fontSize: 12, color: COLORS.textMut, marginTop: 6, marginLeft: 2, lineHeight: 17 },
+  rulesCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
