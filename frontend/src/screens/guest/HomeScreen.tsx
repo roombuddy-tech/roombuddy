@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -169,9 +170,10 @@ export default function HomeScreen() {
     return marks;
   };
 
-  const canSearch = query.trim().length > 0 && checkIn && checkOut;
+  // Dates are optional — a location (typed or from GPS) is enough to search.
+  const canSearch = query.trim().length > 0 || (searchLat != null && searchLng != null);
 
-  const doSearch = useCallback(async () => {
+  const doSearch = useCallback(async (override?: { lat?: number; lng?: number; q?: string }) => {
     setLoading(true);
     setHasSearched(true);
     setShowSearchForm(false);
@@ -179,13 +181,16 @@ export default function HomeScreen() {
     setShowCalendar(false);
     const version = ++searchVersion.current;
     try {
+      const effQuery = override?.q ?? query;
+      const effLat = override?.lat ?? searchLat;
+      const effLng = override?.lng ?? searchLng;
       const params: { q?: string; check_in?: string; check_out?: string; lat?: number; lng?: number } = {};
-      if (query.trim()) params.q = query.trim();
+      if (effQuery.trim()) params.q = effQuery.trim();
       if (checkIn) params.check_in = checkIn;
       if (checkOut) params.check_out = checkOut;
-      if (searchLat != null && searchLng != null) {
-        params.lat = searchLat;
-        params.lng = searchLng;
+      if (effLat != null && effLng != null) {
+        params.lat = effLat;
+        params.lng = effLng;
       }
       const data = await searchListings(Object.keys(params).length ? params : undefined);
       if (version === searchVersion.current) setListings(data.results);
@@ -195,6 +200,23 @@ export default function HomeScreen() {
       if (version === searchVersion.current) setLoading(false);
     }
   }, [query, checkIn, checkOut, searchLat, searchLng]);
+
+  const searchNearby = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Location needed', 'Allow location access to find rooms near you.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setSearchLat(loc.coords.latitude);
+      setSearchLng(loc.coords.longitude);
+      setQuery('Nearby');
+      doSearch({ lat: loc.coords.latitude, lng: loc.coords.longitude, q: 'Nearby' });
+    } catch {
+      Alert.alert('Error', "Couldn't get your location. Please try again.");
+    }
+  }, [doSearch]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -218,6 +240,12 @@ export default function HomeScreen() {
           if (!checkIn) setShowCalendar(true);
         }}
       />
+
+      {/* Use current location */}
+      <TouchableOpacity style={styles.nearMeBtn} activeOpacity={0.7} onPress={searchNearby}>
+        <Ionicons name="navigate" size={16} color={COLORS.primary} />
+        <Text style={styles.nearMeTxt}>Use my current location</Text>
+      </TouchableOpacity>
 
       {/* Date fields */}
       <View style={styles.dateRow}>
@@ -280,12 +308,13 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
         activeOpacity={0.85}
-        onPress={doSearch}
+        onPress={() => doSearch()}
         disabled={!canSearch}
       >
         <Ionicons name="search" size={16} color="#fff" />
-        <Text style={styles.searchBtnTxt}>{isEditMode ? 'Update Search' : 'Search Rooms'}</Text>
+        <Text style={styles.searchBtnTxt}>{isEditMode ? 'Update search' : 'Search rooms'}</Text>
       </TouchableOpacity>
+      <Text style={styles.searchHint}>Dates are optional — search a city to start browsing.</Text>
     </View>
   );
 
@@ -716,7 +745,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     fontSize: 13, color: COLORS.textSec, ...FONTS.semibold, marginBottom: 4,
   },
 
-  dateRow: { flexDirection: 'row', gap: SPACING.md },
+  dateRow: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.lg },
   dateBox: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -739,6 +768,14 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   },
   searchBtnDisabled: { opacity: 0.35 },
   searchBtnTxt: { color: '#fff', fontSize: 16, ...FONTS.bold },
+  searchHint: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: SPACING.sm },
+  nearMeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.pill,
+    paddingHorizontal: 14, paddingVertical: 9, marginTop: -SPACING.xs,
+  },
+  nearMeTxt: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
 
   // ── Results ──
   listPad: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl },
