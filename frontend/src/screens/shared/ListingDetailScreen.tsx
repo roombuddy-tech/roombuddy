@@ -268,7 +268,7 @@ export default function ListingDetailScreen() {
   const getMarkedDates = () => {
     const marks: Record<string, any> = {};
     if (selectingStart) {
-      marks[selectingStart] = { startingDay: true, endingDay: true, color: COLORS.accent, textColor: '#fff' };
+      marks[selectingStart] = { startingDay: true, endingDay: true, color: COLORS.primary, textColor: '#fff' };
     }
     for (const range of blockedDates) {
       const s = new Date(range.start_date);
@@ -419,7 +419,7 @@ export default function ListingDetailScreen() {
               {/* Badges */}
               <View style={styles.badgeRow}>
                 <View style={styles.badge}>
-                  <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
+                  <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} />
                   <Text style={styles.badgeText}>Verified</Text>
                 </View>
               </View>
@@ -1109,8 +1109,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   foodChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 9,
-    borderRadius: RADIUS.md, backgroundColor: COLORS.primaryAlpha,
-    borderWidth: 1, borderColor: 'rgba(13,115,119,0.15)',
+    borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha,
   },
   foodChipText: { fontSize: 13, color: COLORS.primary, ...FONTS.medium },
   foodDesc: { fontSize: 13, color: COLORS.textSec, marginTop: SPACING.sm, lineHeight: 20 },
@@ -1238,7 +1237,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   stickyPrice: { fontSize: 22, ...FONTS.bold, color: COLORS.text },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyBookBtn: {
-    backgroundColor: COLORS.accent, paddingVertical: 13, paddingHorizontal: 28,
+    backgroundColor: COLORS.primary, paddingVertical: 13, paddingHorizontal: 28,
     borderRadius: RADIUS.md,
   },
   stickyBookBtnText: { color: '#fff', fontSize: 15, ...FONTS.semibold },
@@ -1317,13 +1316,13 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   customRuleTxt: { fontSize: 13, color: COLORS.text, lineHeight: 20 },
 
   reviewsHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  breakdownWrap: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOW.md },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   breakdownLabel: { width: 116, fontSize: 13, color: COLORS.textSec },
   breakdownTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: COLORS.border, overflow: 'hidden' },
   breakdownFill: { height: 5, borderRadius: 3, backgroundColor: '#F59E0B' },
   breakdownVal: { width: 30, fontSize: 13, ...FONTS.semibold, color: COLORS.text, textAlign: 'right' as const },
-  reviewCard: { width: 280, backgroundColor: COLORS.bg, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  reviewCard: { width: 280, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, ...SHADOW.md },
   reviewCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   reviewerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, alignItems: 'center', justifyContent: 'center' },
   reviewerInitials: { fontSize: 14, ...FONTS.bold, color: COLORS.primary },
