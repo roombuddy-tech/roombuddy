@@ -414,16 +414,16 @@ function Chip({
 const makeCpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: RADIUS.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: COLORS.border,
     marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.bg,
+    marginBottom: 10,
+    backgroundColor: COLORS.surface,
   },
   sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
+  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
   lblSel: { color: '#fff' },
 });
 
@@ -445,7 +445,7 @@ function AmenityChip({
       activeOpacity={0.7}
       style={[acSt.chip, selected && acSt.sel]}
     >
-      <Ionicons name={iconName} size={13} color={selected ? '#fff' : COLORS.textSec} style={{ marginRight: 5 }} />
+      <Ionicons name={iconName} size={14} color={selected ? '#fff' : COLORS.primary} style={{ marginRight: 6 }} />
       <Text style={[acSt.lbl, selected && acSt.lblSel]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -455,17 +455,17 @@ const makeAcStyles = (COLORS: ThemeColors) => StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: RADIUS.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: COLORS.border,
     marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.bg,
+    marginBottom: 10,
+    backgroundColor: COLORS.surface,
   },
   sel: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec },
+  lbl: { fontSize: 13, ...FONTS.semibold, color: COLORS.text },
   lblSel: { color: '#fff' },
 });
 
@@ -1590,17 +1590,19 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
       ))}
 
       <SectionLabel label="Food options for guests" optional />
-      <RuleRow
-        label="Guests can use the kitchen"
-        value={form.kitchenAccess}
-        onChange={(v) => update({ kitchenAccess: v })}
-      />
-      <RuleRow
-        label="I can provide home-cooked meals (extra charge)"
-        value={form.homeCooked}
-        onChange={(v) => update({ homeCooked: v })}
-        noBorder
-      />
+      <View style={amSt.foodCard}>
+        <RuleRow
+          label="Guests can use the kitchen"
+          value={form.kitchenAccess}
+          onChange={(v) => update({ kitchenAccess: v })}
+        />
+        <RuleRow
+          label="I can provide home-cooked meals (extra charge)"
+          value={form.homeCooked}
+          onChange={(v) => update({ homeCooked: v })}
+          noBorder
+        />
+      </View>
 
       {form.homeCooked && (
         <View style={amSt.mealBox}>
@@ -1633,12 +1635,19 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
 }
 
 const makeAmStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  foodCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
   mealBox: {
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginTop: SPACING.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
 });
 
