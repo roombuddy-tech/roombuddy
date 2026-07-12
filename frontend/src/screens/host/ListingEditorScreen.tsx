@@ -1770,7 +1770,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                 )}
                 {hasPhotos && (
                   <View style={phSt.doneBadge}>
-                    <Ionicons name="checkmark" size={11} color={COLORS.success} />
+                    <Ionicons name="checkmark" size={11} color={COLORS.primary} />
                     <Text style={phSt.doneTxt}>{photos.length} photo{photos.length > 1 ? 's' : ''}</Text>
                   </View>
                 )}
@@ -1823,7 +1823,7 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                   onPress={() => openSourcePicker(cat.key)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="image-outline" size={18} color={COLORS.textMut} />
+                  <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
                   <Text style={phSt.emptyPromptTxt}>Tap to add photos</Text>
                 </TouchableOpacity>
               )}
@@ -1841,21 +1841,22 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   tipTxt: { fontSize: 12, color: COLORS.primaryDark, lineHeight: 18 },
 
   categoryCard: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
     backgroundColor: COLORS.surface,
     overflow: 'hidden',
+    ...SHADOW.md,
   },
-  categoryCardFilled: { borderColor: COLORS.primary, borderWidth: 1.5 },
-  categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 12, gap: 8 },
+  categoryCardFilled: { borderColor: COLORS.primary },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: 14, gap: 8 },
   categoryIcon: { fontSize: 18 },
-  categoryName: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
-  requiredBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip, borderWidth: 1, borderColor: COLORS.border },
+  categoryName: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  requiredBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
-  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentSoft },
-  doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.success },
+  doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
+  doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
   addBtn: {
     width: 34,
     height: 34,
@@ -1879,12 +1880,14 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     gap: 8,
     marginHorizontal: SPACING.md,
     marginBottom: SPACING.md,
-    paddingVertical: 16,
-    borderRadius: RADIUS.sm,
-    borderWidth: 0,
-    backgroundColor: COLORS.warm,
+    paddingVertical: 24,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    backgroundColor: 'transparent',
   },
-  emptyPromptTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
+  emptyPromptTxt: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
 
 });
 
