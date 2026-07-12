@@ -2356,19 +2356,24 @@ function StepReview({
         </View>
       </TouchableOpacity>
 
-      {SUMMARY_ROWS.map((row) => (
-        <View key={row.label} style={rvSt.summaryRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={rvSt.summaryLabel}>{row.label}</Text>
-            <Text style={rvSt.summaryValue} numberOfLines={2}>
-              {row.value || '—'}
-            </Text>
+      <View style={rvSt.summaryCard}>
+        {SUMMARY_ROWS.map((row, i) => (
+          <View
+            key={row.label}
+            style={[rvSt.summaryRow, i === SUMMARY_ROWS.length - 1 && { borderBottomWidth: 0 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={rvSt.summaryLabel}>{row.label}</Text>
+              <Text style={rvSt.summaryValue} numberOfLines={2}>
+                {row.value || '—'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => goToStep(row.step)} style={rvSt.editBtn}>
+              <Text style={rvSt.editTxt}>Edit</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => goToStep(row.step)} style={rvSt.editBtn}>
-            <Text style={rvSt.editTxt}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+        ))}
+      </View>
 
       <TouchableOpacity
         style={[rvSt.publishBtn, submitting && { opacity: 0.7 }]}
@@ -2401,7 +2406,8 @@ function StepReview({
 }
 
 const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.sm },
+  previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.md },
+  summaryCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.md },
   coverPhoto: { width: '100%', height: 150, borderRadius: 0 },
   photoPlaceholder: { height: 150, backgroundColor: COLORS.warm, borderRadius: 0, justifyContent: 'center', alignItems: 'center' },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
