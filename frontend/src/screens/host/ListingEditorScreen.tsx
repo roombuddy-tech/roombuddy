@@ -731,16 +731,19 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       </View>
 
       {[
-        { icon: 'create-outline' as const, label: 'Property & room details' },
-        { icon: 'people-outline' as const, label: 'Flatmate profiles' },
-        { icon: 'camera-outline' as const, label: 'Photos' },
-        { icon: 'pricetag-outline' as const, label: 'Pricing & availability' },
+        { icon: 'create-outline' as const, label: 'Property & room details', desc: 'Address, room type & amenities' },
+        { icon: 'people-outline' as const, label: 'Flatmate profiles', desc: 'Who else lives there' },
+        { icon: 'camera-outline' as const, label: 'Photos', desc: 'Show off your space' },
+        { icon: 'pricetag-outline' as const, label: 'Pricing & availability', desc: 'Set your rate & calendar' },
       ].map((s) => (
         <View key={s.label} style={wlSt.card}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
             <Ionicons name={s.icon} size={20} color={COLORS.primary} />
           </View>
-          <Text style={{ fontSize: 15, ...FONTS.medium, color: COLORS.text }}>{s.label}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text }}>{s.label}</Text>
+            <Text style={{ fontSize: 13, color: COLORS.textSec, marginTop: 2 }}>{s.desc}</Text>
+          </View>
         </View>
       ))}
 
@@ -760,12 +763,10 @@ const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
     backgroundColor: COLORS.surface,
-    ...SHADOW.sm,
+    ...SHADOW.md,
   },
   cta: {
     backgroundColor: COLORS.primary,
