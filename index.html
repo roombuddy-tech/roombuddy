@@ -3,8 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RoomBuddy — Stay in a real home, not a hotel</title>
-  <meta name="description" content="Short-term furnished rooms in verified shared homes across India. Kitchen access, friendly flatmates, Aadhaar-verified hosts. Starting at ₹500/night.">
+  <title>RoomBuddy — Rooms in Bangalore, no brokerage · Deal directly with owners</title>
+  <meta name="description" content="Find furnished rooms in Bangalore with no brokerage and no advance rent locked in. Talk to the owner directly for just ₹29, free cancellation, Aadhaar-verified hosts. From ₹500/night.">
+  <meta name="keywords" content="rooms in Bangalore, no brokerage rooms Bangalore, room for rent Bangalore, no broker, furnished room, sublet Bangalore, PG alternative, Koramangala, Indiranagar, HSR Layout">
+  <!-- Open Graph / social share -->
+  <meta property="og:title" content="RoomBuddy — Rooms in Bangalore, no brokerage">
+  <meta property="og:description" content="No brokerage. No advance rent. Talk to the owner directly for ₹29 and cancel free anytime. Furnished rooms in real shared homes across Bangalore.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="RoomBuddy — Rooms in Bangalore, no brokerage">
+  <meta name="twitter:description" content="No brokerage. No advance rent. Deal directly with owners for ₹29. Free cancellation.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -124,6 +132,12 @@
       max-width: 460px; margin-bottom: 34px;
     }
     .hero-sub strong { color: rgba(255,255,255,.95); font-weight: 600; }
+    .hero-chips { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 30px; }
+    .hero-chip {
+      font-size: 13px; font-weight: 600; color: #fff;
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14);
+      padding: 7px 13px; border-radius: 999px; white-space: nowrap;
+    }
     .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px; }
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
@@ -560,12 +574,57 @@
     }
     @media (max-width: 600px) {
       .why-grid { grid-template-columns: 1fr; }
+      .value-grid { grid-template-columns: 1fr; }
+      .save-band { flex-direction: column; text-align: center; gap: 18px; }
       .nav-links a:not(.nav-cta) { display: none; }
     }
     @media (prefers-reduced-motion: reduce) {
       .phone { animation: none; }
       [data-r] { transition: none; opacity: 1; transform: none; }
     }
+
+    /* VALUE / no-brokerage band */
+    #value { padding: 92px 0; background: var(--parchment-light); }
+    .value-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 18px; margin-top: 40px;
+    }
+    .value-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 26px 26px 24px;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .value-check {
+      flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px;
+      background: rgba(217,112,85,.12);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .value-card h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 700;
+      font-size: 19px; color: var(--teal); margin-bottom: 5px; line-height: 1.25;
+    }
+    .value-card p { font-size: 14.5px; color: var(--text-muted); line-height: 1.55; }
+    .save-band {
+      margin-top: 40px; background: var(--teal); border-radius: var(--r-lg);
+      padding: 30px 40px; display: flex; align-items: center;
+      justify-content: space-between; gap: 28px; flex-wrap: wrap;
+    }
+    .save-band .save-text { color: #fff; }
+    .save-band .save-text h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 800; font-size: 26px;
+      line-height: 1.2; margin-bottom: 6px;
+    }
+    .save-band .save-text h3 em { color: var(--coral); font-style: normal; }
+    .save-band .save-text p { color: rgba(255,255,255,.78); font-size: 15px; }
+    .save-compare { display: flex; align-items: center; gap: 20px; }
+    .save-pill { text-align: center; }
+    .save-pill .amt { font-family: 'Baloo 2', cursive; font-weight: 800; font-size: 30px; line-height: 1; }
+    .save-pill .lbl { font-size: 12.5px; margin-top: 6px; letter-spacing: .02em; }
+    .save-pill.broker .amt { color: rgba(255,255,255,.55); text-decoration: line-through; }
+    .save-pill.broker .lbl { color: rgba(255,255,255,.5); }
+    .save-pill.us .amt { color: var(--coral); }
+    .save-pill.us .lbl { color: #fff; }
+    .save-vs { color: rgba(255,255,255,.4); font-size: 15px; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -595,13 +654,20 @@
         Now live in Bangalore · more cities coming soon
       </div>
       <h1 class="hero-h1">
-        Stay in a real home,<br>not a <em>hotel</em>.
+        Rooms in Bangalore,<br><em>no brokerage</em>.
       </h1>
       <p class="hero-sub">
-        India's hotels cost a fortune. PGs are a gamble.
+        Skip the brokers and their fat commissions.
         RoomBuddy puts you in a <strong>furnished room in a real shared home</strong> —
-        kitchen, flatmates, WiFi — from ₹500 a night. No brokerage, no lock-in.
+        kitchen, flatmates, WiFi — from ₹500 a night.
+        <strong>No brokerage, no advance rent</strong> — talk to the owner directly for just ₹29.
       </p>
+      <div class="hero-chips">
+        <span class="hero-chip">✅ Zero brokerage</span>
+        <span class="hero-chip">✅ No advance rent</span>
+        <span class="hero-chip">✅ Owner contact for ₹29</span>
+        <span class="hero-chip">✅ Free cancellation</span>
+      </div>
       <div class="hero-btns">
         <a href="#download" class="btn-primary">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
@@ -781,6 +847,72 @@
         </div>
         <h3 class="why-h3">Verified end to end</h3>
         <p class="why-body">Every guest and host is Aadhaar-verified. Secure Razorpay payments, in-app chat, and real human support if anything goes wrong.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE / NO BROKERAGE -->
+<section id="value">
+  <div class="section-inner">
+    <div class="why-header" data-r>
+      <div class="section-eyebrow">No brokers. No games.</div>
+      <h2 class="section-h2">Skip the broker.<br>Keep your money.</h2>
+      <p class="section-sub">Renting a room in India means brokers, fat commissions and months of advance. RoomBuddy cuts all of it out — you deal with the owner directly.</p>
+    </div>
+    <div class="value-grid">
+      <div class="value-card" data-r>
+        <div class="value-check">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
+        </div>
+        <div>
+          <h3>Zero brokerage</h3>
+          <p>No middleman, no ₹10,000–15,000 commission. The money stays in your pocket where it belongs.</p>
+        </div>
+      </div>
+      <div class="value-card" data-r>
+        <div class="value-check">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
+        </div>
+        <div>
+          <h3>No advance rent locked in</h3>
+          <p>No months of deposit held hostage. Pay your rent to the host directly — on your terms, not a broker's.</p>
+        </div>
+      </div>
+      <div class="value-card" data-r>
+        <div class="value-check">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
+        </div>
+        <div>
+          <h3>Talk to the owner for just ₹29</h3>
+          <p>Unlock the host's number and message them directly for ₹29 — instead of ₹10,000 to a broker for the same intro.</p>
+        </div>
+      </div>
+      <div class="value-card" data-r>
+        <div class="value-check">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
+        </div>
+        <div>
+          <h3>Free cancellation</h3>
+          <p>Plans change. Cancel anytime before check-in at no cost — no penalties, no fine print.</p>
+        </div>
+      </div>
+    </div>
+    <div class="save-band" data-r>
+      <div class="save-text">
+        <h3>Same room. <em>₹9,971 less.</em></h3>
+        <p>Why pay a broker thousands for an introduction you can make yourself?</p>
+      </div>
+      <div class="save-compare">
+        <div class="save-pill broker">
+          <div class="amt">₹10,000+</div>
+          <div class="lbl">Broker fee</div>
+        </div>
+        <div class="save-vs">vs</div>
+        <div class="save-pill us">
+          <div class="amt">₹29</div>
+          <div class="lbl">RoomBuddy</div>
+        </div>
       </div>
     </div>
   </div>
