@@ -60,8 +60,19 @@ module.exports = {
         "expo-location",
         {
           locationWhenInUsePermission:
-            "RoomBuddy uses your location to show rooms available near you — for example, listings within a few kilometres of where you are — and to set your city when you search for a stay. Location is only used while you are using the app and is never shared with hosts.",
+            "RoomBuddy uses your location to show rooms available near you — for example, listings within a few kilometres of where you are — and to set your city when you search for a stay. Your location is used only while you are using the app and is never shared with hosts.",
           isAndroidBackgroundLocationEnabled: false,
+        },
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "RoomBuddy needs access to your photos so you can upload pictures of your room when creating a listing — for example, selecting photos of the bedroom and bathroom that guests see before booking.",
+          cameraPermission:
+            "RoomBuddy uses your camera so you can take photos of your room while creating a listing — for example, snapping a picture of the bedroom or bathroom to add to your listing so guests can see it before booking.",
+          // We only capture photos, never audio/video.
+          microphonePermission: false,
         },
       ],
     ],
