@@ -1,4 +1,5 @@
 import logging
+import os
 import secrets
 import string
 from datetime import date, timedelta
@@ -782,13 +783,24 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
         # (platform_fee, pay_to_host_directly, meal_total, security_deposit …)
         # is present and consistent across email/PDF.
         base = _build_booking_context(booking)
+        ctx = {
+            **base,
+            "recipient_name": _user_first_name(booking.guest_user),
+        }
+
+        if accepted:
+            flow_id = os.getenv(
+                "MSG91_BOOKING_ACCEPTED_FLOW_ID", "6a551202ea4a6247dd00d053"
+            )
+            if flow_id:
+                property_name = (base.get("property_name") or "your stay")[:30]
+                ctx["msg91_flow_id"] = flow_id
+                ctx["msg91_variables"] = {"var": property_name}
+
         dispatch(
             event_type=event,
             recipients=[booking.guest_user],
-            context={
-                **base,
-                "recipient_name": _user_first_name(booking.guest_user),
-            },
+            context=ctx,
             idempotency_event_id=f"host_respond:{booking.id}:{'accept' if accepted else 'reject'}",
         )
 
