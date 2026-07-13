@@ -47,17 +47,11 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your camera</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your location</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your location</string>
+    <string>RoomBuddy uses your camera so you can take photos of your room while creating a listing — for example, snapping a picture of the bedroom or bathroom to add to your listing so guests can see it before booking.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your location</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <string>RoomBuddy uses your location to show rooms available near you — for example, listings within a few kilometres of where you are — and to set your city when you search for a stay. Your location is used only while you are using the app and is never shared with hosts.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>RoomBuddy needs access to your photos to upload room photos for your listing.</string>
+    <string>RoomBuddy needs access to your photos so you can upload pictures of your room when creating a listing — for example, selecting photos of the bedroom and bathroom that guests see before booking.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UILaunchStoryboardName</key>
