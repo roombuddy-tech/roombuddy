@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { ENDPOINTS } from '../constants/endpoints';
 import api, { setAuthFailureHandler } from '../services/api';
+import { registerForPushNotificationsAsync, unregisterPushToken } from '../services/push';
 import { storage } from '../services/storage';
 
 type UserRole = 'guest' | 'host';
@@ -47,6 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setAuthFailureHandler(forceLogout);
   }, [forceLogout]);
+
+  // Register this device for push notifications once the user is authenticated.
+  useEffect(() => {
+    if (state.isAuthenticated) {
+      registerForPushNotificationsAsync();
+    }
+  }, [state.isAuthenticated]);
 
   // Session restore: if we have a token, fetch fresh profile from backend
   useEffect(() => {
@@ -116,6 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // Deactivate the push token while we still have a valid auth token.
+    await unregisterPushToken();
     await storage.clearTokens();
     setState({
       isLoading: false,

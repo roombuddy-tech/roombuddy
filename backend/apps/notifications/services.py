@@ -29,6 +29,7 @@ from django.template import Context, Template
 from django.utils import timezone
 
 from .models import (
+    DeviceToken,
     EventType,
     Notification,
     NotificationChannel,
@@ -112,6 +113,14 @@ def _enqueue_one(
         # MSG91-specific extras come from the dispatch context
         metadata["msg91_flow_id"] = context.get("msg91_flow_id", "")
         metadata["msg91_variables"] = context.get("msg91_variables", {})
+    if channel == NotificationChannel.PUSH:
+        # Data the app reads on tap to deep-link to the right screen.
+        metadata["push_data"] = {
+            "event_type": event_type,
+            "booking_id": context.get("booking_id", ""),
+            "conversation_id": context.get("conversation_id", ""),
+            "listing_id": context.get("listing_id", ""),
+        }
 
     now = timezone.now()
     if channel == NotificationChannel.IN_APP:
@@ -150,9 +159,13 @@ def _enqueue_one(
 def _render_file_template(event_type: str, channel: str, kind: str, context: dict) -> str:
     """
     Convention: notifications/<event_underscored>/<channel>.<kind>
+
+    Push reuses the in-app templates (same short title/body), so we don't
+    duplicate a push.* file for every event.
     """
     event_path = event_type.replace(".", "_")
-    template_name = f"notifications/{event_path}/{channel}.{kind}"
+    template_channel = "in_app" if channel == NotificationChannel.PUSH else channel
+    template_name = f"notifications/{event_path}/{template_channel}.{kind}"
     return render_to_string(template_name, context)
 
 def _user_wants_channel(user, event_type: str, channel: str) -> bool:
@@ -176,8 +189,16 @@ def _resolve_recipient_address(user, channel: str) -> Optional[str]:
     if channel == NotificationChannel.IN_APP:
         return str(getattr(user, "id", "")) or None
     if channel == NotificationChannel.PUSH:
-        # implement once push tokens are stored
-        return None
+        # Send to the user's most-recently-registered active device.
+        # (v0: one device per user is the common case.)
+        token = (
+            DeviceToken.objects
+            .filter(user=user, is_active=True)
+            .order_by("-updated_at")
+            .values_list("token", flat=True)
+            .first()
+        )
+        return token or None
     return None
 
 

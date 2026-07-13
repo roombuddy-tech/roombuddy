@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import (
+    DeviceToken,
     EventType,
     Notification,
     NotificationChannel,
@@ -100,3 +101,37 @@ class NotificationPreferencesView(APIView):
             )
 
         return Response({"updated": len(prefs)})
+
+class DeviceTokenView(APIView):
+    """
+    POST /api/notifications/device-token/   — register/refresh this device's push token
+        body: { "token": "ExponentPushToken[...]", "platform": "ios" | "android" }
+    DELETE /api/notifications/device-token/ — deactivate a token (on logout)
+        body: { "token": "ExponentPushToken[...]" }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = (request.data.get("token") or "").strip()
+        platform = (request.data.get("platform") or "").strip()[:16]
+        if not token:
+            return Response({"error": "token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # A token is unique to a device; reassign it to the current user in case
+        # a different account previously logged in on this phone.
+        DeviceToken.objects.update_or_create(
+            token=token,
+            defaults={
+                "user": request.user,
+                "platform": platform,
+                "is_active": True,
+                "last_used_at": timezone.now(),
+            },
+        )
+        return Response({"registered": True})
+
+    def delete(self, request):
+        token = (request.data.get("token") or "").strip()
+        if token:
+            DeviceToken.objects.filter(token=token, user=request.user).update(is_active=False)
+        return Response({"deactivated": True})
