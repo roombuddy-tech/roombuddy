@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CHANNELS = [
     NotificationChannel.EMAIL,
     NotificationChannel.SMS,
+    NotificationChannel.PUSH,
     NotificationChannel.IN_APP,
 ]
 

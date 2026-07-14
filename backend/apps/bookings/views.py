@@ -216,19 +216,19 @@ class HostRespondBookingView(APIView):
         if action not in ("accept", "decline"):
             return Response(
                 {"detail": "action must be 'accept' or 'decline'."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=http_status.HTTP_400_BAD_REQUEST,
             )
         try:
             booking = Booking.objects.select_related(
                 "listing", "guest_user", "host_user"
             ).get(id=booking_id, host_user=request.user)
         except Booking.DoesNotExist:
-            return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Booking not found."}, status=http_status.HTTP_404_NOT_FOUND)
 
         if booking.status != Booking.Status.PENDING:
             return Response(
                 {"detail": f"Cannot respond to a booking with status '{booking.status}'."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=http_status.HTTP_400_BAD_REQUEST,
             )
         try:
             if action == "accept":
@@ -239,4 +239,4 @@ class HostRespondBookingView(APIView):
             return Response({"status": booking.status})
         except Exception:
             logger.exception("HostRespondBookingView failed booking_id=%s", booking_id)
-            return Response({"detail": "Failed to process response."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Failed to process response."}, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
