@@ -12,6 +12,7 @@ paid to hosts manually. When you switch to Phase 2, extend `create_order` to
 include `transfers=[...]`.
 """
 import logging
+import os
 from datetime import timedelta
 from decimal import Decimal
 
@@ -743,6 +744,49 @@ def _build_booking_context(booking) -> dict:
         "msg91_variables": {},
     }
 
+DLT_VAR_MAX_LEN = 30
+
+# Words that read badly if a truncated property name ends on them —
+# "your booking at Cozy Private Room in is accepted".
+_SMS_TRAILING_FILLER = {"in", "at", "on", "the", "a", "an", "near", "with", "and", "for", "by", "of"}
+
+
+def _sms_var(value) -> str:
+    """Fit a value into a DLT alphanumeric variable (30 char cap).
+
+    Cuts back to the last whole word, then drops any dangling filler word,
+    so the SMS reads as a sentence rather than a hard truncation.
+    """
+    text = " ".join(str(value or "").split())
+    if len(text) <= DLT_VAR_MAX_LEN:
+        return text
+
+    clipped = text[:DLT_VAR_MAX_LEN]
+    head, sep, _ = clipped.rpartition(" ")
+    result = head if (sep and len(head) >= 10) else clipped
+
+    words = result.split()
+    while len(words) > 1 and words[-1].lower().strip(",-") in _SMS_TRAILING_FILLER:
+        words.pop()
+    return " ".join(words).rstrip(" ,-")
+
+
+def _sms_ctx(env_key: str, default_flow_id: str, variables: dict) -> dict:
+    """MSG91 extras for dispatch(), for events with a DLT-approved template.
+
+    Variable names must match those defined on the MSG91 template exactly.
+    Returns {} when no flow id is configured, which simply means no SMS
+    goes out for that event.
+    """
+    flow_id = os.getenv(env_key, default_flow_id)
+    if not flow_id:
+        return {}
+    return {
+        "msg91_flow_id": flow_id,
+        "msg91_variables": {k: _sms_var(v) for k, v in variables.items()},
+    }
+
+
 def _notify_payment_succeeded(booking, payment) -> None:
     base = _build_booking_context(booking)
     guest = booking.guest_user
@@ -768,6 +812,14 @@ def _notify_payment_succeeded(booking, payment) -> None:
                     "recipient_name": _user_first_name(host),
                     "guest_name": guest_display,
                     "guest_phone": guest_phone,
+                    **_sms_ctx(
+                        "MSG91_BOOKING_REQUEST_FLOW_ID",
+                        "6a566969fde30cbbdc0cdfa5",
+                        {
+                            "property": base.get("property_name") or "your room",
+                            "ref": base.get("booking_reference"),
+                        },
+                    ),
                 },
                 idempotency_event_id=f"booking_new:{booking.id}",
             )
@@ -779,7 +831,16 @@ def _notify_payment_succeeded(booking, payment) -> None:
         dispatch(
             event_type=EventType.BOOKING_PAYMENT_SUCCEEDED,
             recipients=[guest],
-            context={**base, "recipient_name": _user_first_name(guest), "recipient_role": "guest"},
+            context={
+                **base,
+                "recipient_name": _user_first_name(guest),
+                "recipient_role": "guest",
+                **_sms_ctx(
+                    "MSG91_PAYMENT_CONFIRMED_FLOW_ID",
+                    "6a566997682f1b231b0b4042",
+                    {"ref": base.get("booking_reference")},
+                ),
+            },
             idempotency_event_id=f"payment_succeeded:{payment.id}",
         )
 
@@ -788,7 +849,15 @@ def _notify_payment_succeeded(booking, payment) -> None:
         dispatch(
             event_type=EventType.BOOKING_HOST_ACCEPTED,
             recipients=[guest],
-            context={**base, "recipient_name": _user_first_name(guest)},
+            context={
+                **base,
+                "recipient_name": _user_first_name(guest),
+                **_sms_ctx(
+                    "MSG91_BOOKING_ACCEPTED_FLOW_ID",
+                    "6a551202ea4a6247dd00d053",
+                    {"var": base.get("property_name") or "your room"},
+                ),
+            },
             idempotency_event_id=f"host_accepted:{booking.id}",
         )
         _send_invoice_email(booking, guest, base)
