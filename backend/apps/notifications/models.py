@@ -160,6 +160,41 @@ class Notification(models.Model):
         )
 
 
+class DeviceToken(models.Model):
+    """An Expo push token for one of a user's devices.
+
+    The app registers its Expo push token after login; we send push
+    notifications to every active token a user has. Tokens are deactivated
+    when Expo reports them as unregistered (app uninstalled / token rotated).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="device_tokens",
+    )
+    token = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text="Expo push token, e.g. ExponentPushToken[xxxx].",
+    )
+    platform = models.CharField(max_length=16, blank=True)  # ios / android
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "device_tokens"
+        indexes = [
+            models.Index(fields=["user", "is_active"], name="idx_devtok_user_active"),
+        ]
+
+    def __str__(self) -> str:
+        return f"user {self.user_id} · {self.platform} · {'active' if self.is_active else 'inactive'}"
+
+
 class UserNotificationPreference(models.Model):
     """Per-user opt-in/opt-out for (event, channel) combinations.
 

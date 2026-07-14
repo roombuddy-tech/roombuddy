@@ -52,6 +52,7 @@ export const ENDPOINTS = {
     MARK_READ: (id: string) => `/api/notifications/${id}/read/`,
     MARK_ALL_READ: '/api/notifications/read-all/',
     PREFERENCES: '/api/notifications/preferences/',
+    DEVICE_TOKEN: '/api/notifications/device-token/',
   },
   CHAT: {
     CONVERSATIONS: '/api/conversations/',

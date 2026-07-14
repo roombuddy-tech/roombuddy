@@ -57,6 +57,15 @@ def dispatch_pending() -> int:
     return processed
 
 
+def _deactivate_push_token(token: str) -> None:
+    from .models import DeviceToken
+    try:
+        DeviceToken.objects.filter(token=token).update(is_active=False)
+        logger.info("Deactivated dead push token %s", token[:24])
+    except Exception:
+        logger.exception("Failed to deactivate push token")
+
+
 def _send_one(notification: Notification) -> None:
     provider = get_provider(notification.channel)
     metadata = (notification.payload or {}).get("metadata", {}) or {}
@@ -84,6 +93,10 @@ def _send_one(notification: Notification) -> None:
 
     notification.last_error = (result.error or "")[:1000]
     if not result.is_retriable:
+        # A dead push token means the app was uninstalled or the token
+        # rotated — deactivate it so we don't keep targeting it.
+        if result.is_permanent_failure and notification.channel == "push":
+            _deactivate_push_token(notification.recipient_address)
         notification.status = NotificationStatus.DEAD
         notification.save(update_fields=["status", "last_error"])
         logger.warning(

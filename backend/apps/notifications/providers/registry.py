@@ -3,6 +3,7 @@ from typing import Callable, Dict
 
 from .base import NotificationProvider
 from .console import ConsoleEmailProvider, ConsoleSMSProvider
+from .expo_push import ExpoPushProvider
 from .msg91_sms import MSG91SMSProvider
 from .ses_email import SESEmailProvider
 
@@ -21,9 +22,14 @@ def get_sms_provider() -> NotificationProvider:
     return ConsoleSMSProvider()
 
 
+def get_push_provider() -> NotificationProvider:
+    return ExpoPushProvider()
+
+
 _FACTORIES: Dict[str, Callable[[], NotificationProvider]] = {
     "email": get_email_provider,
     "sms": get_sms_provider,
+    "push": get_push_provider,
 }
 
 

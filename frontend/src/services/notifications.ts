@@ -12,6 +12,16 @@ export async function listNotifications(): Promise<NotificationListResponse> {
   return res.data;
 }
 
+/** Register (or refresh) this device's Expo push token with the backend. */
+export async function registerDeviceToken(token: string, platform: string): Promise<void> {
+  await api.post(ENDPOINTS.NOTIFICATIONS.DEVICE_TOKEN, { token, platform });
+}
+
+/** Deactivate this device's push token (call on logout). */
+export async function unregisterDeviceToken(token: string): Promise<void> {
+  await api.delete(ENDPOINTS.NOTIFICATIONS.DEVICE_TOKEN, { data: { token } });
+}
+
 /** Mark a single notification as read. */
 export async function markNotificationRead(id: string): Promise<{ marked_read: number }> {
   const res = await api.post<{ marked_read: number }>(
