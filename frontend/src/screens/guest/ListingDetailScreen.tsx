@@ -29,6 +29,7 @@ import type { GuestStackParamList } from '../../navigation/types';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
 import { createUnlockOrder } from '../../services/payments';
+import { startListingInquiry } from '../../services/chat';
 import type { GuestListingDetail } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -197,6 +198,7 @@ export default function GuestListingDetailScreen() {
   const [showHostPhoto, setShowHostPhoto] = useState(false);
   const [revealedPhone, setRevealedPhone] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [messaging, setMessaging] = useState(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
@@ -275,6 +277,25 @@ export default function GuestListingDetailScreen() {
       setUnlocking(false);
     }
   }, [unlocking, listing, navigation]);
+
+  const handleMessageHost = useCallback(async () => {
+    if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+    if (messaging || !listing) return;
+    setMessaging(true);
+    try {
+      const convo = await startListingInquiry(listing.listing_id);
+      (navigation as any).navigate('Chat', {
+        conversationId: convo.conversation_id,
+        title: listing.host_name || 'Host',
+        subtitle: listing.title,
+        isInquiry: convo.is_inquiry,
+      });
+    } catch {
+      Alert.alert('Could not start chat', 'Please try again in a moment.');
+    } finally {
+      setMessaging(false);
+    }
+  }, [isAuthenticated, messaging, listing, navigation]);
 
   const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
@@ -747,6 +768,31 @@ export default function GuestListingDetailScreen() {
                     <Text style={styles.unlockNote}>One-time fee. Instant access.</Text>
                   </>
                 )}
+
+                {/* Free in-app messaging — always available */}
+                <View style={styles.msgDivider}>
+                  <View style={styles.msgDividerLine} />
+                  <Text style={styles.msgDividerTxt}>or</Text>
+                  <View style={styles.msgDividerLine} />
+                </View>
+                <TouchableOpacity
+                  style={styles.msgHostBtn}
+                  activeOpacity={0.85}
+                  onPress={handleMessageHost}
+                  disabled={messaging}
+                >
+                  {messaging ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble-ellipses-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.msgHostBtnTxt}>Message host — free</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                <Text style={styles.unlockNote}>
+                  Chat in the app. Phone numbers are shared after you book.
+                </Text>
               </View>
             );
           })()}
@@ -1157,6 +1203,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   unlockBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.bold },
   unlockNote: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: 8 },
+  msgDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 14 },
+  msgDividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  msgDividerTxt: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
+  msgHostBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 13, borderRadius: RADIUS.md,
+    borderWidth: 1.5, borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha,
+  },
+  msgHostBtnTxt: { color: COLORS.primary, fontSize: 15, ...FONTS.bold },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
   checkinCard: { flex: 1, paddingVertical: SPACING.lg, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, alignItems: 'center', gap: 8, ...SHADOW.md },

@@ -38,7 +38,7 @@ export type HostStackParamList = {
   GuestProfile: { userId: string };
   Notifications: undefined;
   NotificationPreferences: undefined;
-  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
+  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean; isInquiry?: boolean };
   Verification: undefined;
 };
 
@@ -77,6 +77,6 @@ export type GuestStackParamList = {
   };
   Notifications: undefined;
   NotificationPreferences: undefined;
-  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
+  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean; isInquiry?: boolean };
   WriteReview: { bookingId: string; listingTitle: string; hostName: string };
 };
