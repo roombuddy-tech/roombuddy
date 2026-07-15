@@ -595,7 +595,8 @@ export default function GuestListingDetailScreen() {
                 <MapView
                   style={styles.miniMap} provider={PROVIDER_GOOGLE}
                   initialRegion={{ latitude: listing.property.latitude, longitude: listing.property.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
-                  scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
+                  scrollEnabled zoomEnabled rotateEnabled={false} pitchEnabled={false}
+                  toolbarEnabled={false}
                 >
                   <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(184,92,56,0.12)" strokeColor="rgba(184,92,56,0.35)" strokeWidth={1} />
                 </MapView>

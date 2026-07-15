@@ -650,10 +650,11 @@ export default function ListingDetailScreen() {
                         latitudeDelta: 0.005,
                         longitudeDelta: 0.005,
                       }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
+                      scrollEnabled
+                      zoomEnabled
                       rotateEnabled={false}
                       pitchEnabled={false}
+                      toolbarEnabled={false}
                     >
                       <Marker coordinate={{ latitude: f.latitude, longitude: f.longitude }} />
                     </MapView>
