@@ -288,6 +288,12 @@ def verify_and_capture_unlock(
                 "razorpay_payment_id", "status", "unlocked_at", "updated_at",
             ])
         _notify_contact_unlocked(unlock)
+        try:
+            from third_party.admin_alerts import notify_admin
+            listing_title = getattr(unlock.listing, "title", "a listing")
+            notify_admin(f"🔓 Contact unlock (₹29)\nA guest unlocked the host contact on “{listing_title}”.")
+        except Exception:
+            logger.exception("admin unlock alert failed")
 
     return {
         "listing_id": str(unlock.listing_id),
@@ -791,6 +797,17 @@ def _notify_payment_succeeded(booking, payment) -> None:
     base = _build_booking_context(booking)
     guest = booking.guest_user
     host = booking.host_user
+
+    try:
+        from third_party.admin_alerts import notify_admin
+        notify_admin(
+            f"🏠 New booking · {booking.booking_code}\n"
+            f"{base.get('property_name', 'A property')}\n"
+            f"{base.get('check_in', '')} → {base.get('check_out', '')}\n"
+            f"Guest pays ₹{base.get('amount', '')}"
+        )
+    except Exception:
+        logger.exception("admin booking alert failed")
 
     # ── Notify host: "New booking request" (one email only) ──────────────
     if host:

@@ -635,6 +635,10 @@ def submit_id_verification(user: User, aadhaar_image, selfie_image) -> dict:
         "id_submitted_at", "id_reviewed_at", "id_reviewed_by", "updated_at",
     ])
 
+    from third_party.admin_alerts import notify_admin
+    name = get_display_name(user) or (user.phone_number or "A user")
+    notify_admin(f"🪪 Aadhaar pending approval\n{name} submitted ID verification. Approve it in Django admin.")
+
     return {"status": "pending", "message": "Documents submitted. We'll review within 24-48 hours."}
 
 
