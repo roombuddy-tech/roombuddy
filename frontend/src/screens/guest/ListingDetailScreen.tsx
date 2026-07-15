@@ -914,7 +914,7 @@ export default function GuestListingDetailScreen() {
           <View style={styles.hostModalContent}>
             <View style={styles.hostModalHeader}>
               <Text style={styles.hostModalTitle}>About your host</Text>
-              <TouchableOpacity onPress={() => setShowHostModal(false)} hitSlop={8}>
+              <TouchableOpacity onPress={() => { setShowHostPhoto(false); setShowHostModal(false); }} hitSlop={8}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
@@ -987,25 +987,23 @@ export default function GuestListingDetailScreen() {
               </View>
             </ScrollView>
           </View>
+
+          {/* Full host photo — rendered inside the same modal to avoid nested-modal issues */}
+          {showHostPhoto && listing.host_profile?.photo_url && (
+            <View style={styles.hostPhotoOverlay}>
+              <TouchableOpacity style={styles.hostPhotoTapArea} activeOpacity={1} onPress={() => setShowHostPhoto(false)}>
+                <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostPhotoFull} resizeMode="contain" />
+              </TouchableOpacity>
+              <View style={styles.galleryHeader} pointerEvents="box-none">
+                <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowHostPhoto(false)}>
+                  <Ionicons name="close" size={26} color="#fff" />
+                </TouchableOpacity>
+                <View style={{ width: 40 }} />
+              </View>
+            </View>
+          )}
         </View>
       </Modal>
-
-      {/* ── Host full photo ── */}
-      {showHostPhoto && listing.host_profile?.photo_url && (
-        <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowHostPhoto(false)}>
-          <View style={styles.galleryOverlay}>
-            <TouchableOpacity style={styles.hostPhotoTapArea} activeOpacity={1} onPress={() => setShowHostPhoto(false)}>
-              <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostPhotoFull} resizeMode="contain" />
-            </TouchableOpacity>
-            <View style={styles.galleryHeader} pointerEvents="box-none">
-              <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowHostPhoto(false)}>
-                <Ionicons name="close" size={26} color="#fff" />
-              </TouchableOpacity>
-              <View style={{ width: 40 }} />
-            </View>
-          </View>
-        </Modal>
-      )}
 
       {/* ── All Reviews modal ── */}
       <Modal visible={showAllReviews} animationType="slide">
@@ -1066,6 +1064,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   photoTagTxt: { fontSize: 12, color: '#fff', ...FONTS.medium, textTransform: 'capitalize' },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
   galleryOverlay: { flex: 1, backgroundColor: '#000' },
+  hostPhotoOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 20 },
   hostPhotoTapArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   hostPhotoFull: { width: SCREEN_W, height: SCREEN_W },
   galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
