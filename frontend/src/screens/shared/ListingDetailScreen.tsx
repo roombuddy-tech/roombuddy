@@ -517,7 +517,7 @@ export default function ListingDetailScreen() {
               )}
 
               {/* ── Meet your flatmates ── */}
-              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
+              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
                 <>
                   <Divider />
                   <SectionHeader title="Meet your flatmates" />

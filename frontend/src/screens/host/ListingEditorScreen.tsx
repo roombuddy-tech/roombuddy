@@ -619,6 +619,7 @@ function TimePicker({
   optional?: boolean;
   placeholder?: string;
 }) {
+  const { mode } = useTheme();
   const COLORS = useThemeColors();
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
@@ -660,6 +661,8 @@ function TimePicker({
               mode="time"
               display="spinner"
               minuteInterval={30}
+              themeVariant={mode}
+              textColor={COLORS.text}
               onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
               style={{ height: 200 }}
             />

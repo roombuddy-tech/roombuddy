@@ -497,17 +497,18 @@ export default function GuestListingDetailScreen() {
           )}
 
           {/* ── Flatmates ── */}
-          {listing.flatmates.length > 0 && (
+          {(listing.flatmates.length > 0 ||
+            (listing.host_info && (listing.host_info.age || listing.host_info.occupation || listing.host_info.hobbies || listing.host_info.gender))) && (
             <View style={styles.section}>
               <SectionTitle label="Meet your flatmates" />
-              {listing.host_info && (listing.host_info.occupation || listing.host_info.hobbies) && (
+              {listing.host_info && (listing.host_info.age || listing.host_info.occupation || listing.host_info.hobbies) && (
                 <View style={styles.flatmateCard}>
                   <View style={styles.flatmateAvatar}>
                     <Text style={styles.flatmateInitials}>{listing.host_name ? initials(listing.host_name) : 'H'}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
+                      <Text style={styles.flatmateName}>{listing.host_name || 'Host'}{listing.host_info.age ? `, ${listing.host_info.age}` : ''}</Text>
                       <View style={styles.hostBadge}><Text style={styles.hostBadgeText}>Host</Text></View>
                     </View>
                     {listing.host_info.occupation ? <Text style={styles.flatmateDetail}>Occupation: {listing.host_info.occupation}</Text> : null}
