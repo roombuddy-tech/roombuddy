@@ -533,6 +533,13 @@ def create_listing(user: User, data: dict) -> dict:
                 reason=bd.get("reason", ""),
             )
 
+    try:
+        from third_party.admin_alerts import notify_admin
+        state = "LIVE" if listing.status == Listing.Status.LIVE else "PENDING review"
+        notify_admin(f"📋 New listing ({state})\n“{listing.title}” — {prop.city_name or ''}")
+    except Exception:
+        logger.exception("admin listing alert failed")
+
     return {
         "listing_id": str(listing.id),
         "property_id": str(listing.property_id),
