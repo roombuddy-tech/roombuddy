@@ -659,6 +659,10 @@ def search_guest_listings(
     lat: float | None = None,
     lng: float | None = None,
     radius_km: float = 5.0,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    min_rating: float | None = None,
+    sort: str | None = None,
 ) -> list[dict]:
 
     qs = (
@@ -667,8 +671,28 @@ def search_guest_listings(
         .filter(host_user__profile__id_verification_status="approved")
         .select_related("property", "room")
         .prefetch_related("listing_amenities__amenity")
-        .order_by("-average_rating", "-created_at")
     )
+
+    # ── Price & rating filters ──────────────────────────────────────────
+    if min_price is not None:
+        qs = qs.filter(host_price_per_night__gte=min_price)
+    if max_price is not None:
+        qs = qs.filter(host_price_per_night__lte=max_price)
+    if min_rating is not None:
+        qs = qs.filter(average_rating__gte=min_rating)
+
+    # ── Sort ────────────────────────────────────────────────────────────
+    has_geo = lat is not None and lng is not None
+    sort = (sort or ("distance" if has_geo else "recommended")).lower()
+    DB_ORDER = {
+        "price_low": ("host_price_per_night", "-created_at"),
+        "price_high": ("-host_price_per_night", "-created_at"),
+        "rating": ("-average_rating", "-created_at"),
+        "recommended": ("-average_rating", "-created_at"),
+    }
+    # "distance" is applied in Python after the query (needs lat/lng); until
+    # then order by the recommended default so the [:50] slice is sensible.
+    qs = qs.order_by(*DB_ORDER.get(sort, DB_ORDER["recommended"]))
 
     CITY_ALIASES = {
         "bangalore": "bengaluru",
@@ -754,13 +778,16 @@ def search_guest_listings(
     results = [_listing_to_guest_card(l) for l in qs]
     _attach_cover_photos(qs, results)
 
-    if lat is not None and lng is not None:
+    if has_geo:
         for r in results:
             if r["latitude"] and r["longitude"]:
                 r["distance_km"] = _haversine(lat, lng, r["latitude"], r["longitude"])
             else:
                 r["distance_km"] = None
-        results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
+        # Only reorder by distance when that's the chosen sort; otherwise keep
+        # the DB ordering (price / rating / recommended) and just show distance.
+        if sort == "distance":
+            results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
 
     return results
 

@@ -7,11 +7,15 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
@@ -25,7 +29,7 @@ import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constan
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { GuestStackParamList, GuestTabParamList } from '../../navigation/types';
-import { searchListings } from '../../services/search';
+import { searchListings, type SortOption } from '../../services/search';
 import type { GuestListingCard } from '../../types/listing';
 import ProfileMenu from '../shared/ProfileMenu';
 
@@ -125,6 +129,17 @@ export default function HomeScreen() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [editExpanded, setEditExpanded] = useState(false);
 
+  // Filter & sort
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minRating, setMinRating] = useState<number | null>(null);
+
+  const activeFilterCount =
+    (minPrice.trim() ? 1 : 0) + (maxPrice.trim() ? 1 : 0) +
+    (minRating != null ? 1 : 0) + (sortBy !== 'recommended' ? 1 : 0);
+
   const searchVersion = useRef(0);
 
   useEffect(() => {
@@ -184,7 +199,7 @@ export default function HomeScreen() {
       const effQuery = override?.q ?? query;
       const effLat = override?.lat ?? searchLat;
       const effLng = override?.lng ?? searchLng;
-      const params: { q?: string; check_in?: string; check_out?: string; lat?: number; lng?: number } = {};
+      const params: Parameters<typeof searchListings>[0] = {};
       if (effQuery.trim()) params.q = effQuery.trim();
       if (checkIn) params.check_in = checkIn;
       if (checkOut) params.check_out = checkOut;
@@ -192,6 +207,12 @@ export default function HomeScreen() {
         params.lat = effLat;
         params.lng = effLng;
       }
+      const minP = parseInt(minPrice, 10);
+      const maxP = parseInt(maxPrice, 10);
+      if (!isNaN(minP)) params.min_price = minP;
+      if (!isNaN(maxP)) params.max_price = maxP;
+      if (minRating != null) params.min_rating = minRating;
+      if (sortBy !== 'recommended') params.sort = sortBy;
       const data = await searchListings(Object.keys(params).length ? params : undefined);
       if (version === searchVersion.current) setListings(data.results);
     } catch {
@@ -199,7 +220,7 @@ export default function HomeScreen() {
     } finally {
       if (version === searchVersion.current) setLoading(false);
     }
-  }, [query, checkIn, checkOut, searchLat, searchLng]);
+  }, [query, checkIn, checkOut, searchLat, searchLng, minPrice, maxPrice, minRating, sortBy]);
 
   const searchNearby = useCallback(async () => {
     try {
@@ -450,6 +471,18 @@ export default function HomeScreen() {
           <Ionicons name={viewMode === 'list' ? 'map-outline' : 'list-outline'} size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Sort & filter bar */}
+      <TouchableOpacity
+        style={[styles.filterBar, activeFilterCount > 0 && styles.filterBarActive]}
+        activeOpacity={0.8}
+        onPress={() => setShowFilters(true)}
+      >
+        <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? '#fff' : COLORS.primary} />
+        <Text style={[styles.filterBarTxt, activeFilterCount > 0 && { color: '#fff' }]}>
+          Sort & filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+        </Text>
+      </TouchableOpacity>
 
       {/* Edit panel */}
       {editExpanded && (
@@ -705,6 +738,98 @@ export default function HomeScreen() {
       )}
 
       {isAuthenticated && <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />}
+
+      {/* ── Sort & filter sheet ── */}
+      <Modal visible={showFilters} transparent animationType="slide" onRequestClose={() => setShowFilters(false)}>
+        <View style={styles.fsOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => { Keyboard.dismiss(); setShowFilters(false); }} />
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.fsSheet}>
+            <View style={styles.fsHeader}>
+              <Text style={styles.fsTitle}>Sort & filter</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.fsLabel}>Sort by</Text>
+            {([
+              ['recommended', 'Recommended'],
+              ['price_low', 'Price: low to high'],
+              ['price_high', 'Price: high to low'],
+              ['rating', 'Top rated'],
+              ...(searchLat != null && searchLng != null ? [['distance', 'Nearest first']] : []),
+            ] as [SortOption, string][]).map(([val, lbl]) => (
+              <TouchableOpacity key={val} style={styles.fsRow} activeOpacity={0.7} onPress={() => setSortBy(val)}>
+                <Text style={styles.fsRowTxt}>{lbl}</Text>
+                <Ionicons
+                  name={sortBy === val ? 'radio-button-on' : 'radio-button-off'}
+                  size={20}
+                  color={sortBy === val ? COLORS.primary : COLORS.textMut}
+                />
+              </TouchableOpacity>
+            ))}
+
+            <Text style={[styles.fsLabel, { marginTop: SPACING.lg }]}>Price per night (₹)</Text>
+            <View style={styles.fsPriceRow}>
+              <TextInput
+                style={styles.fsPriceInput}
+                placeholder="Min"
+                placeholderTextColor={COLORS.textMut}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                value={minPrice}
+                onChangeText={(v) => setMinPrice(v.replace(/[^0-9]/g, ''))}
+              />
+              <Text style={styles.fsPriceDash}>–</Text>
+              <TextInput
+                style={styles.fsPriceInput}
+                placeholder="Max"
+                placeholderTextColor={COLORS.textMut}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                value={maxPrice}
+                onChangeText={(v) => setMaxPrice(v.replace(/[^0-9]/g, ''))}
+              />
+            </View>
+
+            <Text style={[styles.fsLabel, { marginTop: SPACING.lg }]}>Minimum rating</Text>
+            <View style={styles.fsChipRow}>
+              {([[null, 'Any'], [4, '4.0+'], [4.5, '4.5+']] as [number | null, string][]).map(([val, lbl]) => (
+                <TouchableOpacity
+                  key={lbl}
+                  style={[styles.fsChip, minRating === val && styles.fsChipActive]}
+                  activeOpacity={0.8}
+                  onPress={() => setMinRating(val)}
+                >
+                  {val != null && <Ionicons name="star" size={12} color={minRating === val ? '#fff' : '#F59E0B'} />}
+                  <Text style={[styles.fsChipTxt, minRating === val && { color: '#fff' }]}>{lbl}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.fsActions}>
+              <TouchableOpacity
+                style={styles.fsClear}
+                activeOpacity={0.7}
+                onPress={() => { setSortBy('recommended'); setMinPrice(''); setMaxPrice(''); setMinRating(null); }}
+              >
+                <Text style={styles.fsClearTxt}>Clear all</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.fsApply}
+                activeOpacity={0.85}
+                onPress={() => { Keyboard.dismiss(); setShowFilters(false); if (hasSearched) doSearch(); }}
+              >
+                <Text style={styles.fsApplyTxt}>Show results</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -795,6 +920,48 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center',
     marginLeft: SPACING.sm,
   },
+  filterBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    alignSelf: 'flex-start', marginTop: SPACING.sm,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: RADIUS.pill,
+    borderWidth: 1, borderColor: COLORS.primary, backgroundColor: COLORS.surface,
+  },
+  filterBarActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterBarTxt: { fontSize: 13.5, color: COLORS.primary, ...FONTS.semibold },
+  // Filter sheet
+  fsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  fsSheet: {
+    backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: SPACING.xxl,
+  },
+  fsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
+  fsTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text },
+  fsLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  fsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  fsRowTxt: { fontSize: 15, color: COLORS.text },
+  fsPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  fsPriceInput: {
+    flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.text,
+    backgroundColor: COLORS.surface,
+  },
+  fsPriceDash: { fontSize: 16, color: COLORS.textMut },
+  fsChipRow: { flexDirection: 'row', gap: 10 },
+  fsChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 9, paddingHorizontal: 16, borderRadius: RADIUS.pill,
+    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface,
+  },
+  fsChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  fsChipTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  fsActions: { flexDirection: 'row', gap: 12, marginTop: SPACING.xl },
+  fsClear: { flex: 1, paddingVertical: 15, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  fsClearTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  fsApply: { flex: 2, paddingVertical: 15, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center' },
+  fsApplyTxt: { fontSize: 15, ...FONTS.bold, color: '#fff' },
 
   editPanel: {
     backgroundColor: COLORS.surface,
