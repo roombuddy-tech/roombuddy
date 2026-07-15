@@ -729,24 +729,15 @@ def search_guest_listings(
         return combined
 
     if lat is not None and lng is not None:
-        # Early-stage: widen the floor so guests still see listings even when
-        # nothing is within a tight radius of their location.
-        effective_radius = max(radius_km, 100.0)
-        delta_lat = effective_radius / 111.0
-        delta_lng = effective_radius / (111.0 * math.cos(math.radians(lat)))
-        geo_filter = Q(
-            property__latitude__isnull=False,
-            property__longitude__isnull=False,
-            property__latitude__gte=lat - delta_lat,
-            property__latitude__lte=lat + delta_lat,
-            property__longitude__gte=lng - delta_lng,
-            property__longitude__lte=lng + delta_lng,
-        )
+        # Early-stage: no distance cutoff. If the guest also typed a place,
+        # narrow to text matches; otherwise show every live listing. Results
+        # are ordered closest-first by the distance sort below, so a guest in
+        # a city with no inventory still sees the nearest available rooms
+        # (just far away) instead of an empty screen.
         search_term = query or area
         if search_term:
-            qs = qs.filter(geo_filter | _text_filter(search_term))
-        else:
-            qs = qs.filter(geo_filter)
+            qs = qs.filter(_text_filter(search_term))
+        # else: no geo/text filter — all live listings, sorted by distance.
     else:
         search_term = query or area
         if search_term:
