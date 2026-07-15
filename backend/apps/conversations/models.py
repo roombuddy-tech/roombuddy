@@ -5,8 +5,16 @@ from django.db import models
 
 class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Booking-linked conversations happen after a booking. Pre-booking
+    # ("inquiry") conversations have no booking and reference the listing
+    # instead, so a guest can message a host before booking.
     booking = models.OneToOneField(
         "bookings.Booking", on_delete=models.CASCADE, related_name="conversation",
+        null=True, blank=True,
+    )
+    listing = models.ForeignKey(
+        "listings.Listing", on_delete=models.CASCADE, related_name="conversations",
+        null=True, blank=True,
     )
     guest_user = models.ForeignKey(
         "users.User", on_delete=models.RESTRICT, related_name="conversations_as_guest",
@@ -26,9 +34,22 @@ class Conversation(models.Model):
             models.Index(fields=["guest_user", "-last_message_at"], name="idx_conv_guest_lastmsg"),
             models.Index(fields=["host_user", "-last_message_at"], name="idx_conv_host_lastmsg"),
         ]
+        constraints = [
+            # At most one pre-booking inquiry per (guest, host, listing).
+            models.UniqueConstraint(
+                fields=["guest_user", "host_user", "listing"],
+                condition=models.Q(booking__isnull=True),
+                name="uq_conv_inquiry_guest_host_listing",
+            ),
+        ]
+
+    @property
+    def is_inquiry(self) -> bool:
+        """Pre-booking conversation (no booking yet)."""
+        return self.booking_id is None
 
     def __str__(self):
-        return f"Conversation for booking {self.booking_id}"
+        return f"Conversation for booking {self.booking_id}" if self.booking_id else f"Inquiry for listing {self.listing_id}"
 
 
 class Message(models.Model):

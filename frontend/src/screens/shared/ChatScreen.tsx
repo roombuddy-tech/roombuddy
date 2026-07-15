@@ -22,7 +22,7 @@ import type { ChatMessage } from '../../types/chat';
 
 const POLL_INTERVAL_MS = 3000;
 
-type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
+type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean; isInquiry?: boolean };
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -35,7 +35,7 @@ function fmtTime(iso: string): string {
 export default function ChatScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<Record<string, ChatRouteParams>, string>>();
-  const { conversationId, title, subtitle, chatDisabled } = route.params;
+  const { conversationId, title, subtitle, chatDisabled, isInquiry } = route.params;
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
 
@@ -154,6 +154,16 @@ export default function ChatScreen() {
             renderItem={renderItem}
             contentContainerStyle={styles.listPad}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            ListHeaderComponent={
+              isInquiry ? (
+                <View style={styles.inquiryBanner}>
+                  <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.inquiryBannerTxt}>
+                    Contact details like phone numbers are hidden until a booking is confirmed. Keep chats in the app to stay protected.
+                  </Text>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <Text style={styles.emptySub}>Say hello to start the conversation.</Text>
@@ -241,6 +251,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface,
   },
   chatDisabledTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
+  inquiryBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    padding: 12, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md, backgroundColor: COLORS.primaryAlpha,
+  },
+  inquiryBannerTxt: { flex: 1, fontSize: 12.5, lineHeight: 18, color: COLORS.text, ...FONTS.medium },
   headerCenter: { flex: 1, alignItems: 'center' },
   headerSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1, textAlign: 'center' },
 });

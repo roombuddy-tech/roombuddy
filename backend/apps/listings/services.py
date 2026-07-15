@@ -20,6 +20,16 @@ from third_party.storage import get_photo_url, delete_image
 from third_party.maps import geocode_address
 
 
+def _age_from_dob(dob) -> int | None:
+    """Whole years from a date of birth, or None if not available."""
+    if not dob:
+        return None
+    from datetime import date
+    today = date.today()
+    years = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    return years if 0 < years < 120 else None
+
+
 def _photo_storage_key(url: str) -> str:
     """Stable key for a photo URL — strips the domain and any presign query
     string so a client's (signed) URL matches the stored (unsigned) URL."""
@@ -188,7 +198,8 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "check_out_time": _format_time(rules.check_out_by) if rules else "",
         },
         "host": {
-            "age": host_fm["age"] if host_fm else None,
+            "age": (host_fm["age"] if host_fm else None)
+            or _age_from_dob(getattr(getattr(listing.host_user, "profile", None), "date_of_birth", None)),
             "occupation": host_fm["occupation"] if host_fm else "",
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
@@ -818,6 +829,7 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
     # Host profile
     host_name = ""
     host_profile_data = {}
+    profile = None
     try:
         profile = listing.host_user.profile
         host_name = f"{profile.first_name} {profile.last_name[0]}." if profile.last_name else profile.first_name
@@ -827,6 +839,12 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
             "gender": profile.gender or "",
             "member_since": listing.host_user.created_at.strftime("%b %Y"),
         }
+        # Host age: prefer the value entered in the flatmates section,
+        # otherwise derive it from the host's date of birth.
+        host_profile_data["age"] = (
+            (host_fm.age if host_fm else None)
+            or _age_from_dob(getattr(profile, "date_of_birth", None))
+        )
         if host_fm:
             host_profile_data["occupation"] = host_fm.occupation or ""
             host_profile_data["hobbies"] = host_fm.hobbies or ""
@@ -892,6 +910,7 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
         "amenities": amenities,
         "flatmates": flatmates,
         "host_info": {
+            "age": (host_fm.age if host_fm else None) or _age_from_dob(getattr(profile, "date_of_birth", None)),
             "occupation": host_fm.occupation if host_fm else "",
             "hobbies": host_fm.hobbies if host_fm else "",
             "gender": host_fm.gender if host_fm else "",

@@ -619,6 +619,7 @@ function TimePicker({
   optional?: boolean;
   placeholder?: string;
 }) {
+  const { mode } = useTheme();
   const COLORS = useThemeColors();
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
@@ -660,6 +661,8 @@ function TimePicker({
               mode="time"
               display="spinner"
               minuteInterval={30}
+              themeVariant={mode}
+              textColor={COLORS.text}
               onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
               style={{ height: 200 }}
             />
@@ -1785,6 +1788,11 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                     <Text style={phSt.requiredTxt}>Required</Text>
                   </View>
                 )}
+                {!cat.required && !hasPhotos && (
+                  <View style={phSt.optionalBadge}>
+                    <Text style={phSt.optionalTxt}>Optional</Text>
+                  </View>
+                )}
                 {hasPhotos && (
                   <View style={phSt.doneBadge}>
                     <Ionicons name="checkmark" size={11} color={COLORS.primary} />
@@ -1872,6 +1880,8 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   categoryName: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
   requiredBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
+  optionalBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip },
+  optionalTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.textSec },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
   addBtn: {
