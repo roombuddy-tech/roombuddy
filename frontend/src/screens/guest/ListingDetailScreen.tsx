@@ -194,6 +194,7 @@ export default function GuestListingDetailScreen() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
   const [showHostModal, setShowHostModal] = useState(false);
+  const [showHostPhoto, setShowHostPhoto] = useState(false);
   const [revealedPhone, setRevealedPhone] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
@@ -921,7 +922,9 @@ export default function GuestListingDetailScreen() {
               <View style={styles.hostModalProfile}>
                 <View style={styles.hostModalAvatarWrap}>
                   {listing.host_profile?.photo_url ? (
-                    <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostModalAvatar} />
+                    <TouchableOpacity activeOpacity={0.9} onPress={() => setShowHostPhoto(true)}>
+                      <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostModalAvatar} />
+                    </TouchableOpacity>
                   ) : (
                     <View style={styles.hostModalAvatarFallback}>
                       <Text style={styles.hostModalAvatarInitials}>{initials(listing.host_name)}</Text>
@@ -935,6 +938,15 @@ export default function GuestListingDetailScreen() {
               </View>
 
               <View style={styles.hostModalDetails}>
+                {listing.host_profile?.age ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Age</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.age} years</Text>
+                    </View>
+                  </View>
+                ) : null}
                 {listing.host_profile?.hometown ? (
                   <View style={styles.hostModalRow}>
                     <Ionicons name="home-outline" size={18} color={COLORS.primary} />
@@ -976,6 +988,23 @@ export default function GuestListingDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Host full photo ── */}
+      {showHostPhoto && listing.host_profile?.photo_url && (
+        <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowHostPhoto(false)}>
+          <View style={styles.galleryOverlay}>
+            <TouchableOpacity style={styles.hostPhotoTapArea} activeOpacity={1} onPress={() => setShowHostPhoto(false)}>
+              <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostPhotoFull} resizeMode="contain" />
+            </TouchableOpacity>
+            <View style={styles.galleryHeader} pointerEvents="box-none">
+              <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowHostPhoto(false)}>
+                <Ionicons name="close" size={26} color="#fff" />
+              </TouchableOpacity>
+              <View style={{ width: 40 }} />
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* ── All Reviews modal ── */}
       <Modal visible={showAllReviews} animationType="slide">
@@ -1036,6 +1065,8 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   photoTagTxt: { fontSize: 12, color: '#fff', ...FONTS.medium, textTransform: 'capitalize' },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
   galleryOverlay: { flex: 1, backgroundColor: '#000' },
+  hostPhotoTapArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  hostPhotoFull: { width: SCREEN_W, height: SCREEN_W },
   galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
   galleryCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
   galleryCounter: { fontSize: 16, color: '#fff', ...FONTS.semibold },

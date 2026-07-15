@@ -97,6 +97,7 @@ export interface GuestListingDetail {
     photo_url: string | null;
     gender: string;
     member_since: string;
+    age?: number | null;
     occupation?: string;
     hobbies?: string;
     hometown?: string;
