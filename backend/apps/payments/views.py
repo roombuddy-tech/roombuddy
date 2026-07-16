@@ -39,6 +39,7 @@ from common.authentication import JWTAuthentication
 from common.constants import WEBHOOK_DEFAULT_EVENT_TYPE
 from common.error_codes import ErrorCode
 from common.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import Sum
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,8 @@ class CreateUnlockOrderView(APIView):
     """Create a Razorpay order to unlock a host's contact on a listing (₹29)."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "unlock"
 
     @extend_schema(
         tags=["Payment"],

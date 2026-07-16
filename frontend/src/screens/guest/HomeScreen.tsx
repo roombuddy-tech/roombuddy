@@ -70,29 +70,34 @@ export default function HomeScreen() {
   // Near-you listings (location-based)
   const [nearbyListings, setNearbyListings] = useState<GuestListingCard[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(true);
+  const [nearbyError, setNearbyError] = useState(false);
   const [hasLocation, setHasLocation] = useState(true);
 
-  useEffect(() => {
+  const fetchNearby = React.useCallback(async () => {
+    setNearbyLoading(true);
+    setNearbyError(false);
     let active = true;
-    (async () => {
-      try {
-        let params: { lat?: number; lng?: number } = {};
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-        } else {
-          if (active) setHasLocation(false);
-        }
-        const data = await searchListings(params);
-        if (active) setNearbyListings(data.results.slice(0, 10));
-      } catch {
-        // ignore
-      } finally {
-        if (active) setNearbyLoading(false);
+    try {
+      let params: { lat?: number; lng?: number } = {};
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      } else {
+        setHasLocation(false);
       }
-    })();
+      const data = await searchListings(params);
+      if (active) setNearbyListings(data.results.slice(0, 10));
+    } catch {
+      if (active) setNearbyError(true);
+    } finally {
+      if (active) setNearbyLoading(false);
+    }
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    fetchNearby();
   }, []);
 
   const SectionHead = ({ title, subtitle }: { title: string; subtitle?: string }) => (
@@ -297,6 +302,9 @@ export default function HomeScreen() {
             <TouchableOpacity
               onPress={() => { setCheckIn(null); setCheckOut(null); }}
               style={{ alignSelf: 'flex-end', marginTop: 8 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Clear selected dates"
             >
               <Text style={{ fontSize: 13, color: COLORS.primary, ...FONTS.medium }}>Clear dates</Text>
             </TouchableOpacity>
@@ -422,6 +430,8 @@ export default function HomeScreen() {
             }
           }}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={viewMode === 'map' ? 'Switch to list view' : 'Back to home'}
         >
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
@@ -446,6 +456,8 @@ export default function HomeScreen() {
         <TouchableOpacity
           onPress={() => setViewMode((v) => (v === 'list' ? 'map' : 'list'))}
           style={styles.mapBtn}
+          accessibilityRole="button"
+          accessibilityLabel={viewMode === 'list' ? 'Switch to map view' : 'Switch to list view'}
         >
           <Ionicons name={viewMode === 'list' ? 'map-outline' : 'list-outline'} size={20} color={COLORS.primary} />
         </TouchableOpacity>
@@ -555,7 +567,13 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Search pill */}
-          <TouchableOpacity style={styles.searchPill} activeOpacity={0.8} onPress={() => setShowSearchForm(true)}>
+          <TouchableOpacity
+            style={styles.searchPill}
+            activeOpacity={0.8}
+            onPress={() => setShowSearchForm(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Search for a room"
+          >
             <View style={styles.pillIcon}>
               <Ionicons name="search" size={18} color={COLORS.primary} />
             </View>
@@ -572,6 +590,18 @@ export default function HomeScreen() {
           <SectionHead title={hasLocation ? 'Stays near you' : 'Popular properties'} />
           {nearbyLoading ? (
             <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
+          ) : nearbyError ? (
+            <View style={styles.emptyNearby}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="cloud-offline-outline" size={26} color={COLORS.textMut} />
+              </View>
+              <Text style={styles.emptyNearbyTitle}>Unable to load listings</Text>
+              <Text style={styles.nearbyEmpty}>Check your connection and try again.</Text>
+              <TouchableOpacity style={styles.emptyCta} activeOpacity={0.85} onPress={fetchNearby}>
+                <Ionicons name="refresh-outline" size={16} color="#fff" />
+                <Text style={styles.emptyCtaTxt}>Retry</Text>
+              </TouchableOpacity>
+            </View>
           ) : nearbyListings.length === 0 ? (
             <View style={styles.emptyNearby}>
               <View style={styles.emptyIconCircle}>

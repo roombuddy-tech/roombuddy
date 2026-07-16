@@ -18,3 +18,16 @@ class IsProfileComplete(BasePermission):
 
     def has_permission(self, request, view):
         return getattr(request.user, "is_profile_complete", False)
+
+
+class IsAdminUser(BasePermission):
+    """User must be authenticated and have is_staff=True."""
+
+    message = "Admin access required."
+
+    def has_permission(self, request, view):
+        return (
+            request.user is not None
+            and hasattr(request.user, "id")
+            and getattr(request.user, "is_staff", False)
+        )

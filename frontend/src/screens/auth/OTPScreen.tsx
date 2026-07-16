@@ -26,6 +26,7 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
+  const [resending, setResending] = useState(false);
   const verifyingRef = useRef(false);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function OTPScreen({ navigation, route }: Props) {
   };
 
   const handleResend = async () => {
+    setResending(true);
     try {
       const mode = isSignup ? 'signup' : 'login';
       await authService.sendOTP(phoneNumber, '+91', mode);
@@ -73,6 +75,8 @@ export default function OTPScreen({ navigation, route }: Props) {
       Alert.alert('OTP Sent', 'A new OTP has been sent to your phone.');
     } catch {
       Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -123,10 +127,12 @@ export default function OTPScreen({ navigation, route }: Props) {
         {/* Resend */}
         <View style={styles.resendSection}>
           {canResend ? (
-            <TouchableOpacity onPress={handleResend}>
+            <TouchableOpacity onPress={handleResend} disabled={resending}>
               <Text style={styles.resendText}>
                 Didn't receive?{' '}
-                <Text style={styles.resendActive}>Resend OTP</Text>
+                <Text style={styles.resendActive}>
+                  {resending ? 'Sending...' : 'Resend OTP'}
+                </Text>
               </Text>
             </TouchableOpacity>
           ) : (

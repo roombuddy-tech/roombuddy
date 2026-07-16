@@ -33,3 +33,7 @@ class ErrorCode:
     GATEWAY_ERROR = "GATEWAY_ERROR"
     BAD_SIGNATURE = "BAD_SIGNATURE"
     PAYMENT_NOT_FOUND = "PAYMENT_NOT_FOUND"
+
+    # ── Files / Storage ──────────────────────────────────────
+    INVALID_FILE_TYPE = "INVALID_FILE_TYPE"
+    FILE_TOO_LARGE = "FILE_TOO_LARGE"
