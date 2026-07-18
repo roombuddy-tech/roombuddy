@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { FONTS, RADIUS, SPACING, ThemeColors, ThemeMode } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -42,7 +42,11 @@ interface ProfileData {
 export default function ProfileMenu({ visible, onClose, initialScreen }: ProfileMenuProps) {
   const { logout } = useAuth();
   const { mode, colors: COLORS, toggle } = useTheme();
-  const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  const styles = useMemo(() => makeStyles(COLORS, mode), [COLORS, mode]);
+  const isDark = mode === 'dark';
+  // Light mode keeps the familiar green. On dark, green clashes with the
+  // palette, so verified badges become a subtle glass chip with a gold tick.
+  const verifiedColor = isDark ? COLORS.primary : '#10B981';
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeScreen, setActiveScreen] = useState<SubScreen>('none');
@@ -211,9 +215,9 @@ const handlePickPhoto = async () => {
                   <Ionicons
                     name={profile?.phone_verified ? 'checkmark-circle' : 'alert-circle-outline'}
                     size={14}
-                    color={profile?.phone_verified ? '#10B981' : '#F59E0B'}
+                    color={profile?.phone_verified ? verifiedColor : '#F59E0B'}
                   />
-                  <Text style={[styles.badgeText, { color: profile?.phone_verified ? '#10B981' : '#F59E0B' }]}>Phone</Text>
+                  <Text style={[styles.badgeText, { color: profile?.phone_verified ? verifiedColor : '#F59E0B' }]}>Phone</Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.badge, profile?.email_verified ? styles.badgeGreen : styles.badgeWarning]}
@@ -222,9 +226,9 @@ const handlePickPhoto = async () => {
                   <Ionicons
                     name={profile?.email_verified ? 'checkmark-circle' : 'alert-circle-outline'}
                     size={14}
-                    color={profile?.email_verified ? '#10B981' : '#F59E0B'}
+                    color={profile?.email_verified ? verifiedColor : '#F59E0B'}
                   />
-                  <Text style={[styles.badgeText, { color: profile?.email_verified ? '#10B981' : '#F59E0B' }]}>Email</Text>
+                  <Text style={[styles.badgeText, { color: profile?.email_verified ? verifiedColor : '#F59E0B' }]}>Email</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.badge, profile?.aadhaar_verified ? styles.badgeSuccess : styles.badgeWarning]}
@@ -233,9 +237,9 @@ const handlePickPhoto = async () => {
                   <Ionicons
                     name={profile?.aadhaar_verified ? 'checkmark-circle' : 'time-outline'}
                     size={14}
-                    color={profile?.aadhaar_verified ? '#10B981' : COLORS.textMut}
+                    color={profile?.aadhaar_verified ? verifiedColor : COLORS.textMut}
                   />
-                  <Text style={[styles.badgeText, { color: profile?.aadhaar_verified ? '#10B981' : COLORS.textMut }]}>
+                  <Text style={[styles.badgeText, { color: profile?.aadhaar_verified ? verifiedColor : COLORS.textMut }]}>
                     Aadhaar
                   </Text>
                 </TouchableOpacity>
@@ -318,7 +322,7 @@ const handlePickPhoto = async () => {
   );
 }
 
-const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
+const makeStyles = (COLORS: ThemeColors, mode: ThemeMode) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: SPACING.lg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   closeBtn: { alignSelf: 'flex-end', padding: SPACING.sm, marginTop: SPACING.sm },
@@ -328,13 +332,20 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   avatarInitials: { fontSize: 32, ...FONTS.bold, color: COLORS.primary },
   avatarImage: { width: 86, height: 86, borderRadius: 43 },
   editBadge: { position: 'absolute', bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.bg },
-  badgeSuccess: { backgroundColor: '#E6F9F0', borderColor: '#C5EDDA' },
+  // Light keeps the original mint. Dark drops green for a neutral glass chip.
+  badgeSuccess: mode === 'dark'
+    ? { backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)' }
+    : { backgroundColor: '#E6F9F0', borderColor: '#C5EDDA' },
   userName: { fontSize: 24, ...FONTS.bold, color: COLORS.text, marginBottom: 4 },
   userMeta: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.md },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, justifyContent: 'center' },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: RADIUS.pill },
-  badgeGreen: { backgroundColor: '#E6F9F0' },
-  badgeWarning: { backgroundColor: '#FFF8E6' },
+  badgeGreen: mode === 'dark'
+    ? { backgroundColor: 'rgba(255,255,255,0.07)' }
+    : { backgroundColor: '#E6F9F0' },
+  badgeWarning: mode === 'dark'
+    ? { backgroundColor: 'rgba(245,158,11,0.14)' }
+    : { backgroundColor: '#FFF8E6' },
   badgeOutline: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   badgeText: { fontSize: 12, ...FONTS.semibold },
   menuSection: { marginBottom: SPACING.lg },

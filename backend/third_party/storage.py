@@ -2,7 +2,7 @@ import os
 import uuid
 import logging
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageOps
 from pathlib import Path
 from django.conf import settings
 
@@ -105,6 +105,11 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     except Exception:
         logger.exception("upload_image failed")
         raise StorageError("Invalid image file. Please upload a JPEG or PNG.")
+
+    try:
+        image = ImageOps.exif_transpose(image) or image
+    except Exception:
+        logger.exception("exif_transpose failed; using image as-is")
 
     if image.mode in ("RGBA", "P"):
         image = image.convert("RGB")
