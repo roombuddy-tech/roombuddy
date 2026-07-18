@@ -66,7 +66,7 @@ export interface GuestListingDetail {
   photos: ListingPhoto[];
   amenities: Array<{ display_name: string; category: string }>;
   flatmates: ListingFlatmate[];
-  host_info: { occupation: string; hobbies: string; gender: string; hometown: string };
+  host_info: { age: number | null; occupation: string; hobbies: string; gender: string; hometown: string };
   host_verifications: { aadhaar: boolean; email: boolean; phone: boolean };
   food: {
     kitchen_access: boolean;
@@ -97,6 +97,7 @@ export interface GuestListingDetail {
     photo_url: string | null;
     gender: string;
     member_since: string;
+    age?: number | null;
     occupation?: string;
     hobbies?: string;
     hometown?: string;

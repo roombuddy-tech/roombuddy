@@ -20,6 +20,28 @@ from third_party.storage import get_photo_url, delete_image
 from third_party.maps import geocode_address
 
 
+def _age_from_dob(dob) -> int | None:
+    """Whole years from a date of birth, or None if not available."""
+    if not dob:
+        return None
+    from datetime import date
+    today = date.today()
+    years = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    return years if 0 < years < 120 else None
+
+
+# Amenities are matched by display name, so a renamed amenity would silently
+# stop matching for clients still running the old app build. Map the old name
+# onto the new one until those builds age out.
+_AMENITY_ALIASES = {
+    "Water purifier": "RO / Water purifier",
+}
+
+
+def _resolve_amenity_names(names) -> list[str]:
+    return [_AMENITY_ALIASES.get(n, n) for n in (names or [])]
+
+
 def _photo_storage_key(url: str) -> str:
     """Stable key for a photo URL — strips the domain and any presign query
     string so a client's (signed) URL matches the stored (unsigned) URL."""
@@ -188,7 +210,8 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "check_out_time": _format_time(rules.check_out_by) if rules else "",
         },
         "host": {
-            "age": host_fm["age"] if host_fm else None,
+            "age": (host_fm["age"] if host_fm else None)
+            or _age_from_dob(getattr(getattr(listing.host_user, "profile", None), "date_of_birth", None)),
             "occupation": host_fm["occupation"] if host_fm else "",
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
@@ -254,17 +277,22 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         else:
             logger.info("update_listing: no kept_photo_urls in payload — skipping photo sync")
 
-        PropertyFlatmate.objects.filter(property=prop).delete()
-        for fm in d.get("flatmates", []):
-            PropertyFlatmate.objects.create(
-                property=prop,
-                name=fm["name"],
-                age=fm.get("age"),
-                gender=fm.get("gender", "") or None,
-                occupation=fm.get("occupation", ""),
-                hobbies=fm.get("hobbies", ""),
-                hometown=fm.get("hometown", ""),
-            )
+        if "flatmates" in data:
+            incoming = d.get("flatmates", [])
+            incoming = [fm for fm in incoming if (fm.get("name") or "").strip()]
+            PropertyFlatmate.objects.filter(property=prop).delete()
+            for fm in incoming:
+                PropertyFlatmate.objects.create(
+                    property=prop,
+                    name=fm["name"],
+                    age=fm.get("age"),
+                    gender=fm.get("gender", "") or None,
+                    occupation=fm.get("occupation", ""),
+                    hobbies=fm.get("hobbies", ""),
+                    hometown=fm.get("hometown", ""),
+                )
+        else:
+            logger.info("update_listing: no flatmates in payload — leaving existing rows intact")
 
         room = listing.room
         room_data = d["room"]
@@ -292,7 +320,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         ListingAmenity.objects.filter(listing=listing).delete()
         amenity_names = d.get("amenities", [])
         if amenity_names:
-            amenity_defs = AmenityDefinition.objects.filter(display_name__in=amenity_names)
+            amenity_defs = AmenityDefinition.objects.filter(display_name__in=_resolve_amenity_names(amenity_names))
             ListingAmenity.objects.bulk_create([
                 ListingAmenity(listing=listing, amenity=amenity)
                 for amenity in amenity_defs
@@ -491,7 +519,7 @@ def create_listing(user: User, data: dict) -> dict:
 
         amenity_names = d.get("amenities", [])
         if amenity_names:
-            amenity_defs = AmenityDefinition.objects.filter(display_name__in=amenity_names)
+            amenity_defs = AmenityDefinition.objects.filter(display_name__in=_resolve_amenity_names(amenity_names))
             ListingAmenity.objects.bulk_create([
                 ListingAmenity(listing=listing, amenity=amenity)
                 for amenity in amenity_defs
@@ -521,6 +549,13 @@ def create_listing(user: User, data: dict) -> dict:
                 end_date=bd["end_date"],
                 reason=bd.get("reason", ""),
             )
+
+    try:
+        from third_party.admin_alerts import notify_admin
+        state = "LIVE" if listing.status == Listing.Status.LIVE else "PENDING review"
+        notify_admin(f"📋 New listing ({state})\n“{listing.title}” — {prop.city_name or ''}")
+    except Exception:
+        logger.exception("admin listing alert failed")
 
     return {
         "listing_id": str(listing.id),
@@ -648,6 +683,10 @@ def search_guest_listings(
     lat: float | None = None,
     lng: float | None = None,
     radius_km: float = 5.0,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    min_rating: float | None = None,
+    sort: str | None = None,
 ) -> list[dict]:
 
     qs = (
@@ -656,8 +695,28 @@ def search_guest_listings(
         .filter(host_user__profile__id_verification_status="approved")
         .select_related("property", "room")
         .prefetch_related("listing_amenities__amenity")
-        .order_by("-average_rating", "-created_at")
     )
+
+    # ── Price & rating filters ──────────────────────────────────────────
+    if min_price is not None:
+        qs = qs.filter(host_price_per_night__gte=min_price)
+    if max_price is not None:
+        qs = qs.filter(host_price_per_night__lte=max_price)
+    if min_rating is not None:
+        qs = qs.filter(average_rating__gte=min_rating)
+
+    # ── Sort ────────────────────────────────────────────────────────────
+    has_geo = lat is not None and lng is not None
+    sort = (sort or ("distance" if has_geo else "recommended")).lower()
+    DB_ORDER = {
+        "price_low": ("host_price_per_night", "-created_at"),
+        "price_high": ("-host_price_per_night", "-created_at"),
+        "rating": ("-average_rating", "-created_at"),
+        "recommended": ("-average_rating", "-created_at"),
+    }
+    # "distance" is applied in Python after the query (needs lat/lng); until
+    # then order by the recommended default so the [:50] slice is sensible.
+    qs = qs.order_by(*DB_ORDER.get(sort, DB_ORDER["recommended"]))
 
     CITY_ALIASES = {
         "bangalore": "bengaluru",
@@ -687,24 +746,15 @@ def search_guest_listings(
         return combined
 
     if lat is not None and lng is not None:
-        # Early-stage: widen the floor so guests still see listings even when
-        # nothing is within a tight radius of their location.
-        effective_radius = max(radius_km, 100.0)
-        delta_lat = effective_radius / 111.0
-        delta_lng = effective_radius / (111.0 * math.cos(math.radians(lat)))
-        geo_filter = Q(
-            property__latitude__isnull=False,
-            property__longitude__isnull=False,
-            property__latitude__gte=lat - delta_lat,
-            property__latitude__lte=lat + delta_lat,
-            property__longitude__gte=lng - delta_lng,
-            property__longitude__lte=lng + delta_lng,
-        )
+        # Early-stage: no distance cutoff. If the guest also typed a place,
+        # narrow to text matches; otherwise show every live listing. Results
+        # are ordered closest-first by the distance sort below, so a guest in
+        # a city with no inventory still sees the nearest available rooms
+        # (just far away) instead of an empty screen.
         search_term = query or area
         if search_term:
-            qs = qs.filter(geo_filter | _text_filter(search_term))
-        else:
-            qs = qs.filter(geo_filter)
+            qs = qs.filter(_text_filter(search_term))
+        # else: no geo/text filter — all live listings, sorted by distance.
     else:
         search_term = query or area
         if search_term:
@@ -743,13 +793,16 @@ def search_guest_listings(
     results = [_listing_to_guest_card(l) for l in qs]
     _attach_cover_photos(qs, results)
 
-    if lat is not None and lng is not None:
+    if has_geo:
         for r in results:
             if r["latitude"] and r["longitude"]:
                 r["distance_km"] = _haversine(lat, lng, r["latitude"], r["longitude"])
             else:
                 r["distance_km"] = None
-        results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
+        # Only reorder by distance when that's the chosen sort; otherwise keep
+        # the DB ordering (price / rating / recommended) and just show distance.
+        if sort == "distance":
+            results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
 
     return results
 
@@ -818,6 +871,7 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
     # Host profile
     host_name = ""
     host_profile_data = {}
+    profile = None
     try:
         profile = listing.host_user.profile
         host_name = f"{profile.first_name} {profile.last_name[0]}." if profile.last_name else profile.first_name
@@ -827,6 +881,12 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
             "gender": profile.gender or "",
             "member_since": listing.host_user.created_at.strftime("%b %Y"),
         }
+        # Host age: prefer the value entered in the flatmates section,
+        # otherwise derive it from the host's date of birth.
+        host_profile_data["age"] = (
+            (host_fm.age if host_fm else None)
+            or _age_from_dob(getattr(profile, "date_of_birth", None))
+        )
         if host_fm:
             host_profile_data["occupation"] = host_fm.occupation or ""
             host_profile_data["hobbies"] = host_fm.hobbies or ""
@@ -892,6 +952,7 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
         "amenities": amenities,
         "flatmates": flatmates,
         "host_info": {
+            "age": (host_fm.age if host_fm else None) or _age_from_dob(getattr(profile, "date_of_birth", None)),
             "occupation": host_fm.occupation if host_fm else "",
             "hobbies": host_fm.hobbies if host_fm else "",
             "gender": host_fm.gender if host_fm else "",

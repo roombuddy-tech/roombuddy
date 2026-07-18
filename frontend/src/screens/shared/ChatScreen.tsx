@@ -16,13 +16,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
 import { getMessages, markConversationRead, sendMessage } from '../../services/chat';
 import type { ChatMessage } from '../../types/chat';
 
 const POLL_INTERVAL_MS = 3000;
 
-type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
+type ChatRouteParams = { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean; isInquiry?: boolean; listingId?: string };
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -35,9 +36,21 @@ function fmtTime(iso: string): string {
 export default function ChatScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<Record<string, ChatRouteParams>, string>>();
-  const { conversationId, title, subtitle, chatDisabled } = route.params;
+  const { conversationId, title, subtitle, chatDisabled, isInquiry, listingId } = route.params;
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  const { userRole } = useAuth();
+
+  // Tapping the property name opens that listing. This screen is shared by
+  // both roles, and each stack registers the listing screen under its own name.
+  const openListing = useCallback(() => {
+    if (!listingId) return;
+    if (userRole === 'host') {
+      navigation.navigate('ListingDetail', { item: { listing_id: listingId } });
+    } else {
+      navigation.navigate('GuestListingDetail', { listingId });
+    }
+  }, [listingId, userRole, navigation]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +145,14 @@ export default function ChatScreen() {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle} numberOfLines={1}>{title ?? 'Chat'}</Text>
           {subtitle ? (
-            <Text style={styles.headerSub} numberOfLines={1}>{subtitle}</Text>
+            listingId ? (
+              <TouchableOpacity style={styles.headerSubBtn} activeOpacity={0.6} onPress={openListing}>
+                <Text style={[styles.headerSub, styles.headerSubLink]} numberOfLines={1}>{subtitle}</Text>
+                <Ionicons name="chevron-forward" size={12} color={COLORS.primary} />
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.headerSub} numberOfLines={1}>{subtitle}</Text>
+            )
           ) : null}
         </View>
         <View style={{ width: 36 }} />
@@ -154,6 +174,16 @@ export default function ChatScreen() {
             renderItem={renderItem}
             contentContainerStyle={styles.listPad}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            ListHeaderComponent={
+              isInquiry ? (
+                <View style={styles.inquiryBanner}>
+                  <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.inquiryBannerTxt}>
+                    Contact details like phone numbers are hidden until a booking is confirmed. Keep chats in the app to stay protected.
+                  </Text>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <Text style={styles.emptySub}>Say hello to start the conversation.</Text>
@@ -202,7 +232,10 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  headerTitle: { fontSize: 17, ...FONTS.semibold, color: COLORS.text, flex: 1, textAlign: 'center' },
+  // No flex here — headerCenter is a column, so flex:1 stretched this box and
+  // clipped the descenders once the property link took the second line.
+  // lineHeight leaves room for descenders with the custom font.
+  headerTitle: { fontSize: 17, lineHeight: 22, ...FONTS.semibold, color: COLORS.text, textAlign: 'center' },
 
   listPad: { padding: SPACING.md, flexGrow: 1 },
   bubbleRow: { flexDirection: 'row', marginBottom: SPACING.sm },
@@ -241,6 +274,14 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface,
   },
   chatDisabledTxt: { fontSize: 13, color: COLORS.textMut, ...FONTS.medium },
+  inquiryBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    padding: 12, marginBottom: SPACING.sm,
+    borderRadius: RADIUS.md, backgroundColor: COLORS.primaryAlpha,
+  },
+  inquiryBannerTxt: { flex: 1, fontSize: 12.5, lineHeight: 18, color: COLORS.text, ...FONTS.medium },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerSub: { fontSize: 12, color: COLORS.textSec, marginTop: 1, textAlign: 'center' },
+  headerSubBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '100%' },
+  headerSubLink: { color: COLORS.primary },
+  headerSub: { fontSize: 12, lineHeight: 16, color: COLORS.textSec, marginTop: 1, textAlign: 'center' },
 });

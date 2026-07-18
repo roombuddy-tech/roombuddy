@@ -21,6 +21,14 @@ export async function startConversation(bookingId: string): Promise<Conversation
   return res.data;
 }
 
+/** Get-or-create a pre-booking inquiry conversation with a listing's host. */
+export async function startListingInquiry(listingId: string): Promise<Conversation> {
+  const res = await api.post<Conversation>(ENDPOINTS.CHAT.CONVERSATIONS, {
+    listing_id: listingId,
+  });
+  return res.data;
+}
+
 /** Fetch messages in a thread. Pass `after` (ISO timestamp) to poll incrementally. */
 export async function getMessages(
   conversationId: string,

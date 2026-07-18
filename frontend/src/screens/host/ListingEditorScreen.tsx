@@ -171,12 +171,12 @@ const AMENITY_GROUPS = [
   {
     label: 'Kitchen & Food',
     optional: true,
-    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'],
+    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'RO / Water purifier', 'Utensils provided'],
   },
   {
     label: 'Comfort',
     optional: true,
-    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
+    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Terrace / Garden access', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
   },
   {
     label: 'Safety',
@@ -197,11 +197,12 @@ const AMENITY_ICONS: Record<string, any> = {
   'Fridge': 'cube-outline',
   'Microwave': 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   'TV': 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
@@ -619,6 +620,7 @@ function TimePicker({
   optional?: boolean;
   placeholder?: string;
 }) {
+  const { mode } = useTheme();
   const COLORS = useThemeColors();
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
@@ -660,6 +662,8 @@ function TimePicker({
               mode="time"
               display="spinner"
               minuteInterval={30}
+              themeVariant={mode}
+              textColor={COLORS.text}
               onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
               style={{ height: 200 }}
             />
@@ -796,7 +800,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
   const validate = (): string | null => {
     if (!form.apartmentType) return 'Please select an apartment type';
     if (!form.floorNumber.trim()) return 'Please enter the floor number';
-    if (!form.apartmentName.trim()) return 'Please enter the society / apartment name';
+    if (!form.apartmentName.trim()) return 'Please enter the building name or number';
     if (!form.locality.trim()) return 'Please enter the locality / area';
     if (!form.city.trim()) return 'Please enter the city';
     return null;
@@ -845,8 +849,8 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           keyboardType="number-pad"
         />
         <Field
-          label="Society / Apartment name"
-          placeholder="e.g. Prestige Shantiniketan"
+          label="Building name or number"
+          placeholder="e.g. Prestige Shantiniketan, or House 42"
           value={form.apartmentName}
           onChange={(v) => update({ apartmentName: v })}
         />
@@ -1785,6 +1789,11 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                     <Text style={phSt.requiredTxt}>Required</Text>
                   </View>
                 )}
+                {!cat.required && !hasPhotos && (
+                  <View style={phSt.optionalBadge}>
+                    <Text style={phSt.optionalTxt}>Optional</Text>
+                  </View>
+                )}
                 {hasPhotos && (
                   <View style={phSt.doneBadge}>
                     <Ionicons name="checkmark" size={11} color={COLORS.primary} />
@@ -1872,6 +1881,8 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   categoryName: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
   requiredBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
+  optionalBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip },
+  optionalTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.textSec },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
   addBtn: {

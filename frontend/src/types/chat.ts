@@ -8,13 +8,15 @@ export interface ChatMessage {
 
 export interface Conversation {
   conversation_id: string;
-  booking_id: string;
-  booking_code: string;
-  booking_status: string;
+  booking_id: string | null;
+  booking_code: string | null;
+  booking_status: string | null;
+  is_inquiry: boolean;
   chat_disabled: boolean;
   counterpart_name: string;
   counterpart_initials: string;
   last_message: string | null;
+  listing_id: string | null;
   listing_title: string | null;
   last_message_at: string | null;
   unread_count: number;

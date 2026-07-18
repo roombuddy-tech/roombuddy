@@ -37,7 +37,7 @@ class VerifyOTPSerializer(PhoneValidationMixin, serializers.Serializer):
 
 class CompleteProfileSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=100, min_length=2)
-    last_name = serializers.CharField(max_length=100, min_length=2)
+    last_name = serializers.CharField(max_length=100, min_length=1)
     email = serializers.EmailField(required=False, allow_blank=True)
     gender = serializers.ChoiceField(choices=UserProfile.Gender.choices, required=False, allow_blank=True)
     city = serializers.CharField(max_length=100, min_length=2, required=False, allow_blank=True)

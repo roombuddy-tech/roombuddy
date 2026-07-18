@@ -13,6 +13,7 @@ import {
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,6 +30,7 @@ import type { GuestStackParamList } from '../../navigation/types';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
 import { createUnlockOrder } from '../../services/payments';
+import { startListingInquiry } from '../../services/chat';
 import type { GuestListingDetail } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -48,11 +50,12 @@ const AMENITY_ICONS: Record<string, string> = {
   Fridge: 'cube-outline',
   Microwave: 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   TV: 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
@@ -185,6 +188,7 @@ export default function GuestListingDetailScreen() {
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBookModal, setShowBookModal] = useState(false);
   const [bookStep, setBookStep] = useState<'rules' | 'dates'>('rules');
@@ -194,8 +198,10 @@ export default function GuestListingDetailScreen() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
   const [showHostModal, setShowHostModal] = useState(false);
+  const [showHostPhoto, setShowHostPhoto] = useState(false);
   const [revealedPhone, setRevealedPhone] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [messaging, setMessaging] = useState(false);
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
@@ -230,6 +236,25 @@ export default function GuestListingDetailScreen() {
       .catch(() => setError('Could not load listing'))
       .finally(() => setLoading(false));
     getListingReviews(listingId).then(setReviewsData).catch(() => {});
+  }, [listingId]);
+
+  // Pull-to-refresh: price, availability and reviews can change while the
+  // guest is reading the page.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [fresh, reviews] = await Promise.allSettled([
+        getGuestListingDetail(listingId),
+        getListingReviews(listingId),
+      ]);
+      if (fresh.status === 'fulfilled') {
+        setListing(fresh.value);
+        setError(null);
+      }
+      if (reviews.status === 'fulfilled') setReviewsData(reviews.value);
+    } finally {
+      setRefreshing(false);
+    }
   }, [listingId]);
 
   // Contact returned after a successful unlock payment.
@@ -274,6 +299,26 @@ export default function GuestListingDetailScreen() {
       setUnlocking(false);
     }
   }, [unlocking, listing, navigation]);
+
+  const handleMessageHost = useCallback(async () => {
+    if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+    if (messaging || !listing) return;
+    setMessaging(true);
+    try {
+      const convo = await startListingInquiry(listing.listing_id);
+      (navigation as any).navigate('Chat', {
+        conversationId: convo.conversation_id,
+        title: listing.host_name || 'Host',
+        subtitle: listing.title,
+        isInquiry: convo.is_inquiry,
+        listingId: listing.listing_id,
+      });
+    } catch {
+      Alert.alert('Could not start chat', 'Please try again in a moment.');
+    } finally {
+      setMessaging(false);
+    }
+  }, [isAuthenticated, messaging, listing, navigation]);
 
   const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
@@ -341,7 +386,13 @@ export default function GuestListingDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+      >
 
         {/* ── Photos ── */}
         <View style={styles.photoWrap}>
@@ -497,40 +548,43 @@ export default function GuestListingDetailScreen() {
           )}
 
           {/* ── Flatmates ── */}
-          {listing.flatmates.length > 0 && (
-            <View style={styles.section}>
-              <SectionTitle label="Meet your flatmates" />
-              {listing.host_info && (listing.host_info.occupation || listing.host_info.hobbies) && (
-                <View style={styles.flatmateCard}>
-                  <View style={styles.flatmateAvatar}>
-                    <Text style={styles.flatmateInitials}>{listing.host_name ? initials(listing.host_name) : 'H'}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
-                      <View style={styles.hostBadge}><Text style={styles.hostBadgeText}>Host</Text></View>
-                    </View>
-                    {listing.host_info.occupation ? <Text style={styles.flatmateDetail}>Occupation: {listing.host_info.occupation}</Text> : null}
-                    {listing.host_info.gender ? <Text style={styles.flatmateDetail}>Gender: {listing.host_info.gender.charAt(0).toUpperCase() + listing.host_info.gender.slice(1)}</Text> : null}
-                    {listing.host_info.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {listing.host_info.hobbies}</Text> : null}
-                    {listing.host_info.hometown ? <Text style={styles.flatmateDetail}>Hometown: {listing.host_info.hometown}</Text> : null}
-                  </View>
+          {/* The host always appears here — their name and badge stand on their
+              own, so the section shows even when no optional details or
+              flatmates were filled in. */}
+          <View style={styles.section}>
+            <SectionTitle label="Meet your flatmates" />
+
+            {/* Host card — always rendered. Optional details appear only if set. */}
+            <View style={styles.flatmateCard}>
+              <View style={styles.flatmateAvatar}>
+                <Text style={styles.flatmateInitials}>{listing.host_name ? initials(listing.host_name) : 'H'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
+                  <View style={styles.hostBadge}><Text style={styles.hostBadgeText}>Host</Text></View>
                 </View>
-              )}
-              {listing.flatmates.map((fm, idx) => (
-                <View key={idx} style={[styles.flatmateCard, idx === listing.flatmates.length - 1 && { borderBottomWidth: 0 }]}>
-                  <View style={styles.flatmateAvatar}><Text style={styles.flatmateInitials}>{initials(fm.name)}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.flatmateName}>{fm.name}{fm.age ? `, ${fm.age}` : ''}</Text>
-                    {fm.occupation ? <Text style={styles.flatmateDetail}>Occupation: {fm.occupation}</Text> : null}
-                    {fm.gender ? <Text style={styles.flatmateDetail}>Gender: {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}</Text> : null}
-                    {fm.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {fm.hobbies}</Text> : null}
-                    {fm.hometown ? <Text style={styles.flatmateDetail}>Hometown: {fm.hometown}</Text> : null}
-                  </View>
-                </View>
-              ))}
+                {listing.host_info?.occupation ? <Text style={styles.flatmateDetail}>Occupation: {listing.host_info.occupation}</Text> : null}
+                {listing.host_info?.gender ? <Text style={styles.flatmateDetail}>Gender: {listing.host_info.gender.charAt(0).toUpperCase() + listing.host_info.gender.slice(1)}</Text> : null}
+                {listing.host_info?.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {listing.host_info.hobbies}</Text> : null}
+                {listing.host_info?.hometown ? <Text style={styles.flatmateDetail}>Hometown: {listing.host_info.hometown}</Text> : null}
+              </View>
             </View>
-          )}
+
+            {/* Skip blank rows — an empty name means the entry has nothing to show. */}
+            {listing.flatmates.filter((fm) => fm.name?.trim()).map((fm, idx, arr) => (
+              <View key={idx} style={[styles.flatmateCard, idx === arr.length - 1 && { borderBottomWidth: 0 }]}>
+                <View style={styles.flatmateAvatar}><Text style={styles.flatmateInitials}>{initials(fm.name)}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.flatmateName}>{fm.name}{fm.age ? `, ${fm.age}` : ''}</Text>
+                  {fm.occupation ? <Text style={styles.flatmateDetail}>Occupation: {fm.occupation}</Text> : null}
+                  {fm.gender ? <Text style={styles.flatmateDetail}>Gender: {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}</Text> : null}
+                  {fm.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {fm.hobbies}</Text> : null}
+                  {fm.hometown ? <Text style={styles.flatmateDetail}>Hometown: {fm.hometown}</Text> : null}
+                </View>
+              </View>
+            ))}
+          </View>
 
           {/* ── Food ── */}
           {(listing.food.kitchen_access || listing.food.meals_available) && (
@@ -593,7 +647,8 @@ export default function GuestListingDetailScreen() {
                 <MapView
                   style={styles.miniMap} provider={PROVIDER_GOOGLE}
                   initialRegion={{ latitude: listing.property.latitude, longitude: listing.property.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
-                  scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false}
+                  scrollEnabled zoomEnabled rotateEnabled={false} pitchEnabled={false}
+                  toolbarEnabled={false}
                 >
                   <Circle center={{ latitude: listing.property.latitude, longitude: listing.property.longitude }} radius={300} fillColor="rgba(184,92,56,0.12)" strokeColor="rgba(184,92,56,0.35)" strokeWidth={1} />
                 </MapView>
@@ -744,6 +799,31 @@ export default function GuestListingDetailScreen() {
                     <Text style={styles.unlockNote}>One-time fee. Instant access.</Text>
                   </>
                 )}
+
+                {/* Free in-app messaging — always available */}
+                <View style={styles.msgDivider}>
+                  <View style={styles.msgDividerLine} />
+                  <Text style={styles.msgDividerTxt}>or</Text>
+                  <View style={styles.msgDividerLine} />
+                </View>
+                <TouchableOpacity
+                  style={styles.msgHostBtn}
+                  activeOpacity={0.85}
+                  onPress={handleMessageHost}
+                  disabled={messaging}
+                >
+                  {messaging ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble-ellipses-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.msgHostBtnTxt}>Message host — free</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                <Text style={styles.unlockNote}>
+                  Chat in the app. Phone numbers are shared after you book.
+                </Text>
               </View>
             );
           })()}
@@ -911,7 +991,7 @@ export default function GuestListingDetailScreen() {
           <View style={styles.hostModalContent}>
             <View style={styles.hostModalHeader}>
               <Text style={styles.hostModalTitle}>About your host</Text>
-              <TouchableOpacity onPress={() => setShowHostModal(false)} hitSlop={8}>
+              <TouchableOpacity onPress={() => { setShowHostPhoto(false); setShowHostModal(false); }} hitSlop={8}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
@@ -920,7 +1000,9 @@ export default function GuestListingDetailScreen() {
               <View style={styles.hostModalProfile}>
                 <View style={styles.hostModalAvatarWrap}>
                   {listing.host_profile?.photo_url ? (
-                    <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostModalAvatar} />
+                    <TouchableOpacity activeOpacity={0.9} onPress={() => setShowHostPhoto(true)}>
+                      <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostModalAvatar} />
+                    </TouchableOpacity>
                   ) : (
                     <View style={styles.hostModalAvatarFallback}>
                       <Text style={styles.hostModalAvatarInitials}>{initials(listing.host_name)}</Text>
@@ -934,6 +1016,15 @@ export default function GuestListingDetailScreen() {
               </View>
 
               <View style={styles.hostModalDetails}>
+                {listing.host_profile?.age ? (
+                  <View style={styles.hostModalRow}>
+                    <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
+                    <View>
+                      <Text style={styles.hostModalRowLabel}>Age</Text>
+                      <Text style={styles.hostModalRowValue}>{listing.host_profile.age} years</Text>
+                    </View>
+                  </View>
+                ) : null}
                 {listing.host_profile?.hometown ? (
                   <View style={styles.hostModalRow}>
                     <Ionicons name="home-outline" size={18} color={COLORS.primary} />
@@ -973,6 +1064,21 @@ export default function GuestListingDetailScreen() {
               </View>
             </ScrollView>
           </View>
+
+          {/* Full host photo — rendered inside the same modal to avoid nested-modal issues */}
+          {showHostPhoto && listing.host_profile?.photo_url && (
+            <View style={styles.hostPhotoOverlay}>
+              <TouchableOpacity style={styles.hostPhotoTapArea} activeOpacity={1} onPress={() => setShowHostPhoto(false)}>
+                <Image source={{ uri: listing.host_profile.photo_url }} style={styles.hostPhotoFull} resizeMode="contain" />
+              </TouchableOpacity>
+              <View style={styles.galleryHeader} pointerEvents="box-none">
+                <TouchableOpacity style={styles.galleryCloseBtn} onPress={() => setShowHostPhoto(false)}>
+                  <Ionicons name="close" size={26} color="#fff" />
+                </TouchableOpacity>
+                <View style={{ width: 40 }} />
+              </View>
+            </View>
+          )}
         </View>
       </Modal>
 
@@ -1035,6 +1141,9 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   photoTagTxt: { fontSize: 12, color: '#fff', ...FONTS.medium, textTransform: 'capitalize' },
   photoCounterTxt: { fontSize: 12, color: '#fff', ...FONTS.medium },
   galleryOverlay: { flex: 1, backgroundColor: '#000' },
+  hostPhotoOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 20 },
+  hostPhotoTapArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  hostPhotoFull: { width: SCREEN_W, height: SCREEN_W },
   galleryHeader: { position: 'absolute', top: 60, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: SPACING.md },
   galleryCloseBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
   galleryCounter: { fontSize: 16, color: '#fff', ...FONTS.semibold },
@@ -1125,6 +1234,15 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
   unlockBtnTxt: { color: '#fff', fontSize: 15, ...FONTS.bold },
   unlockNote: { fontSize: 12, color: COLORS.textMut, textAlign: 'center', marginTop: 8 },
+  msgDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 14 },
+  msgDividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  msgDividerTxt: { fontSize: 12, color: COLORS.textMut, ...FONTS.medium },
+  msgHostBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 13, borderRadius: RADIUS.md,
+    borderWidth: 1.5, borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha,
+  },
+  msgHostBtnTxt: { color: COLORS.primary, fontSize: 15, ...FONTS.bold },
 
   checkinRow: { flexDirection: 'row', gap: SPACING.sm },
   checkinCard: { flex: 1, paddingVertical: SPACING.lg, paddingHorizontal: SPACING.sm, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, alignItems: 'center', gap: 8, ...SHADOW.md },

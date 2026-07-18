@@ -46,11 +46,12 @@ const AMENITY_ICONS: Record<string, any> = {
   'Fridge': 'cube-outline',
   'Microwave': 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   'TV': 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
@@ -517,7 +518,7 @@ export default function ListingDetailScreen() {
               )}
 
               {/* ── Meet your flatmates ── */}
-              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
+              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
                 <>
                   <Divider />
                   <SectionHeader title="Meet your flatmates" />
@@ -598,12 +599,12 @@ export default function ListingDetailScreen() {
                   {
                     label: 'Kitchen & Food',
                     icon: 'restaurant-outline',
-                    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'].filter(a => ams.includes(a)),
+                    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'RO / Water purifier', 'Utensils provided'].filter(a => ams.includes(a)),
                   },
                   {
                     label: 'Comfort',
                     icon: 'happy-outline',
-                    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'].filter(a => ams.includes(a)),
+                    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Terrace / Garden access', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'].filter(a => ams.includes(a)),
                   },
                   {
                     label: 'Safety',
@@ -650,10 +651,11 @@ export default function ListingDetailScreen() {
                         latitudeDelta: 0.005,
                         longitudeDelta: 0.005,
                       }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
+                      scrollEnabled
+                      zoomEnabled
                       rotateEnabled={false}
                       pitchEnabled={false}
+                      toolbarEnabled={false}
                     >
                       <Marker coordinate={{ latitude: f.latitude, longitude: f.longitude }} />
                     </MapView>

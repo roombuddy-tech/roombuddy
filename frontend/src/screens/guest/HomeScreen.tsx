@@ -1,17 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   FlatList,
   Image,
+  Keyboard,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
@@ -24,8 +29,8 @@ import SearchResultsMap from '../../components/maps/SearchResultsMap';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import type { GuestStackParamList, GuestTabParamList } from '../../navigation/types';
-import { searchListings } from '../../services/search';
+import type { GuestStackParamList } from '../../navigation/types';
+import { searchListings, type SortOption } from '../../services/search';
 import type { GuestListingCard } from '../../types/listing';
 import ProfileMenu from '../shared/ProfileMenu';
 
@@ -73,32 +78,43 @@ export default function HomeScreen() {
   const [nearbyError, setNearbyError] = useState(false);
   const [hasLocation, setHasLocation] = useState(true);
 
-  const fetchNearby = React.useCallback(async () => {
-    setNearbyLoading(true);
-    setNearbyError(false);
-    let active = true;
+  // Coordinates are fetched once and reused — re-acquiring GPS on every tab
+  // switch or app resume would be slow and drain battery.
+  const coordsRef = useRef<{ lat?: number; lng?: number } | null>(null);
+  const lastNearbyFetchRef = useRef(0);
+  const NEARBY_STALE_MS = 30_000;
+
+  // Shared by initial load, focus, app-resume and pull-to-refresh so the
+  // landing page picks up newly published listings.
+  const loadNearby = useCallback(async (opts?: { force?: boolean }) => {
+    if (!opts?.force && Date.now() - lastNearbyFetchRef.current < NEARBY_STALE_MS) {
+      return; // refreshed a moment ago — skip the redundant call
+    }
     try {
-      let params: { lat?: number; lng?: number } = {};
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-      } else {
-        setHasLocation(false);
+      let params: { lat?: number; lng?: number } = coordsRef.current ?? {};
+      if (!coordsRef.current) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          coordsRef.current = params;
+        } else {
+          setHasLocation(false);
+        }
       }
       const data = await searchListings(params);
-      if (active) setNearbyListings(data.results.slice(0, 10));
+      setNearbyListings(data.results.slice(0, 10));
+      lastNearbyFetchRef.current = Date.now();
     } catch {
-      if (active) setNearbyError(true);
+      // leave the previous results in place on failure
     } finally {
-      if (active) setNearbyLoading(false);
+      setNearbyLoading(false);
     }
-    return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    fetchNearby();
-  }, []);
+    loadNearby({ force: true });
+  }, [loadNearby]);
 
   const SectionHead = ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <View style={styles.sectionHead}>
@@ -124,11 +140,37 @@ export default function HomeScreen() {
 
   // Results
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Refresh "Stays near you" when returning to the tab, and when the app is
+  // reopened after being backgrounded. Both are throttled inside loadNearby.
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasSearched) loadNearby();
+    }, [hasSearched, loadNearby]),
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && !hasSearched) loadNearby();
+    });
+    return () => sub.remove();
+  }, [hasSearched, loadNearby]);
   const [listings, setListings] = useState<GuestListingCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [editExpanded, setEditExpanded] = useState(false);
+
+  // Filter & sort
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minRating, setMinRating] = useState<number | null>(null);
+
+  const activeFilterCount =
+    (minPrice.trim() ? 1 : 0) + (maxPrice.trim() ? 1 : 0) +
+    (minRating != null ? 1 : 0) + (sortBy !== 'recommended' ? 1 : 0);
 
   const searchVersion = useRef(0);
 
@@ -189,7 +231,7 @@ export default function HomeScreen() {
       const effQuery = override?.q ?? query;
       const effLat = override?.lat ?? searchLat;
       const effLng = override?.lng ?? searchLng;
-      const params: { q?: string; check_in?: string; check_out?: string; lat?: number; lng?: number } = {};
+      const params: Parameters<typeof searchListings>[0] = {};
       if (effQuery.trim()) params.q = effQuery.trim();
       if (checkIn) params.check_in = checkIn;
       if (checkOut) params.check_out = checkOut;
@@ -197,6 +239,12 @@ export default function HomeScreen() {
         params.lat = effLat;
         params.lng = effLng;
       }
+      const minP = parseInt(minPrice, 10);
+      const maxP = parseInt(maxPrice, 10);
+      if (!isNaN(minP)) params.min_price = minP;
+      if (!isNaN(maxP)) params.max_price = maxP;
+      if (minRating != null) params.min_rating = minRating;
+      if (sortBy !== 'recommended') params.sort = sortBy;
       const data = await searchListings(Object.keys(params).length ? params : undefined);
       if (version === searchVersion.current) setListings(data.results);
     } catch {
@@ -204,7 +252,7 @@ export default function HomeScreen() {
     } finally {
       if (version === searchVersion.current) setLoading(false);
     }
-  }, [query, checkIn, checkOut, searchLat, searchLng]);
+  }, [query, checkIn, checkOut, searchLat, searchLng, minPrice, maxPrice, minRating, sortBy]);
 
   const searchNearby = useCallback(async () => {
     try {
@@ -225,8 +273,10 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    doSearch().finally(() => setRefreshing(false));
-  }, [doSearch]);
+    // The landing page shows "Stays near you"; results pages show the search.
+    const task = hasSearched ? doSearch() : loadNearby({ force: true });
+    Promise.resolve(task).finally(() => setRefreshing(false));
+  }, [hasSearched, doSearch, loadNearby]);
 
   // ─── Search form (reused in search page & edit panel) ──────────────────
 
@@ -463,6 +513,18 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Sort & filter bar */}
+      <TouchableOpacity
+        style={[styles.filterBar, activeFilterCount > 0 && styles.filterBarActive]}
+        activeOpacity={0.8}
+        onPress={() => setShowFilters(true)}
+      >
+        <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? '#fff' : COLORS.primary} />
+        <Text style={[styles.filterBarTxt, activeFilterCount > 0 && { color: '#fff' }]}>
+          Sort & filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+        </Text>
+      </TouchableOpacity>
+
       {/* Edit panel */}
       {editExpanded && (
         <View style={styles.editPanel}>
@@ -565,6 +627,9 @@ export default function HomeScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.homeWrap}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          }
         >
           {/* Search pill */}
           <TouchableOpacity
@@ -735,6 +800,98 @@ export default function HomeScreen() {
       )}
 
       {isAuthenticated && <ProfileMenu visible={showProfile} onClose={() => setShowProfile(false)} />}
+
+      {/* ── Sort & filter sheet ── */}
+      <Modal visible={showFilters} transparent animationType="slide" onRequestClose={() => setShowFilters(false)}>
+        <View style={styles.fsOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => { Keyboard.dismiss(); setShowFilters(false); }} />
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.fsSheet}>
+            <View style={styles.fsHeader}>
+              <Text style={styles.fsTitle}>Sort & filter</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.fsLabel}>Sort by</Text>
+            {([
+              ['recommended', 'Recommended'],
+              ['price_low', 'Price: low to high'],
+              ['price_high', 'Price: high to low'],
+              ['rating', 'Top rated'],
+              ...(searchLat != null && searchLng != null ? [['distance', 'Nearest first']] : []),
+            ] as [SortOption, string][]).map(([val, lbl]) => (
+              <TouchableOpacity key={val} style={styles.fsRow} activeOpacity={0.7} onPress={() => setSortBy(val)}>
+                <Text style={styles.fsRowTxt}>{lbl}</Text>
+                <Ionicons
+                  name={sortBy === val ? 'radio-button-on' : 'radio-button-off'}
+                  size={20}
+                  color={sortBy === val ? COLORS.primary : COLORS.textMut}
+                />
+              </TouchableOpacity>
+            ))}
+
+            <Text style={[styles.fsLabel, { marginTop: SPACING.lg }]}>Price per night (₹)</Text>
+            <View style={styles.fsPriceRow}>
+              <TextInput
+                style={styles.fsPriceInput}
+                placeholder="Min"
+                placeholderTextColor={COLORS.textMut}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                value={minPrice}
+                onChangeText={(v) => setMinPrice(v.replace(/[^0-9]/g, ''))}
+              />
+              <Text style={styles.fsPriceDash}>–</Text>
+              <TextInput
+                style={styles.fsPriceInput}
+                placeholder="Max"
+                placeholderTextColor={COLORS.textMut}
+                keyboardType="number-pad"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                value={maxPrice}
+                onChangeText={(v) => setMaxPrice(v.replace(/[^0-9]/g, ''))}
+              />
+            </View>
+
+            <Text style={[styles.fsLabel, { marginTop: SPACING.lg }]}>Minimum rating</Text>
+            <View style={styles.fsChipRow}>
+              {([[null, 'Any'], [4, '4.0+'], [4.5, '4.5+']] as [number | null, string][]).map(([val, lbl]) => (
+                <TouchableOpacity
+                  key={lbl}
+                  style={[styles.fsChip, minRating === val && styles.fsChipActive]}
+                  activeOpacity={0.8}
+                  onPress={() => setMinRating(val)}
+                >
+                  {val != null && <Ionicons name="star" size={12} color={minRating === val ? '#fff' : '#F59E0B'} />}
+                  <Text style={[styles.fsChipTxt, minRating === val && { color: '#fff' }]}>{lbl}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.fsActions}>
+              <TouchableOpacity
+                style={styles.fsClear}
+                activeOpacity={0.7}
+                onPress={() => { setSortBy('recommended'); setMinPrice(''); setMaxPrice(''); setMinRating(null); }}
+              >
+                <Text style={styles.fsClearTxt}>Clear all</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.fsApply}
+                activeOpacity={0.85}
+                onPress={() => { Keyboard.dismiss(); setShowFilters(false); if (hasSearched) doSearch(); }}
+              >
+                <Text style={styles.fsApplyTxt}>Show results</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -825,6 +982,48 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center',
     marginLeft: SPACING.sm,
   },
+  filterBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    alignSelf: 'flex-start', marginTop: SPACING.sm,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: RADIUS.pill,
+    borderWidth: 1, borderColor: COLORS.primary, backgroundColor: COLORS.surface,
+  },
+  filterBarActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterBarTxt: { fontSize: 13.5, color: COLORS.primary, ...FONTS.semibold },
+  // Filter sheet
+  fsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  fsSheet: {
+    backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg, paddingBottom: SPACING.xxl,
+  },
+  fsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
+  fsTitle: { fontSize: 20, ...FONTS.bold, color: COLORS.text },
+  fsLabel: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  fsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  fsRowTxt: { fontSize: 15, color: COLORS.text },
+  fsPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  fsPriceInput: {
+    flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.text,
+    backgroundColor: COLORS.surface,
+  },
+  fsPriceDash: { fontSize: 16, color: COLORS.textMut },
+  fsChipRow: { flexDirection: 'row', gap: 10 },
+  fsChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 9, paddingHorizontal: 16, borderRadius: RADIUS.pill,
+    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface,
+  },
+  fsChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  fsChipTxt: { fontSize: 14, ...FONTS.semibold, color: COLORS.text },
+  fsActions: { flexDirection: 'row', gap: 12, marginTop: SPACING.xl },
+  fsClear: { flex: 1, paddingVertical: 15, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  fsClearTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
+  fsApply: { flex: 2, paddingVertical: 15, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center' },
+  fsApplyTxt: { fontSize: 15, ...FONTS.bold, color: '#fff' },
 
   editPanel: {
     backgroundColor: COLORS.surface,

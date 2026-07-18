@@ -48,6 +48,29 @@ class ConversationListCreateView(APIView):
     def post(self, request):
         s = StartConversationRequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
+
+        # ── Pre-booking inquiry: guest messages a listing's host ──────────
+        if s.validated_data.get("listing_id"):
+            from apps.listings.models import Listing
+            from apps.conversations.services import get_or_create_inquiry_conversation
+            try:
+                listing = Listing.objects.select_related("host_user").get(
+                    id=s.validated_data["listing_id"]
+                )
+            except Listing.DoesNotExist:
+                return Response(
+                    {"error": "Listing not found", "code": ErrorCode.NOT_FOUND},
+                    status=http_status.HTTP_404_NOT_FOUND,
+                )
+            if request.user.id == listing.host_user_id:
+                return Response(
+                    {"error": "You can't message your own listing", "code": ErrorCode.FORBIDDEN},
+                    status=http_status.HTTP_403_FORBIDDEN,
+                )
+            conversation = get_or_create_inquiry_conversation(request.user, listing)
+            return Response(serialize_conversation(conversation, request.user))
+
+        # ── Post-booking chat ─────────────────────────────────────────────
         try:
             booking = (
                 Booking.objects.select_related("guest_user", "host_user", "listing")

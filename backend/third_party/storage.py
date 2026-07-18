@@ -116,6 +116,11 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     except Exception:
         logger.exception("exif_transpose failed; using image as-is")
 
+    try:
+        image = ImageOps.exif_transpose(image) or image
+    except Exception:
+        logger.exception("exif_transpose failed; using image as-is")
+
     if image.mode in ("RGBA", "P"):
         image = image.convert("RGB")
 
