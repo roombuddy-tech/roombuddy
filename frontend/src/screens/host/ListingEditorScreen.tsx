@@ -799,7 +799,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
   const validate = (): string | null => {
     if (!form.apartmentType) return 'Please select an apartment type';
     if (!form.floorNumber.trim()) return 'Please enter the floor number';
-    if (!form.apartmentName.trim()) return 'Please enter the society / apartment name';
+    if (!form.apartmentName.trim()) return 'Please enter the building name or number';
     if (!form.locality.trim()) return 'Please enter the locality / area';
     if (!form.city.trim()) return 'Please enter the city';
     return null;
@@ -848,8 +848,8 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           keyboardType="number-pad"
         />
         <Field
-          label="Society / Apartment name"
-          placeholder="e.g. Prestige Shantiniketan"
+          label="Building name or number"
+          placeholder="e.g. Prestige Shantiniketan, or House 42"
           value={form.apartmentName}
           onChange={(v) => update({ apartmentName: v })}
         />
