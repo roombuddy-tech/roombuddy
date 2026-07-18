@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Q
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 MESSAGE_PAGE_SIZE = 50
 MESSAGE_MAX_LENGTH = 2000
+ACTIVE_VIEW_WINDOW = timedelta(seconds=90)
 
 # Contact info is hidden in pre-booking chats so deals stay on-platform.
 # Matches phone numbers (7+ digits, possibly spaced/dashed/with +91), emails,
@@ -248,6 +250,28 @@ def _notify_new_message(conversation, sender, message) -> None:
     except Exception:
         logger.exception("_notify_new_message failed")
         listing_title = None
+
+    # Skip the phone buzz if the recipient is currently looking at this thread.
+    recipient_last_read = (
+        conversation.guest_last_read_at
+        if recipient.id == conversation.guest_user_id
+        else conversation.host_last_read_at
+    )
+    is_viewing = (
+        recipient_last_read is not None
+        and (timezone.now() - recipient_last_read) <= ACTIVE_VIEW_WINDOW
+    )
+    channels = (
+        [NotificationChannel.IN_APP]
+        if is_viewing
+        else [NotificationChannel.PUSH, NotificationChannel.IN_APP]
+    )
+    if is_viewing:
+        logger.info(
+            "Skipping push for message %s — recipient %s is viewing the thread",
+            message.id, recipient.id,
+        )
+
     dispatch(
         event_type=EventType.MESSAGE_RECEIVED,
         recipients=[recipient],
@@ -256,6 +280,6 @@ def _notify_new_message(conversation, sender, message) -> None:
             "conversation_id": str(conversation.id),
             "listing_title": listing_title or "",
         },
-        idempotency_event_id=f"message:{conversation.id}:{recipient.id}",
-        channels=[NotificationChannel.IN_APP],
+        idempotency_event_id=f"message:{message.id}:{recipient.id}",
+        channels=channels,
     )
