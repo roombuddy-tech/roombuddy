@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   FlatList,
   Image,
@@ -76,28 +77,43 @@ export default function HomeScreen() {
   const [nearbyLoading, setNearbyLoading] = useState(true);
   const [hasLocation, setHasLocation] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        let params: { lat?: number; lng?: number } = {};
+  // Coordinates are fetched once and reused — re-acquiring GPS on every tab
+  // switch or app resume would be slow and drain battery.
+  const coordsRef = useRef<{ lat?: number; lng?: number } | null>(null);
+  const lastNearbyFetchRef = useRef(0);
+  const NEARBY_STALE_MS = 30_000;
+
+  // Shared by initial load, focus, app-resume and pull-to-refresh so the
+  // landing page picks up newly published listings.
+  const loadNearby = useCallback(async (opts?: { force?: boolean }) => {
+    if (!opts?.force && Date.now() - lastNearbyFetchRef.current < NEARBY_STALE_MS) {
+      return; // refreshed a moment ago — skip the redundant call
+    }
+    try {
+      let params: { lat?: number; lng?: number } = coordsRef.current ?? {};
+      if (!coordsRef.current) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          coordsRef.current = params;
         } else {
-          if (active) setHasLocation(false);
+          setHasLocation(false);
         }
-        const data = await searchListings(params);
-        if (active) setNearbyListings(data.results.slice(0, 10));
-      } catch {
-        // ignore
-      } finally {
-        if (active) setNearbyLoading(false);
       }
-    })();
-    return () => { active = false; };
+      const data = await searchListings(params);
+      setNearbyListings(data.results.slice(0, 10));
+      lastNearbyFetchRef.current = Date.now();
+    } catch {
+      // leave the previous results in place on failure
+    } finally {
+      setNearbyLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadNearby({ force: true });
+  }, [loadNearby]);
 
   const SectionHead = ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <View style={styles.sectionHead}>
@@ -123,6 +139,21 @@ export default function HomeScreen() {
 
   // Results
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Refresh "Stays near you" when returning to the tab, and when the app is
+  // reopened after being backgrounded. Both are throttled inside loadNearby.
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasSearched) loadNearby();
+    }, [hasSearched, loadNearby]),
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && !hasSearched) loadNearby();
+    });
+    return () => sub.remove();
+  }, [hasSearched, loadNearby]);
   const [listings, setListings] = useState<GuestListingCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -241,8 +272,10 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    doSearch().finally(() => setRefreshing(false));
-  }, [doSearch]);
+    // The landing page shows "Stays near you"; results pages show the search.
+    const task = hasSearched ? doSearch() : loadNearby({ force: true });
+    Promise.resolve(task).finally(() => setRefreshing(false));
+  }, [hasSearched, doSearch, loadNearby]);
 
   // ─── Search form (reused in search page & edit panel) ──────────────────
 
@@ -586,6 +619,9 @@ export default function HomeScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.homeWrap}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          }
         >
           {/* Search pill */}
           <TouchableOpacity style={styles.searchPill} activeOpacity={0.8} onPress={() => setShowSearchForm(true)}>
