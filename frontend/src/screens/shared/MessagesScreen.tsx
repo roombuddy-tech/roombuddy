@@ -71,6 +71,7 @@ export default function MessagesScreen() {
       subtitle: c.listing_title ?? undefined,
       chatDisabled: c.chat_disabled,
       isInquiry: c.is_inquiry,
+      listingId: c.listing_id ?? undefined,
     });
   };
 

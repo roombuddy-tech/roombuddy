@@ -103,6 +103,7 @@ export default function BookingDetailScreen() {
         title: booking.guest_name,
         subtitle: convo.listing_title ?? undefined,
         chatDisabled: chatOff,
+        listingId: convo.listing_id ?? undefined,
       });
     } catch {
       // network error — screen stays as-is; user can retry
