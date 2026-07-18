@@ -30,6 +30,18 @@ def _age_from_dob(dob) -> int | None:
     return years if 0 < years < 120 else None
 
 
+# Amenities are matched by display name, so a renamed amenity would silently
+# stop matching for clients still running the old app build. Map the old name
+# onto the new one until those builds age out.
+_AMENITY_ALIASES = {
+    "Water purifier": "RO / Water purifier",
+}
+
+
+def _resolve_amenity_names(names) -> list[str]:
+    return [_AMENITY_ALIASES.get(n, n) for n in (names or [])]
+
+
 def _photo_storage_key(url: str) -> str:
     """Stable key for a photo URL — strips the domain and any presign query
     string so a client's (signed) URL matches the stored (unsigned) URL."""
@@ -265,17 +277,22 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         else:
             logger.info("update_listing: no kept_photo_urls in payload — skipping photo sync")
 
-        PropertyFlatmate.objects.filter(property=prop).delete()
-        for fm in d.get("flatmates", []):
-            PropertyFlatmate.objects.create(
-                property=prop,
-                name=fm["name"],
-                age=fm.get("age"),
-                gender=fm.get("gender", "") or None,
-                occupation=fm.get("occupation", ""),
-                hobbies=fm.get("hobbies", ""),
-                hometown=fm.get("hometown", ""),
-            )
+        if "flatmates" in data:
+            incoming = d.get("flatmates", [])
+            incoming = [fm for fm in incoming if (fm.get("name") or "").strip()]
+            PropertyFlatmate.objects.filter(property=prop).delete()
+            for fm in incoming:
+                PropertyFlatmate.objects.create(
+                    property=prop,
+                    name=fm["name"],
+                    age=fm.get("age"),
+                    gender=fm.get("gender", "") or None,
+                    occupation=fm.get("occupation", ""),
+                    hobbies=fm.get("hobbies", ""),
+                    hometown=fm.get("hometown", ""),
+                )
+        else:
+            logger.info("update_listing: no flatmates in payload — leaving existing rows intact")
 
         room = listing.room
         room_data = d["room"]
@@ -303,7 +320,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         ListingAmenity.objects.filter(listing=listing).delete()
         amenity_names = d.get("amenities", [])
         if amenity_names:
-            amenity_defs = AmenityDefinition.objects.filter(display_name__in=amenity_names)
+            amenity_defs = AmenityDefinition.objects.filter(display_name__in=_resolve_amenity_names(amenity_names))
             ListingAmenity.objects.bulk_create([
                 ListingAmenity(listing=listing, amenity=amenity)
                 for amenity in amenity_defs
@@ -502,7 +519,7 @@ def create_listing(user: User, data: dict) -> dict:
 
         amenity_names = d.get("amenities", [])
         if amenity_names:
-            amenity_defs = AmenityDefinition.objects.filter(display_name__in=amenity_names)
+            amenity_defs = AmenityDefinition.objects.filter(display_name__in=_resolve_amenity_names(amenity_names))
             ListingAmenity.objects.bulk_create([
                 ListingAmenity(listing=listing, amenity=amenity)
                 for amenity in amenity_defs

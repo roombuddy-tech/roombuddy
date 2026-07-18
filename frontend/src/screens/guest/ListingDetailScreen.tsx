@@ -13,6 +13,7 @@ import {
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,11 +50,12 @@ const AMENITY_ICONS: Record<string, string> = {
   Fridge: 'cube-outline',
   Microwave: 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   TV: 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
@@ -186,6 +188,7 @@ export default function GuestListingDetailScreen() {
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBookModal, setShowBookModal] = useState(false);
   const [bookStep, setBookStep] = useState<'rules' | 'dates'>('rules');
@@ -233,6 +236,25 @@ export default function GuestListingDetailScreen() {
       .catch(() => setError('Could not load listing'))
       .finally(() => setLoading(false));
     getListingReviews(listingId).then(setReviewsData).catch(() => {});
+  }, [listingId]);
+
+  // Pull-to-refresh: price, availability and reviews can change while the
+  // guest is reading the page.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [fresh, reviews] = await Promise.allSettled([
+        getGuestListingDetail(listingId),
+        getListingReviews(listingId),
+      ]);
+      if (fresh.status === 'fulfilled') {
+        setListing(fresh.value);
+        setError(null);
+      }
+      if (reviews.status === 'fulfilled') setReviewsData(reviews.value);
+    } finally {
+      setRefreshing(false);
+    }
   }, [listingId]);
 
   // Contact returned after a successful unlock payment.
@@ -363,7 +385,13 @@ export default function GuestListingDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+      >
 
         {/* ── Photos ── */}
         <View style={styles.photoWrap}>
@@ -519,41 +547,43 @@ export default function GuestListingDetailScreen() {
           )}
 
           {/* ── Flatmates ── */}
-          {(listing.flatmates.length > 0 ||
-            (listing.host_info && (listing.host_info.age || listing.host_info.occupation || listing.host_info.hobbies || listing.host_info.gender))) && (
-            <View style={styles.section}>
-              <SectionTitle label="Meet your flatmates" />
-              {listing.host_info && (listing.host_info.age || listing.host_info.occupation || listing.host_info.hobbies) && (
-                <View style={styles.flatmateCard}>
-                  <View style={styles.flatmateAvatar}>
-                    <Text style={styles.flatmateInitials}>{listing.host_name ? initials(listing.host_name) : 'H'}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.flatmateName}>{listing.host_name || 'Host'}{listing.host_info.age ? `, ${listing.host_info.age}` : ''}</Text>
-                      <View style={styles.hostBadge}><Text style={styles.hostBadgeText}>Host</Text></View>
-                    </View>
-                    {listing.host_info.occupation ? <Text style={styles.flatmateDetail}>Occupation: {listing.host_info.occupation}</Text> : null}
-                    {listing.host_info.gender ? <Text style={styles.flatmateDetail}>Gender: {listing.host_info.gender.charAt(0).toUpperCase() + listing.host_info.gender.slice(1)}</Text> : null}
-                    {listing.host_info.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {listing.host_info.hobbies}</Text> : null}
-                    {listing.host_info.hometown ? <Text style={styles.flatmateDetail}>Hometown: {listing.host_info.hometown}</Text> : null}
-                  </View>
+          {/* The host always appears here — their name and badge stand on their
+              own, so the section shows even when no optional details or
+              flatmates were filled in. */}
+          <View style={styles.section}>
+            <SectionTitle label="Meet your flatmates" />
+
+            {/* Host card — always rendered. Optional details appear only if set. */}
+            <View style={styles.flatmateCard}>
+              <View style={styles.flatmateAvatar}>
+                <Text style={styles.flatmateInitials}>{listing.host_name ? initials(listing.host_name) : 'H'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.flatmateName}>{listing.host_name || 'Host'}</Text>
+                  <View style={styles.hostBadge}><Text style={styles.hostBadgeText}>Host</Text></View>
                 </View>
-              )}
-              {listing.flatmates.map((fm, idx) => (
-                <View key={idx} style={[styles.flatmateCard, idx === listing.flatmates.length - 1 && { borderBottomWidth: 0 }]}>
-                  <View style={styles.flatmateAvatar}><Text style={styles.flatmateInitials}>{initials(fm.name)}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.flatmateName}>{fm.name}{fm.age ? `, ${fm.age}` : ''}</Text>
-                    {fm.occupation ? <Text style={styles.flatmateDetail}>Occupation: {fm.occupation}</Text> : null}
-                    {fm.gender ? <Text style={styles.flatmateDetail}>Gender: {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}</Text> : null}
-                    {fm.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {fm.hobbies}</Text> : null}
-                    {fm.hometown ? <Text style={styles.flatmateDetail}>Hometown: {fm.hometown}</Text> : null}
-                  </View>
-                </View>
-              ))}
+                {listing.host_info?.occupation ? <Text style={styles.flatmateDetail}>Occupation: {listing.host_info.occupation}</Text> : null}
+                {listing.host_info?.gender ? <Text style={styles.flatmateDetail}>Gender: {listing.host_info.gender.charAt(0).toUpperCase() + listing.host_info.gender.slice(1)}</Text> : null}
+                {listing.host_info?.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {listing.host_info.hobbies}</Text> : null}
+                {listing.host_info?.hometown ? <Text style={styles.flatmateDetail}>Hometown: {listing.host_info.hometown}</Text> : null}
+              </View>
             </View>
-          )}
+
+            {/* Skip blank rows — an empty name means the entry has nothing to show. */}
+            {listing.flatmates.filter((fm) => fm.name?.trim()).map((fm, idx, arr) => (
+              <View key={idx} style={[styles.flatmateCard, idx === arr.length - 1 && { borderBottomWidth: 0 }]}>
+                <View style={styles.flatmateAvatar}><Text style={styles.flatmateInitials}>{initials(fm.name)}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.flatmateName}>{fm.name}{fm.age ? `, ${fm.age}` : ''}</Text>
+                  {fm.occupation ? <Text style={styles.flatmateDetail}>Occupation: {fm.occupation}</Text> : null}
+                  {fm.gender ? <Text style={styles.flatmateDetail}>Gender: {fm.gender.charAt(0).toUpperCase() + fm.gender.slice(1)}</Text> : null}
+                  {fm.hobbies ? <Text style={styles.flatmateDetail}>Hobbies: {fm.hobbies}</Text> : null}
+                  {fm.hometown ? <Text style={styles.flatmateDetail}>Hometown: {fm.hometown}</Text> : null}
+                </View>
+              </View>
+            ))}
+          </View>
 
           {/* ── Food ── */}
           {(listing.food.kitchen_access || listing.food.meals_available) && (
