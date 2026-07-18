@@ -2,7 +2,7 @@ import os
 import uuid
 import logging
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageOps
 from pathlib import Path
 from django.conf import settings
 
@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 MAX_IMAGE_SIZE_MB = 10
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
-# Pillow reports format from the file's actual header bytes, not the filename.
-ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}
+ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP", "MPO", "HEIF", "HEIC"}
 
 
 class StorageError(Exception):
@@ -109,8 +108,13 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     if image.format not in ALLOWED_IMAGE_FORMATS:
         raise StorageError(
             f"Unsupported image format '{image.format}'. "
-            "Please upload a JPEG, PNG, or WebP file."
+            "Please upload a JPEG, PNG, HEIC or WebP file."
         )
+
+    try:
+        image = ImageOps.exif_transpose(image) or image
+    except Exception:
+        logger.exception("exif_transpose failed; using image as-is")
 
     if image.mode in ("RGBA", "P"):
         image = image.convert("RGB")
