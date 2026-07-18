@@ -265,17 +265,22 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         else:
             logger.info("update_listing: no kept_photo_urls in payload — skipping photo sync")
 
-        PropertyFlatmate.objects.filter(property=prop).delete()
-        for fm in d.get("flatmates", []):
-            PropertyFlatmate.objects.create(
-                property=prop,
-                name=fm["name"],
-                age=fm.get("age"),
-                gender=fm.get("gender", "") or None,
-                occupation=fm.get("occupation", ""),
-                hobbies=fm.get("hobbies", ""),
-                hometown=fm.get("hometown", ""),
-            )
+        if "flatmates" in data:
+            incoming = d.get("flatmates", [])
+            incoming = [fm for fm in incoming if (fm.get("name") or "").strip()]
+            PropertyFlatmate.objects.filter(property=prop).delete()
+            for fm in incoming:
+                PropertyFlatmate.objects.create(
+                    property=prop,
+                    name=fm["name"],
+                    age=fm.get("age"),
+                    gender=fm.get("gender", "") or None,
+                    occupation=fm.get("occupation", ""),
+                    hobbies=fm.get("hobbies", ""),
+                    hometown=fm.get("hometown", ""),
+                )
+        else:
+            logger.info("update_listing: no flatmates in payload — leaving existing rows intact")
 
         room = listing.room
         room_data = d["room"]
