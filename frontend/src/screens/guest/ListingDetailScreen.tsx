@@ -311,6 +311,7 @@ export default function GuestListingDetailScreen() {
         title: listing.host_name || 'Host',
         subtitle: listing.title,
         isInquiry: convo.is_inquiry,
+        listingId: listing.listing_id,
       });
     } catch {
       Alert.alert('Could not start chat', 'Please try again in a moment.');

@@ -255,6 +255,7 @@ export default function MyStaysScreen() {
         title: b.host_name,
         subtitle: convo.listing_title ?? undefined,
         chatDisabled: chatOff,
+        listingId: convo.listing_id ?? undefined,
       });
     } catch {}
   };
