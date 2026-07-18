@@ -13,6 +13,7 @@ import {
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -186,6 +187,7 @@ export default function GuestListingDetailScreen() {
 
   const [listing, setListing] = useState<GuestListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBookModal, setShowBookModal] = useState(false);
   const [bookStep, setBookStep] = useState<'rules' | 'dates'>('rules');
@@ -233,6 +235,25 @@ export default function GuestListingDetailScreen() {
       .catch(() => setError('Could not load listing'))
       .finally(() => setLoading(false));
     getListingReviews(listingId).then(setReviewsData).catch(() => {});
+  }, [listingId]);
+
+  // Pull-to-refresh: price, availability and reviews can change while the
+  // guest is reading the page.
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [fresh, reviews] = await Promise.allSettled([
+        getGuestListingDetail(listingId),
+        getListingReviews(listingId),
+      ]);
+      if (fresh.status === 'fulfilled') {
+        setListing(fresh.value);
+        setError(null);
+      }
+      if (reviews.status === 'fulfilled') setReviewsData(reviews.value);
+    } finally {
+      setRefreshing(false);
+    }
   }, [listingId]);
 
   // Contact returned after a successful unlock payment.
@@ -363,7 +384,13 @@ export default function GuestListingDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+      >
 
         {/* ── Photos ── */}
         <View style={styles.photoWrap}>
