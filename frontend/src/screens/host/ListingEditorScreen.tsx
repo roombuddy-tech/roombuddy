@@ -171,12 +171,12 @@ const AMENITY_GROUPS = [
   {
     label: 'Kitchen & Food',
     optional: true,
-    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'],
+    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'RO / Water purifier', 'Utensils provided'],
   },
   {
     label: 'Comfort',
     optional: true,
-    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
+    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Terrace / Garden access', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
   },
   {
     label: 'Safety',
@@ -197,11 +197,12 @@ const AMENITY_ICONS: Record<string, any> = {
   'Fridge': 'cube-outline',
   'Microwave': 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   'TV': 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
