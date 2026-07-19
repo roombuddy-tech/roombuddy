@@ -4,7 +4,7 @@ module.exports = {
   expo: {
     name: "RoomBuddy",
     slug: "roombuddy",
-    version: "1.0.3",
+    version: "1.0.4",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
