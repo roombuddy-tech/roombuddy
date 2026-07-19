@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
@@ -13,14 +15,14 @@ export type GuestTabParamList = {
 
 export type HostTabParamList = {
   Today: undefined;
-  Listing: undefined;
+  Listing: { openVerification?: boolean } | undefined;
   Bookings: undefined;
   Earnings: undefined;
   Messages: undefined;
 };
 
 export type HostStackParamList = {
-  HostTabs: undefined;
+  HostTabs: NavigatorScreenParams<HostTabParamList> | undefined;
   ListingEditor: { listingId?: string; resumeDraft?: boolean };
   ListingDetail: {
     preview?: any;

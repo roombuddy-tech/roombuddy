@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { CompositeNavigationProp } from '@react-navigation/native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -13,7 +13,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
 import api from '../../services/api';
-import VerificationScreen from '../shared/VerificationScreen';
 
 const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
 const TOTAL_STEPS = 9;
@@ -81,6 +80,7 @@ function DraftProgressBar({ completed, total, styles }: { completed: number; tot
 
 export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RouteProp<HostTabParamList, 'Listing'>>();
   const { user } = useAuth();
   const { colors: COLORS, shadows: SHADOW } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
@@ -91,7 +91,6 @@ export default function ListingsScreen() {
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [aadhaarVerified, setAadhaarVerified] = useState(true);
   const [idVerificationStatus, setIdVerificationStatus] = useState('not_submitted');
-  const [showVerification, setShowVerification] = useState(false);
 
   const draftKey = user?.user_id ? getDraftKey(user.user_id) : null;
 
@@ -174,16 +173,22 @@ export default function ListingsScreen() {
   const draftTitle = draft?.form?.title?.trim() || draft?.form?.apartmentName?.trim() || 'Untitled listing';
   const draftStepsCompleted = draft ? Math.max(0, draft.step) : 0;
 
-  const handleVerificationClose = () => {
-    setShowVerification(false);
-    fetchListings();
-  };
+  // Push the Verification screen as a real route rather than a local <Modal>.
+  // RN's Modal renders outside the app's SafeAreaProvider, so the screen's
+  // SafeAreaView got 0 insets and its back button sat under the status bar.
+  const openVerification = () => navigation.navigate('Verification');
+
+  // "Verify now" from the post-publish prompt lands here with a param.
+  // Clear it immediately so it doesn't reopen on every later focus.
+  useEffect(() => {
+    if (route.params?.openVerification) {
+      navigation.setParams({ openVerification: undefined });
+      openVerification();
+    }
+  }, [route.params?.openVerification, navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <Modal visible={showVerification} animationType="slide">
-        <VerificationScreen visible={showVerification} onClose={handleVerificationClose} onVerified={fetchListings} />
-      </Modal>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
@@ -263,7 +268,7 @@ export default function ListingsScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.verifyBannerBtn}
-                  onPress={() => setShowVerification(true)}
+                  onPress={() => openVerification()}
                 >
                   <Text style={styles.verifyBannerBtnTxt}>
                     {idVerificationStatus === 'pending' ? 'Check status' : idVerificationStatus === 'rejected' ? 'Resubmit' : 'Verify now'}
@@ -283,67 +288,77 @@ export default function ListingsScreen() {
                 )}
                 {listings.map((item) => {
                   const isHidden = item.status === 'live' && item.visible_to_guests === false;
+                  // Everything that would go live the moment Aadhaar clears.
+                  // 'pending' was stamped at creation (host unverified then);
+                  // 'live' is held back by visible_to_guests. Both are blocked
+                  // by the same thing, so both get the same call to action.
+                  const needsAadhaar =
+                    !aadhaarVerified &&
+                    item.visible_to_guests === false &&
+                    (item.status === 'live' || item.status === 'pending');
                   const statusConfig = STATUS_CONFIG[isHidden ? 'hidden' : item.status] || STATUS_CONFIG.draft;
                   return (
-                    <TouchableOpacity
-                      key={item.listing_id}
-                      style={styles.listingCard}
-                      activeOpacity={0.7}
-                      onPress={() => handleCardPress(item)}
-                    >
-                      <View style={styles.photoContainer}>
-                        <ListingThumbnail uri={item.cover_photo_url} styles={styles} COLORS={COLORS} />
-                        <View style={styles.statusOverlay}>
-                          <View style={[styles.statusOverlayDot, { backgroundColor: statusConfig.color }]} />
-                          <Text style={styles.statusOverlayTxt}>{statusConfig.label}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.detailsContainer}>
-                        <View style={styles.titleRow}>
-                          <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                          <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.textMut} />
-                        </View>
-
-                        <Text style={styles.areaName}>{item.area_name}</Text>
-
-                        <View style={styles.bottomRow}>
-                          <Text style={styles.price}>
-                            ₹{item.host_price_per_night.toLocaleString('en-IN')}
-                            <Text style={styles.priceUnit}>/night</Text>
-                          </Text>
-                          <View style={styles.statsRow}>
-                            {item.average_rating ? (
-                              <>
-                                <Text style={styles.star}>★</Text>
-                                <Text style={styles.rating}>{item.average_rating}</Text>
-                                <Text style={styles.dot}>·</Text>
-                              </>
-                            ) : null}
-                            <Text style={styles.bookingCount}>{item.total_bookings} bookings</Text>
+                    <View key={item.listing_id} style={styles.listingCard}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handleCardPress(item)}
+                      >
+                        <View style={styles.photoContainer}>
+                          <ListingThumbnail uri={item.cover_photo_url} styles={styles} COLORS={COLORS} />
+                          <View style={styles.statusOverlay}>
+                            <View style={[styles.statusOverlayDot, { backgroundColor: statusConfig.color }]} />
+                            <Text style={styles.statusOverlayTxt}>{statusConfig.label}</Text>
                           </View>
                         </View>
 
-                        {item.status === 'draft' && (
-                          <View style={styles.serverDraftHint}>
-                            <Ionicons name="pencil-outline" size={12} color={COLORS.primary} />
-                            <Text style={styles.serverDraftHintTxt}>Tap to continue editing</Text>
+                        <View style={styles.detailsContainer}>
+                          <View style={styles.titleRow}>
+                            <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
+                            <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.textMut} />
                           </View>
-                        )}
-                        {isHidden && (
-                          <TouchableOpacity
-                            style={styles.hiddenHint}
-                            activeOpacity={0.6}
-                            onPress={() => setShowVerification(true)}
-                            hitSlop={8}
-                          >
-                            <Ionicons name="shield-outline" size={13} color="#D97706" />
-                            <Text style={styles.hiddenHintTxt}>Verify Aadhaar to publish</Text>
-                            <Ionicons name="chevron-forward" size={13} color="#D97706" />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </TouchableOpacity>
+
+                          <Text style={styles.areaName}>{item.area_name}</Text>
+
+                          <View style={styles.bottomRow}>
+                            <Text style={styles.price}>
+                              ₹{item.host_price_per_night.toLocaleString('en-IN')}
+                              <Text style={styles.priceUnit}>/night</Text>
+                            </Text>
+                            <View style={styles.statsRow}>
+                              {item.average_rating ? (
+                                <>
+                                  <Text style={styles.star}>★</Text>
+                                  <Text style={styles.rating}>{item.average_rating}</Text>
+                                  <Text style={styles.dot}>·</Text>
+                                </>
+                              ) : null}
+                              <Text style={styles.bookingCount}>{item.total_bookings} bookings</Text>
+                            </View>
+                          </View>
+
+                          {item.status === 'draft' && (
+                            <View style={styles.serverDraftHint}>
+                              <Ionicons name="pencil-outline" size={12} color={COLORS.primary} />
+                              <Text style={styles.serverDraftHintTxt}>Tap to continue editing</Text>
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+
+                    {/* Sibling of the card's touchable, never nested inside it —
+                        nested touchables race and taps leak through to the card. */}
+                    {needsAadhaar && (
+                      <TouchableOpacity
+                        style={styles.hiddenHint}
+                        activeOpacity={0.6}
+                        onPress={() => openVerification()}
+                      >
+                        <Ionicons name="shield-outline" size={16} color={COLORS.star} />
+                        <Text style={styles.hiddenHintTxt}>Verify Aadhaar to publish</Text>
+                        <Ionicons name="chevron-forward" size={16} color={COLORS.star} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   );
                 })}
               </View>
@@ -492,14 +507,20 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   serverDraftHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   serverDraftHintTxt: { fontSize: 11, color: COLORS.primary, ...FONTS.medium },
 
+  // Full-width action bar across the bottom of the card. 48px tall so it clears
+  // the minimum touch target — the old inline text was a ~16px strip and taps
+  // routinely missed it.
   hiddenHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-    alignSelf: 'flex-start',
+    gap: 6,
+    minHeight: 48,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.chip,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
-  hiddenHintTxt: { fontSize: 12, color: COLORS.primary, ...FONTS.medium },
+  hiddenHintTxt: { flex: 1, fontSize: 13, color: COLORS.star, ...FONTS.semibold },
 
   // ── Empty state ──
   emptyState: { alignItems: 'center', paddingVertical: 60 },
