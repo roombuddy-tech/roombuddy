@@ -51,6 +51,7 @@ export type GuestStackParamList = {
     checkIn?: string;
     checkOut?: string;
     unlockedContact?: { name: string; phone: string | null };
+    autoAction?: 'unlock' | 'message' | 'book';
   };
   BookTest: undefined;
   BookingConfirm: {

@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,10 +27,11 @@ import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/the
 import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
+import { startListingInquiry } from '../../services/chat';
+import { createUnlockOrder } from '../../services/payments';
+import { savePendingIntent, type PendingAction } from '../../services/pendingIntent';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
-import { createUnlockOrder } from '../../services/payments';
-import { startListingInquiry } from '../../services/chat';
 import type { GuestListingDetail } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -131,7 +132,7 @@ function parseNearbyFromDescription(description: string): { cleanDesc: string; n
 export default function GuestListingDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut, unlockedContact } = route.params;
+  const { listingId, checkIn: passedCheckIn, checkOut: passedCheckOut, unlockedContact, autoAction } = route.params;
   const { isAuthenticated } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
@@ -265,8 +266,13 @@ export default function GuestListingDetailScreen() {
     }
   }, [unlockedContact]);
 
+  const gateToLogin = useCallback((action: PendingAction) => {
+    if (listingId) savePendingIntent(listingId, action);
+    (navigation as any).navigate('Login');
+  }, [listingId, navigation]);
+
   const handleUnlock = useCallback(async () => {
-    if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+    if (!isAuthenticated) { gateToLogin('unlock'); return; }
     if (unlocking || !listing) return;
     setUnlocking(true);
     try {
@@ -301,7 +307,7 @@ export default function GuestListingDetailScreen() {
   }, [unlocking, listing, navigation]);
 
   const handleMessageHost = useCallback(async () => {
-    if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+    if (!isAuthenticated) { gateToLogin('message'); return; }
     if (messaging || !listing) return;
     setMessaging(true);
     try {
@@ -319,6 +325,16 @@ export default function GuestListingDetailScreen() {
       setMessaging(false);
     }
   }, [isAuthenticated, messaging, listing, navigation]);
+
+  const pendingAutoAction = useRef<PendingAction | undefined>(autoAction);
+  useEffect(() => {
+    if (!listing || !isAuthenticated || !pendingAutoAction.current) return;
+    const action = pendingAutoAction.current;
+    pendingAutoAction.current = undefined;
+
+    if (action === 'message') handleMessageHost();
+    else if (action === 'book') { setBookStep('rules'); setShowBookModal(true); }
+  }, [listing, isAuthenticated, handleUnlock, handleMessageHost]);
 
   const onPhotoScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
@@ -880,7 +896,7 @@ export default function GuestListingDetailScreen() {
           )}
         </View>
         <TouchableOpacity style={styles.stickyBookBtn} activeOpacity={0.85} onPress={() => {
-          if (!isAuthenticated) { (navigation as any).navigate('Login'); return; }
+          if (!isAuthenticated) { gateToLogin('book'); return; }
           setBookStep('rules'); setShowBookModal(true);
         }}>
           <Text style={styles.stickyBookBtnText}>Book now</Text>
