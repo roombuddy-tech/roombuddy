@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,7 +24,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { CONFIG } from '../../constants/config';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -2169,6 +2169,20 @@ function StepReview({
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const rvSt = useMemo(() => makeRvStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [showVerifyPrompt, setShowVerifyPrompt] = useState(false);
+
+  const leaveToListings = (openVerification: boolean) => {
+    setShowVerifyPrompt(false);
+    setTimeout(() => {
+      onSuccess();
+      setTimeout(() => {
+        navigation.navigate('HostTabs', {
+          screen: 'Listing',
+          params: openVerification ? { openVerification: true } : undefined,
+        });
+      }, 320);
+    }, 220);
+  };
 
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const amenityHighlights = form.amenities.slice(0, 3).join(', ');
@@ -2205,6 +2219,7 @@ function StepReview({
     setUploadProgress(null);
     try {
       let propertyId: string | null = null;
+      let needsAadhaar = false;
 
       if (isEditMode && listingId) {
         const result = await updateListing(listingId, form);
@@ -2212,8 +2227,18 @@ function StepReview({
       } else {
         const result = await createListing(form);
         propertyId = result.property_id ?? null;
+        // Backend returns 'pending' when the host's Aadhaar isn't approved yet —
+        // that's exactly when the listing stays hidden from guests.
+        needsAadhaar = result.status === 'pending';
         if (draftKey) await AsyncStorage.removeItem(draftKey);
       }
+
+      // A brand-new listing published by an unverified host is invisible to guests.
+      // Prompt for Aadhaar here instead of silently dropping the host on Today.
+      const finish = () => {
+        if (needsAadhaar) setShowVerifyPrompt(true);
+        else onSuccess();
+      };
 
       // Upload only newly added local photos (skip existing S3 URLs)
       const newPhotoCount = Object.values(form.photos)
@@ -2231,7 +2256,7 @@ function StepReview({
           Alert.alert(
             isEditMode ? 'Updated' : 'Listing published!',
             `Your listing was saved, but all ${failed} photo${failed > 1 ? 's' : ''} failed to upload. You can add them later via Edit listing.`,
-            [{ text: 'OK', onPress: onSuccess }],
+            [{ text: 'OK', onPress: finish }],
           );
           return;
         }
@@ -2239,16 +2264,21 @@ function StepReview({
           Alert.alert(
             isEditMode ? 'Updated' : 'Listing published!',
             `${uploaded} photo${uploaded > 1 ? 's' : ''} uploaded. ${failed} failed — you can add them later via Edit listing.`,
-            [{ text: 'OK', onPress: onSuccess }],
+            [{ text: 'OK', onPress: finish }],
           );
           return;
         }
       }
 
+      if (needsAadhaar) {
+        finish();
+        return;
+      }
+
       Alert.alert(
         isEditMode ? 'Updated!' : 'Listing published!',
         isEditMode ? 'Your listing has been updated.' : 'Your listing will be available for booking in a few hours.',
-        [{ text: 'OK', onPress: onSuccess }],
+        [{ text: 'OK', onPress: finish }],
       );
     } catch (err: any) {
       const msg =
@@ -2328,6 +2358,31 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
+      {/* Post-publish nudge: the listing is saved but hidden until Aadhaar clears */}
+      <Modal visible={showVerifyPrompt} transparent animationType="fade" onRequestClose={() => leaveToListings(false)}>
+        <View style={rvSt.vpBackdrop}>
+          <View style={rvSt.vpCard}>
+            <View style={rvSt.vpIcon}>
+              <Ionicons name="shield-checkmark" size={30} color={COLORS.primary} />
+            </View>
+            <Text style={rvSt.vpTitle}>Listing published!</Text>
+            <Text style={rvSt.vpBody}>
+              One last step — your listing stays hidden from guests until your Aadhaar is verified.
+              It takes 2 minutes, and we review it within 24-48 hours.
+            </Text>
+
+            <TouchableOpacity style={rvSt.vpPrimary} onPress={() => leaveToListings(true)} activeOpacity={0.85}>
+              <Text style={rvSt.vpPrimaryTxt}>Verify now</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={rvSt.vpSecondary} onPress={() => leaveToListings(false)} activeOpacity={0.7}>
+              <Text style={rvSt.vpSecondaryTxt}>I'll do it later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Text style={stSt.title}>{isEditMode ? 'Review & Update' : 'Review & List'}</Text>
       <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
@@ -2418,6 +2473,17 @@ function StepReview({
 }
 
 const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
+  // Aadhaar verification prompt shown right after a listing is published
+  vpBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', paddingHorizontal: SPACING.lg },
+  vpCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center', ...SHADOW.md },
+  vpIcon: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.accentAlpha, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
+  vpTitle: { fontSize: 19, ...FONTS.bold, color: COLORS.text, marginBottom: 8, textAlign: 'center' },
+  vpBody: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec, textAlign: 'center', lineHeight: 21, marginBottom: SPACING.lg },
+  vpPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 15, width: '100%' },
+  vpPrimaryTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
+  vpSecondary: { paddingVertical: 14, marginTop: 4 },
+  vpSecondaryTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.textMut },
+
   previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.md },
   summaryCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.md },
   coverPhoto: { width: '100%', height: 150, borderRadius: 0 },

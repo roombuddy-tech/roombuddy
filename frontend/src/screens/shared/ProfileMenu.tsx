@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeMode } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -316,8 +316,10 @@ const handlePickPhoto = async () => {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      {renderContent()}
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        {renderContent()}
+      </SafeAreaProvider>
     </Modal>
   );
 }

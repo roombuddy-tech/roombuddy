@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  AppState,
   Alert,
+  AppState,
   FlatList,
   Image,
   Keyboard,
@@ -29,7 +29,8 @@ import SearchResultsMap from '../../components/maps/SearchResultsMap';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import type { GuestStackParamList, GuestTabParamList } from '../../navigation/types';
+import type { GuestStackParamList } from '../../navigation/types';
+import { takePendingIntent } from '../../services/pendingIntent';
 import { searchListings, type SortOption } from '../../services/search';
 import type { GuestListingCard } from '../../types/listing';
 import ProfileMenu from '../shared/ProfileMenu';
@@ -71,6 +72,20 @@ export default function HomeScreen() {
   const { colors: COLORS, shadows: SHADOW } = useTheme();
   const styles = useMemo(() => makeStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const initial = (user?.first_name?.[0] || user?.display_name?.[0] || 'U').toUpperCase();
+
+  const intentReplayed = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated || intentReplayed.current) return;
+    intentReplayed.current = true;
+
+    takePendingIntent().then((intent) => {
+      if (!intent) return;
+      navigation.navigate('GuestListingDetail', {
+        listingId: intent.listingId,
+        autoAction: intent.action,
+      });
+    });
+  }, [isAuthenticated, navigation]);
 
   // Near-you listings (location-based)
   const [nearbyListings, setNearbyListings] = useState<GuestListingCard[]>([]);
