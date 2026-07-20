@@ -4,15 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RoomBuddy — Rooms in Bangalore, no brokerage · Deal directly with owners</title>
-  <meta name="description" content="Find furnished rooms in Bangalore with no brokerage and no advance rent locked in. Talk to the owner directly for just ₹29, free cancellation, Aadhaar-verified hosts. From ₹500/night.">
+  <meta name="description" content="Find furnished rooms in Bangalore with no brokerage and no advance rent locked in. Message hosts free in the app, unlock their number for ₹29, free cancellation, Aadhaar-verified hosts. From ₹500/night.">
   <meta name="keywords" content="rooms in Bangalore, no brokerage rooms Bangalore, room for rent Bangalore, no broker, furnished room, sublet Bangalore, PG alternative, Koramangala, Indiranagar, HSR Layout">
   <!-- Open Graph / social share -->
   <meta property="og:title" content="RoomBuddy — Rooms in Bangalore, no brokerage">
-  <meta property="og:description" content="No brokerage. No advance rent. Talk to the owner directly for ₹29 and cancel free anytime. Furnished rooms in real shared homes across Bangalore.">
+  <meta property="og:description" content="No brokerage. No advance rent. Message hosts free in the app and cancel free anytime. Furnished rooms in real shared homes across Bangalore.">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="RoomBuddy — Rooms in Bangalore, no brokerage">
-  <meta name="twitter:description" content="No brokerage. No advance rent. Deal directly with owners for ₹29. Free cancellation.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -333,6 +330,71 @@
     .way-card.host .way-btn { background: #E89478; color: var(--teal); }
 
     /* why */
+    /* problem — the case for why this needs to exist at all */
+    #problem {
+      background: #fff;
+      padding: 90px 28px;
+      border-bottom: 1px solid rgba(44,74,88,.06);
+    }
+    .problem-header { text-align: center; max-width: 700px; margin: 0 auto 46px; }
+    .problem-header .section-sub { margin: 0 auto; }
+    .problem-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+      max-width: 1160px; margin: 0 auto;
+    }
+    .problem-card {
+      background: var(--parchment-light);
+      border: 1px solid rgba(44,74,88,.07);
+      border-radius: var(--r); padding: 26px 22px;
+    }
+    .problem-card-num {
+      font-family: 'Baloo 2', cursive; font-size: 13px; font-weight: 700;
+      color: var(--coral); letter-spacing: .08em; margin-bottom: 10px;
+    }
+    .problem-h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 18px;
+      color: var(--teal); line-height: 1.25; margin-bottom: 8px;
+    }
+    .problem-body { font-size: 14.5px; line-height: 1.62; color: var(--text-muted); }
+    .problem-why {
+      max-width: 760px; margin: 40px auto 0; text-align: center;
+    }
+    .problem-why h3 {
+      font-family: 'Baloo 2', cursive; font-weight: 800;
+      font-size: clamp(21px, 2.6vw, 30px); line-height: 1.2;
+      color: var(--teal); margin-bottom: 10px;
+    }
+    .problem-why h3 em { color: var(--coral); font-style: normal; }
+    .problem-why p { font-size: 15.5px; line-height: 1.7; color: var(--text-muted); }
+
+    /* before / after — the product payoff, side by side */
+    .compare {
+      max-width: 1160px; margin: 40px auto 0;
+      background: var(--teal); border-radius: var(--r-lg);
+      padding: 38px; display: grid; grid-template-columns: 1fr 1fr; gap: 34px;
+    }
+    .compare-col-title {
+      font-size: 12px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; margin-bottom: 18px;
+    }
+    .compare-old .compare-col-title { color: rgba(255,255,255,.45); }
+    .compare-new .compare-col-title { color: var(--coral); }
+    .compare-list { display: flex; flex-direction: column; gap: 12px; }
+    .compare-item {
+      display: flex; align-items: flex-start; gap: 11px;
+      font-size: 15px; line-height: 1.5;
+    }
+    .compare-mark {
+      flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; margin-top: 1px;
+    }
+    .compare-old .compare-mark { background: rgba(255,255,255,.08); color: rgba(255,255,255,.4); }
+    .compare-old .compare-item { color: rgba(255,255,255,.5); }
+    .compare-new .compare-mark { background: rgba(217,112,85,.22); color: var(--coral); }
+    .compare-new .compare-item { color: #fff; }
+    .compare-cta { grid-column: 1 / -1; margin-top: 6px; }
+
     #why {
       background: var(--parchment-light);
       padding: 90px 28px;
@@ -475,6 +537,9 @@
       transition: background .2s, transform .15s;
     }
     .store-btn:hover { background: var(--teal-mid); transform: translateY(-2px); }
+    /* Play listing is still in review — dimmed until the URL is live. */
+    .store-btn-soon { opacity: .45; cursor: not-allowed; }
+    .store-btn-soon:hover { background: var(--teal); transform: none; }
     .store-btn-label { text-align: left; }
     .store-btn-small { font-size: 10px; opacity: .65; line-height: 1.1; }
     .store-btn-name {
@@ -566,6 +631,8 @@
       .phone-wrap { display: none; }
       .two-ways-grid { grid-template-columns: 1fr; }
       .why-grid { grid-template-columns: 1fr 1fr; }
+      .problem-grid { grid-template-columns: 1fr 1fr; }
+      .nav-links a:not(.nav-cta) { display: none; }
       .how-grid { grid-template-columns: 1fr; }
       .testi-grid { grid-template-columns: 1fr; }
       .footer-inner { grid-template-columns: 1fr; gap: 32px; }
@@ -574,9 +641,9 @@
     }
     @media (max-width: 600px) {
       .why-grid { grid-template-columns: 1fr; }
+      .problem-grid { grid-template-columns: 1fr; }
       .value-grid { grid-template-columns: 1fr; }
       .save-band { flex-direction: column; text-align: center; gap: 18px; }
-      .nav-links a:not(.nav-cta) { display: none; }
     }
     @media (prefers-reduced-motion: reduce) {
       .phone { animation: none; }
@@ -625,11 +692,160 @@
     .save-pill.us .amt { color: var(--coral); }
     .save-pill.us .lbl { color: #fff; }
     .save-vs { color: rgba(255,255,255,.4); font-size: 15px; font-weight: 700; }
+
+    /* ── premium atmosphere ───────────────────────────────────────────── */
+
+    /* Fine film grain across the whole page. Cheapest, highest-impact way to
+       stop flat colour fields reading like a template. Kept very low opacity —
+       you should feel it, not see it. */
+    body::after {
+      content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      opacity: .04; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Reading-progress hairline. Subtle motion cue that the page is going
+       somewhere — reads as considered rather than decorative. */
+    #progress {
+      position: fixed; top: 0; left: 0; height: 2px; width: 0; z-index: 200;
+      background: linear-gradient(90deg, var(--coral), #E89478);
+      transition: width .12s linear;
+    }
+
+    /* Nav condenses and deepens once you leave the hero. */
+    #nav { transition: background .35s, box-shadow .35s, backdrop-filter .35s; }
+    #nav .nav-inner { transition: padding .35s cubic-bezier(.16,1,.3,1); }
+    #nav.scrolled { background: rgba(30,52,63,.82); backdrop-filter: blur(26px) saturate(140%); }
+    #nav.scrolled .nav-inner { padding-top: 9px; padding-bottom: 9px; }
+
+    /* Unified card interaction — lift, warm the border, deepen the shadow.
+       One easing curve everywhere so the page feels like one object. */
+    .why-card, .problem-card, .how-card, .value-card, .testi-card {
+      transition: transform .38s cubic-bezier(.16,1,.3,1),
+                  box-shadow .38s cubic-bezier(.16,1,.3,1),
+                  border-color .38s ease;
+      will-change: transform;
+    }
+    /* ── 3D tilt on every card ────────────────────────────────────────── */
+
+    /* Perspective lives on the grid so sibling cards share one vanishing
+       point — tilt each card in its own perspective and they look unrelated. */
+    .problem-grid, .why-grid, .value-grid, .testi-grid,
+    .personas-grid, .how-grid, .two-ways-grid { perspective: 1400px; }
+
+    .problem-card, .why-card, .value-card, .testi-card,
+    .persona-card, .how-card, .way-card {
+      position: relative;
+      transform-style: preserve-3d;
+      /* Slow, eased settle on the way back to rest. */
+      transition: transform .45s cubic-bezier(.16,1,.3,1),
+                  box-shadow .45s cubic-bezier(.16,1,.3,1),
+                  border-color .45s ease;
+      will-change: transform;
+    }
+    /* Swapped in while the pointer is inside — snappy enough to feel glued. */
+    .problem-card.tilting, .why-card.tilting, .value-card.tilting,
+    .testi-card.tilting, .persona-card.tilting, .how-card.tilting,
+    .way-card.tilting { transition: transform .08s linear, box-shadow .3s; }
+
+    /* Cards arrive rotated instead of sliding flat. */
+    .problem-card[data-r], .why-card[data-r], .value-card[data-r],
+    .testi-card[data-r], .persona-card[data-r], .how-card[data-r],
+    .way-card[data-r] { transform: translateY(26px) rotateX(-9deg); }
+    .problem-card[data-r].visible, .why-card[data-r].visible,
+    .value-card[data-r].visible, .testi-card[data-r].visible,
+    .persona-card[data-r].visible, .how-card[data-r].visible,
+    .way-card[data-r].visible { transform: none; }
+
+    /* Warm spotlight tracking the cursor across the card face. */
+    .problem-card::before, .why-card::before, .value-card::before,
+    .testi-card::before, .persona-card::before, .how-card::before {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      pointer-events: none; opacity: 0; transition: opacity .35s ease;
+      background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%),
+                  rgba(217,112,85,.16), transparent 62%);
+    }
+    /* The two-ways cards are already coral/teal — a coral wash would muddy
+       them, so they get a white sheen instead. */
+    .way-card::before {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      pointer-events: none; opacity: 0; transition: opacity .35s ease; z-index: 1;
+      background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%),
+                  rgba(255,255,255,.13), transparent 60%);
+    }
+    .problem-card:hover::before, .why-card:hover::before, .value-card:hover::before,
+    .testi-card:hover::before, .persona-card:hover::before, .how-card:hover::before,
+    .way-card:hover::before { opacity: 1; }
+
+    .problem-card:hover, .why-card:hover, .value-card:hover,
+    .testi-card:hover, .persona-card:hover, .how-card:hover {
+      border-color: rgba(217,112,85,.38);
+      box-shadow: 0 26px 56px rgba(44,74,88,.18);
+    }
+    .way-card:hover { box-shadow: 0 26px 56px rgba(44,74,88,.26); }
+
+    /* Content floats above the card face so the tilt parallaxes rather than
+       looking like a rotating rectangle. Direct children only, so it works
+       whatever each card's internal markup happens to be. */
+    .problem-card > *, .why-card > *, .value-card > *, .testi-card > *,
+    .persona-card > *, .how-card > * { transform: translateZ(22px); }
+    .way-card-inner { transform: translateZ(26px); }
+
+    /* The problem cards keep their finer-grained layering. */
+    .problem-card-num { transform: translateZ(34px); }
+    .problem-card .problem-h3 { transform: translateZ(26px); }
+    .problem-card .problem-body { transform: translateZ(14px); }
+
+    /* Touch devices: flat cards, no dead hover states, crisp text. */
+    @media (hover: none) {
+      .problem-card::before, .why-card::before, .value-card::before,
+      .testi-card::before, .persona-card::before, .how-card::before,
+      .way-card::before { display: none; }
+      .problem-card > *, .why-card > *, .value-card > *, .testi-card > *,
+      .persona-card > *, .how-card > *, .way-card-inner,
+      .problem-card-num, .problem-card .problem-h3,
+      .problem-card .problem-body { transform: none; }
+    }
+
+    /* Buttons get a touch of depth and a lift on hover. */
+    .btn-primary, .store-btn, .nav-cta {
+      transition: transform .28s cubic-bezier(.16,1,.3,1), box-shadow .28s, background .2s;
+    }
+    .btn-primary:hover, .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(217,112,85,.32); }
+
+    /* Slightly longer, softer reveal — less "pop in", more "settle". */
+    [data-r] { transition-duration: .8s !important; }
+
+    @media (prefers-reduced-motion: reduce) {
+      #progress { display: none; }
+      .why-card:hover, .problem-card:hover, .how-card:hover,
+      .value-card:hover, .testi-card:hover,
+      .btn-primary:hover, .nav-cta:hover { transform: none; }
+    }
+
+    /* The #value rules above are declared *after* the main media queries, so the
+       mobile overrides there lost on source order and the grid stayed 2-up —
+       which is what pushed the page into horizontal scroll on phones.
+       Re-declared here, last, so they actually win. */
+    @media (max-width: 900px) {
+      .save-band { padding: 26px 24px; }
+      .compare { padding: 30px 26px; gap: 26px; }
+    }
+    @media (max-width: 680px) {
+      .compare { grid-template-columns: 1fr; gap: 22px; }
+    }
+    @media (max-width: 600px) {
+      .value-grid { grid-template-columns: 1fr; }
+      .save-band { flex-direction: column; text-align: center; gap: 18px; }
+      .save-compare { justify-content: center; }
+    }
   </style>
 </head>
 <body>
 
 <!-- NAV -->
+<div id="progress"></div>
+
 <nav id="nav">
   <div class="nav-inner">
     <a href="#" class="nav-logo">
@@ -637,6 +853,7 @@
       <span>Room<em>Buddy</em></span>
     </a>
     <div class="nav-links">
+      <a href="#problem">The problem</a>
       <a href="#why">Why us</a>
       <a href="#how">How it works</a>
       <a href="#host">For hosts</a>
@@ -657,16 +874,14 @@
         Rooms in Bangalore,<br><em>no brokerage</em>.
       </h1>
       <p class="hero-sub">
-        Skip the brokers and their fat commissions.
-        RoomBuddy puts you in a <strong>furnished room in a real shared home</strong> —
-        kitchen, flatmates, WiFi — from ₹500 a night.
-        <strong>No brokerage, no advance rent</strong> — talk to the owner directly for just ₹29.
+        A furnished room in a real shared home — kitchen, flatmates, WiFi — from <strong>₹500 a night</strong>. Message the owner free. <strong>No broker in between.</strong>
       </p>
       <div class="hero-chips">
         <span class="hero-chip">✅ Zero brokerage</span>
         <span class="hero-chip">✅ No advance rent</span>
-        <span class="hero-chip">✅ Owner contact for ₹29</span>
+        <span class="hero-chip">✅ Free chat with hosts</span>
         <span class="hero-chip">✅ Free cancellation</span>
+        <span class="hero-chip">✅ ₹49 back if the host declines</span>
       </div>
       <div class="hero-btns">
         <a href="#download" class="btn-primary">
@@ -748,6 +963,81 @@
 </header>
 
 <!-- PERSONAS -->
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="problem-header" data-r>
+    <div class="section-eyebrow">The problem</div>
+    <h2 class="section-h2">Finding a room in a shared<br>home is still guesswork.</h2>
+    <p class="section-sub">Thousands of rooms get sublet across India every month. The demand has always been there. A place built for it hasn’t.</p>
+  </div>
+
+  <div class="problem-grid">
+    <div class="problem-card" data-r>
+      <div class="problem-card-num">01</div>
+      <h3 class="problem-h3">Nowhere to actually search</h3>
+      <p class="problem-body">Scattered across group chats and classifieds. No filters, no dates. You scroll and hope.</p>
+    </div>
+    <div class="problem-card" data-r>
+      <div class="problem-card-num">02</div>
+      <h3 class="problem-h3">Listings vanish in hours</h3>
+      <p class="problem-body">Post today, buried by tomorrow. So you post again. And again.</p>
+    </div>
+    <div class="problem-card" data-r>
+      <div class="problem-card-num">03</div>
+      <h3 class="problem-h3">Conversations get lost</h3>
+      <p class="problem-body">Twelve people, three apps. By Thursday you’ve lost the one who was actually right.</p>
+    </div>
+    <div class="problem-card" data-r>
+      <div class="problem-card-num">04</div>
+      <h3 class="problem-h3">You can't tell who's real</h3>
+      <p class="problem-body">A stranger is moving into your home. You have a photo and a first name.</p>
+    </div>
+    <div class="problem-card" data-r>
+      <div class="problem-card-num">05</div>
+      <h3 class="problem-h3">Nothing is comparable</h3>
+      <p class="problem-body">Rent, deposit, what’s included — buried in replies, if mentioned at all.</p>
+    </div>
+    <div class="problem-card" data-r>
+      <div class="problem-card-num">06</div>
+      <h3 class="problem-h3">So both sides give up</h3>
+      <p class="problem-body">Hosts stop posting. Guests stop looking. The room sits empty anyway.</p>
+    </div>
+  </div>
+
+  <div class="problem-why" data-r>
+    <h3>Nobody built for this, because <em>there's no brokerage in it</em>.</h3>
+    <p>Portals chase whole flats and the commission that comes with them. Short-stay sites chase tourists. One spare room in a real home was never worth anyone’s time.</p>
+  </div>
+
+  <div class="compare" data-r>
+    <div class="compare-old">
+      <div class="compare-col-title">Finding a room today</div>
+      <div class="compare-list">
+        <div class="compare-item"><span class="compare-mark">✕</span><span>Scroll endlessly and hope something fits</span></div>
+        <div class="compare-item"><span class="compare-mark">✕</span><span>Re-post your room every single day</span></div>
+        <div class="compare-item"><span class="compare-mark">✕</span><span>Chats scattered, leads quietly lost</span></div>
+        <div class="compare-item"><span class="compare-mark">✕</span><span>No idea who you're really dealing with</span></div>
+        <div class="compare-item"><span class="compare-mark">✕</span><span>₹10,000–15,000 to a broker for an introduction</span></div>
+        <div class="compare-item"><span class="compare-mark">✕</span><span>That fee is gone even if the deal falls through</span></div>
+      </div>
+    </div>
+    <div class="compare-new">
+      <div class="compare-col-title">Finding a room on RoomBuddy</div>
+      <div class="compare-list">
+        <div class="compare-item"><span class="compare-mark">✓</span><span>Filter by budget, area, dates and rating</span></div>
+        <div class="compare-item"><span class="compare-mark">✓</span><span>List once — it stays live until you pause it</span></div>
+        <div class="compare-item"><span class="compare-mark">✓</span><span>Message hosts free — one thread each, still there next week</span></div>
+        <div class="compare-item"><span class="compare-mark">✓</span><span>Aadhaar-verified hosts and guests, both sides</span></div>
+        <div class="compare-item"><span class="compare-mark">✓</span><span>₹49 to book. Rent goes straight to the host.</span></div>
+        <div class="compare-item"><span class="compare-mark">✓</span><span>₹49 back in full if the host doesn’t accept</span></div>
+      </div>
+    </div>
+    <div class="compare-cta">
+      <a href="#how" class="btn-primary">See how it works</a>
+    </div>
+  </div>
+</section>
+
 <section id="personas">
   <div class="personas-inner">
     <div class="personas-label">This is for you if —</div>
@@ -817,7 +1107,7 @@
     <div class="why-header" data-r>
       <div class="section-eyebrow">Why RoomBuddy</div>
       <h2 class="section-h2">Not a hotel. Not a PG.<br>Something better.</h2>
-      <p class="section-sub">A new kind of stay — affordable, flexible and human. Like crashing at a trusted friend's place, but anywhere in India.</p>
+      <p class="section-sub">Affordable, flexible, human. Like a trusted friend’s spare room — anywhere in India.</p>
     </div>
     <div class="why-grid">
       <div class="why-card" data-r>
@@ -825,28 +1115,28 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/></svg>
         </div>
         <h3 class="why-h3">Real homes, not hotel boxes</h3>
-        <p class="why-body">A furnished room in a real apartment — queen bed, WiFi, attached bath — at 60% less than any comparable hotel nearby.</p>
+        <p class="why-body">Queen bed, WiFi, attached bath. Around 60% less than a comparable hotel.</p>
       </div>
       <div class="why-card" data-r>
         <div class="why-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0c1.1 0 2-.9 2-2V2M5 2v20M16 2c-1.7 0-3 2-3 5s1.3 5 3 5v8"/></svg>
         </div>
         <h3 class="why-h3">Food sorted</h3>
-        <p class="why-body">Full kitchen access to cook your own meals, or a local tiffin from ₹120. No overpriced room service, no hunting for dhabas at midnight.</p>
+        <p class="why-body">Cook in a real kitchen, or a local tiffin from ₹120. No midnight dhaba hunts.</p>
       </div>
       <div class="why-card" data-r>
         <div class="why-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5M15.5 19c0-1.8.7-3.3 2-4.2"/></svg>
         </div>
         <h3 class="why-h3">Know your flatmates first</h3>
-        <p class="why-body">See real profiles — occupation, hobbies, gender — before you book. No surprises at the door. It's the difference between staying somewhere and living somewhere.</p>
+        <p class="why-body">See who you’re living with — before you book, not at the door.</p>
       </div>
       <div class="why-card" data-r>
         <div class="why-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.3 3 7.5 7 9 4-1.5 7-4.7 7-9V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.2-3.6"/></svg>
         </div>
         <h3 class="why-h3">Verified end to end</h3>
-        <p class="why-body">Every guest and host is Aadhaar-verified. Secure Razorpay payments, in-app chat, and real human support if anything goes wrong.</p>
+        <p class="why-body">Aadhaar-verified on both sides. Secure payments, in-app chat, real support.</p>
       </div>
     </div>
   </div>
@@ -858,7 +1148,7 @@
     <div class="why-header" data-r>
       <div class="section-eyebrow">No brokers. No games.</div>
       <h2 class="section-h2">Skip the broker.<br>Keep your money.</h2>
-      <p class="section-sub">Renting a room in India means brokers, fat commissions and months of advance. RoomBuddy cuts all of it out — you deal with the owner directly.</p>
+      <p class="section-sub">Brokers, commissions, months of advance. We cut all of it out.</p>
     </div>
     <div class="value-grid">
       <div class="value-card" data-r>
@@ -884,8 +1174,8 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
         </div>
         <div>
-          <h3>Talk to the owner for just ₹29</h3>
-          <p>Unlock the host's number and message them directly for ₹29 — instead of ₹10,000 to a broker for the same intro.</p>
+          <h3>Message the owner — free</h3>
+          <p>Chat with hosts in the app at no cost. Prefer to call? Unlock their number for ₹29 — instead of ₹10,000 to a broker for the very same introduction.</p>
         </div>
       </div>
       <div class="value-card" data-r>
@@ -901,7 +1191,7 @@
     <div class="save-band" data-r>
       <div class="save-text">
         <h3>Same room. <em>₹9,971 less.</em></h3>
-        <p>Why pay a broker thousands for an introduction you can make yourself?</p>
+        <p>Messaging is free. If you’d rather call, ₹29 unlocks the number — why pay a broker thousands for an introduction you can make yourself?</p>
       </div>
       <div class="save-compare">
         <div class="save-pill broker">
@@ -923,8 +1213,8 @@
   <div class="section-inner">
     <div class="how-header" data-r>
       <div class="section-eyebrow">How it works</div>
-      <h2 class="section-h2">Book a room in 3 steps</h2>
-      <p class="section-sub" style="margin:0 auto">No brokerage. No long-term lock-in. No hidden charges. Just a place to stay.</p>
+      <h2 class="section-h2">How booking works</h2>
+      <p class="section-sub" style="margin:0 auto">One flat ₹49 fee to book — refunded in full if your host doesn’t accept. No brokerage, no commission on your rent, no long-term lock-in.</p>
     </div>
     <div class="how-grid">
       <div class="how-card" data-r>
@@ -932,24 +1222,24 @@
         <div class="how-icon">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         </div>
-        <h3 class="how-h3">Search</h3>
-        <p class="how-body">Enter your city and dates. Filter by price, food, AC, bathroom type and gender preference. See the actual room photos and flatmate profiles before you do anything.</p>
+        <h3 class="how-h3">Search &amp; message</h3>
+        <p class="how-body">Filter by price, food, AC, bathroom, gender. Real photos, real flatmate profiles — and message the host free.</p>
       </div>
       <div class="how-card" data-r>
         <div class="how-num">2</div>
         <div class="how-icon">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2C4A58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
-        <h3 class="how-h3">Book & pay</h3>
-        <p class="how-body">Pick the room you like. Pay securely via UPI, card or netbanking — no deposit wire transfers, no cash. Your booking is confirmed instantly or within hours.</p>
+        <h3 class="how-h3">Request to book — ₹49</h3>
+        <p class="how-body">Pay the flat ₹49 by UPI or card. That’s all we charge — rent goes straight to your host.</p>
       </div>
       <div class="how-card" data-r>
         <div class="how-num">3</div>
         <div class="how-icon">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#D97055" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/></svg>
         </div>
-        <h3 class="how-h3">Check in & stay</h3>
-        <p class="how-body">Turn up, meet your flatmates, cook a meal. Everything is set up — bed, WiFi, kitchen. Feel right at home from the moment you walk in.</p>
+        <h3 class="how-h3">Host confirms, you move in</h3>
+        <p class="how-body">Usually within 24 hours. Decline or no reply? Your ₹49 comes back automatically.</p>
       </div>
     </div>
   </div>
@@ -1044,16 +1334,16 @@
   <div class="download-inner">
     <div data-r>
       <h2 class="download-h2">Get RoomBuddy</h2>
-      <p class="download-sub">Android and iOS. Find a room or list yours in under 2 minutes.</p>
+      <p class="download-sub">On iPhone now — Android coming soon. Find a room or list yours in under 2 minutes.</p>
       <div class="store-btns">
-        <a href="#" class="store-btn">
+        <a class="store-btn store-btn-soon" aria-disabled="true" title="Coming soon to Google Play">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="#E89478"><path d="M3.6 2.3 13 12 3.6 21.7c-.4-.2-.6-.6-.6-1.1V3.4c0-.5.2-.9.6-1.1zm10.6 8.3 2.9 2.9-9.1 5.2 6.2-8.1zm0 2.8L8 4.5l9.1 5.2-2.9 2.9zm3.9-1.4 2.7 1.5c.7.4.7 1.2 0 1.6l-2.7 1.5L15 12l3-2z"/></svg>
           <div class="store-btn-label">
-            <div class="store-btn-small">GET IT ON</div>
+            <div class="store-btn-small">COMING SOON TO</div>
             <div class="store-btn-name">Google Play</div>
           </div>
         </a>
-        <a href="#" class="store-btn">
+        <a href="https://apps.apple.com/in/app/roombuddy-room-rentals/id6784737607" target="_blank" rel="noopener" class="store-btn">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.9zM14.2 5.6c.6-.8 1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 0 2-.5 2.7-1.3z"/></svg>
           <div class="store-btn-label">
             <div class="store-btn-small">DOWNLOAD ON THE</div>
@@ -1084,9 +1374,6 @@
         </a>
         <a href="https://facebook.com/roombuddyofficial" target="_blank" rel="noopener" aria-label="Facebook" class="social-btn">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M14 8.5V7c0-.9.6-1.1 1-1.1h2V2.7h-2.7C11.3 2.7 10 4.5 10 6.6v1.9H8v3.2h2V21h4v-9.3h2.5l.5-3.2H14z"/></svg>
-        </a>
-        <a href="https://x.com" target="_blank" rel="noopener" aria-label="X" class="social-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.2 2.5h3.3l-7.2 8.3 8.5 11.2h-6.6l-5.2-6.8-6 6.8H1.7l7.7-8.8L1.3 2.5h6.8l4.7 6.2 5.4-6.2zm-1.2 17.8h1.8L7.1 4.3H5.2L17 20.3z"/></svg>
         </a>
         <a href="https://linkedin.com/company/roombuddy-co-in" target="_blank" rel="noopener" aria-label="LinkedIn" class="social-btn">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M6.9 8.8H3.3V21h3.6V8.8zM5.1 3.2A2.1 2.1 0 1 0 5.1 7.4 2.1 2.1 0 0 0 5.1 3.2zM20.7 21v-6.7c0-3.3-1.8-4.9-4.1-4.9-1.9 0-2.7 1-3.2 1.8V8.8H9.8c.05 1 0 12.2 0 12.2h3.6v-6.8c0-.3 0-.6.1-.8.3-.6.8-1.3 1.8-1.3 1.3 0 1.8 1 1.8 2.4V21h3.6z"/></svg>
@@ -1126,11 +1413,71 @@
       io.observe(el);
     });
 
-    // Nav shadow on scroll
+    // Nav state + reading progress, batched into one rAF-throttled handler
+    // so we never lay out on every scroll event.
     var nav = document.getElementById('nav');
+    var bar = document.getElementById('progress');
+    var ticking = false;
+
+    function onScroll() {
+      var y = window.scrollY;
+      nav.classList.toggle('scrolled', y > 30);
+      nav.style.boxShadow = y > 30 ? '0 8px 30px rgba(0,0,0,.25)' : 'none';
+
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      bar.style.width = max > 0 ? (y / max * 100) + '%' : '0%';
+      ticking = false;
+    }
+
     window.addEventListener('scroll', function () {
-      nav.style.boxShadow = window.scrollY > 30 ? '0 8px 30px rgba(0,0,0,.25)' : 'none';
-    });
+      if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+    }, { passive: true });
+    onScroll();
+
+    // 3D tilt on the problem cards. Only for real pointers — touch devices get
+    // the flat card, and anyone who asked for reduced motion gets nothing.
+    var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    var stillMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (finePointer && !stillMotion) {
+      var MAX_TILT = 7;   // degrees — past ~8 it stops feeling like a card
+      var LIFT     = 10;  // px toward the viewer
+
+      var TILT_CARDS = '.problem-card, .why-card, .value-card, .testi-card,' +
+                       '.persona-card, .how-card, .way-card';
+
+      document.querySelectorAll(TILT_CARDS).forEach(function (card) {
+        var frame = null;
+
+        card.addEventListener('pointermove', function (ev) {
+          if (frame) return;
+          frame = requestAnimationFrame(function () {
+            frame = null;
+            var r  = card.getBoundingClientRect();
+            var px = (ev.clientX - r.left) / r.width;   // 0 → 1
+            var py = (ev.clientY - r.top) / r.height;
+
+            // Spotlight position for the ::before gradient.
+            card.style.setProperty('--mx', (px * 100) + '%');
+            card.style.setProperty('--my', (py * 100) + '%');
+
+            // Tilt away from the cursor, so the card leans into it.
+            card.style.transform =
+              'perspective(1400px) rotateX(' + ((0.5 - py) * MAX_TILT * 2).toFixed(2) + 'deg)' +
+              ' rotateY(' + ((px - 0.5) * MAX_TILT * 2).toFixed(2) + 'deg)' +
+              ' translateZ(' + LIFT + 'px)';
+          });
+        });
+
+        card.addEventListener('pointerenter', function () { card.classList.add('tilting'); });
+
+        card.addEventListener('pointerleave', function () {
+          if (frame) { cancelAnimationFrame(frame); frame = null; }
+          card.classList.remove('tilting');   // slow easing takes it home
+          card.style.transform = '';
+        });
+      });
+    }
   })();
 </script>
 

@@ -752,13 +752,32 @@ def accept_booking(booking: Booking, host: User) -> Booking:
 
 
 def reject_booking(booking: Booking, host: User, reason: str = "") -> Booking:
-    """Host declines a pending booking."""
+    """
+    Host declines a pending booking.
+
+    The guest pays the platform fee up front, before the host has responded, so
+    a decline must return it in full — they got nothing for it. Mirrors the
+    refund path in cancel_booking: flag REFUND_PENDING inside the transaction,
+    then call the gateway after it commits.
+    """
     logger.info("reject_booking booking_id=%s host_id=%s", booking.id, host.id)
+    refund_amount = Decimal("0.00")
+
     with transaction.atomic():
         booking.status = Booking.Status.REJECTED
         booking.host_responded_at = timezone.now()
         booking.cancellation_reason = reason or None
-        booking.save(update_fields=["status", "host_responded_at", "cancellation_reason", "updated_at"])
+        update_fields = ["status", "host_responded_at", "cancellation_reason", "updated_at"]
+
+        # Only money that actually reached us can be sent back.
+        if booking.payment_status == Booking.PaymentStatus.PAID:
+            refund_amount = booking.total_guest_pays or Decimal("0.00")
+            if refund_amount > 0:
+                booking.refund_amount = refund_amount
+                booking.payment_status = Booking.PaymentStatus.REFUND_PENDING
+                update_fields += ["refund_amount", "payment_status"]
+
+        booking.save(update_fields=update_fields)
         BookingStatusHistory.objects.create(
             booking=booking,
             from_status=Booking.Status.PENDING,
@@ -766,6 +785,19 @@ def reject_booking(booking: Booking, host: User, reason: str = "") -> Booking:
             changed_by_user=host,
         )
         _notify_host_responded(booking, accepted=False)
+
+    # Outside the transaction — a gateway failure must not roll back the
+    # decline itself. A stuck REFUND_PENDING row is recoverable; a booking
+    # the host thinks they declined but is still live is not.
+    if booking.payment_status == Booking.PaymentStatus.REFUND_PENDING:
+        initiate_refund_for_cancelled_booking(
+            booking, refund_amount, Booking.CancelledBy.HOST,
+        )
+
+    logger.info(
+        "Booking %s declined by host; refund=₹%s",
+        booking.booking_code, refund_amount,
+    )
     return booking
 
 
