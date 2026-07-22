@@ -518,11 +518,11 @@ export default function ListingDetailScreen() {
               )}
 
               {/* ── Meet your flatmates ── */}
-              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
+              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender || f.hostHometown) && (
                 <>
                   <Divider />
                   <SectionHeader title="Meet your flatmates" />
-                  {(f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
+                  {(f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender || f.hostHometown) && (
                     <View style={styles.flatmateCard}>
                       <View style={styles.flatmateAvatar}>
                         <Text style={styles.flatmateInitials}>H</Text>
@@ -539,6 +539,7 @@ export default function ListingDetailScreen() {
                         {f.hostGender ? <Text style={styles.flatmateDetail}>{f.hostGender.charAt(0).toUpperCase() + f.hostGender.slice(1)}</Text> : null}
                         {f.hostOccupation ? <Text style={styles.flatmateDetail}>{f.hostOccupation}</Text> : null}
                         {f.hostHobbies ? <Text style={styles.flatmateDetail}>Hobbies: {f.hostHobbies}</Text> : null}
+                        {f.hostHometown ? <Text style={styles.flatmateDetail}>From {f.hostHometown}</Text> : null}
                       </View>
                     </View>
                   )}
