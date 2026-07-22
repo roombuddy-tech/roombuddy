@@ -56,18 +56,20 @@ export async function createListing(form: {
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  hostHometown: string;
   blockedDates: Array<{ startDate: string; endDate: string }>;
 }): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
   // Prepend host as first flatmate entry
-  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge || form.hostHometown
     ? [{
         name: '__host__',
         age: form.hostAge ? parseInt(form.hostAge, 10) : null,
         gender: form.hostGender,
         occupation: form.hostOccupation,
         hobbies: form.hostHobbies,
+        hometown: form.hostHometown,
       }]
     : [];
 
@@ -169,13 +171,14 @@ export async function updateListing(
 ): Promise<CreateListingResponse> {
   const description = _buildDescription(form);
 
-  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge
+  const hostFlatmate = form.hostOccupation || form.hostHobbies || form.hostGender || form.hostAge || form.hostHometown
     ? [{
         name: '__host__',
         age: form.hostAge ? parseInt(form.hostAge, 10) : null,
         gender: form.hostGender,
         occupation: form.hostOccupation,
         hobbies: form.hostHobbies,
+        hometown: form.hostHometown,
       }]
     : [];
 

@@ -33,6 +33,17 @@ interface DashboardData {
     check_outs: Array<{ booking_id: string; booking_code: string; guest_name: string }>;
     recent_reviews: Array<{ reviewer_name: string; rating: number; title: string | null; body: string; submitted_at: string }>;
   };
+  pending_actions?: Array<{
+    booking_id: string;
+    booking_code: string;
+    guest_name: string;
+    listing_title: string;
+    check_in_date: string;
+    check_out_date: string;
+    nights: number;
+    total_host_receives: number;
+    hours_left: number | null;
+  }>;
 }
 
 export default function DashboardScreen() {
@@ -117,6 +128,50 @@ export default function DashboardScreen() {
         {/* Greeting */}
         <Text style={styles.greeting}>{getGreeting()}</Text>
         <Text style={styles.name}>{name}</Text>
+
+        {/* Priority: booking requests awaiting the host's response. Sits above
+            everything so the host can't miss that a guest has paid and is
+            waiting. Tapping a row opens the booking, where Accept/Decline live. */}
+        {(d?.pending_actions?.length ?? 0) > 0 && (
+          <View style={styles.actionBanner}>
+            <View style={styles.actionBannerHead}>
+              <View style={styles.actionBannerDot} />
+              <Text style={styles.actionBannerTitle}>
+                {d!.pending_actions!.length === 1
+                  ? '1 booking needs your response'
+                  : `${d!.pending_actions!.length} bookings need your response`}
+              </Text>
+            </View>
+            {d!.pending_actions!.map((a) => (
+              <TouchableOpacity
+                key={a.booking_id}
+                style={styles.actionRow}
+                activeOpacity={0.8}
+                onPress={() => openBooking(a.booking_id)}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.actionGuest} numberOfLines={1}>
+                    {a.guest_name}
+                    <Text style={styles.actionSep}> – </Text>
+                    {a.nights} night{a.nights === 1 ? '' : 's'}
+                  </Text>
+                  <Text style={styles.actionMeta} numberOfLines={1}>
+                    {a.listing_title || 'Your listing'}
+                    {a.hours_left != null
+                      ? a.hours_left > 0
+                        ? ` · ${a.hours_left}h left`
+                        : ' · respond now'
+                      : ''}
+                  </Text>
+                </View>
+                <View style={styles.actionCta}>
+                  <Text style={styles.actionCtaTxt}>Review</Text>
+                  <Ionicons name="chevron-forward" size={15} color="#fff" />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Stats grid — 2x2 premium white cards */}
         <View style={styles.statsGrid}>
@@ -301,6 +356,44 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   bellBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center' },
   greeting: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 4 },
   name: { fontSize: 32, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5, marginBottom: SPACING.lg },
+  actionBanner: {
+    backgroundColor: COLORS.accentAlpha,
+    borderWidth: 1,
+    borderColor: 'rgba(184,92,56,0.28)',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    gap: 10,
+  },
+  actionBannerHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionBannerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
+  actionBannerTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.primary, flex: 1 },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    ...SHADOW.sm,
+  },
+  actionGuest: { fontSize: 14.5, ...FONTS.semibold, color: COLORS.text },
+  actionSep: { fontSize: 12, color: COLORS.textMut, ...FONTS.regular },
+  actionMeta: { fontSize: 12.5, color: COLORS.textSec, marginTop: 2, ...FONTS.medium },
+  actionCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flexShrink: 0,        // never let the text column squeeze the button off-screen
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 8,
+    paddingLeft: 14,
+    paddingRight: 10,
+  },
+  actionCtaTxt: { fontSize: 13, ...FONTS.semibold, color: '#fff' },
+
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: SPACING.xl },
   statCard: { width: '48%', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.md, ...SHADOW.md },
   statTop: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },

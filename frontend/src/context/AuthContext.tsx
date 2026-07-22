@@ -82,7 +82,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             user: freshUser,
             didLogout: false,
           });
-        } catch {
+        } catch (err: any) {
+          const status = err?.response?.status;
+          // The server explicitly rejected the token — the user or session is
+          // gone (e.g. deleted account, wiped DB). Do NOT restore a phantom
+          // session from cached data: that leaves the app thinking a guest is
+          // logged in, so it skips the login walls on Post/Messages. The api
+          // interceptor already fired forceLogout on the failed refresh; we must
+          // not overwrite it back to authenticated here.
+          if (status === 401 || status === 403) {
+            await storage.clearTokens();
+            setState({
+              isLoading: false,
+              isAuthenticated: false,
+              isProfileComplete: false,
+              userRole: 'guest',
+              user: null,
+              didLogout: false,
+            });
+            return;
+          }
+          // Any other failure (no network, server down) is transient — keep the
+          // cached session so the app still opens offline.
           setState({
             isLoading: false,
             isAuthenticated: true,

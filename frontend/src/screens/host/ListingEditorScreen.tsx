@@ -96,6 +96,7 @@ interface FormData {
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  hostHometown: string;
   blockedDates: Array<{ startDate: string; endDate: string }>;
 }
 
@@ -148,6 +149,7 @@ const INIT: FormData = {
   hostOccupation: '',
   hostHobbies: '',
   hostGender: '',
+  hostHometown: '',
   blockedDates: [],
 };
 
@@ -644,32 +646,51 @@ function TimePicker({
         <Ionicons name="time-outline" size={18} color={COLORS.textSec} />
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="slide">
-        <View style={tpSt.overlay}>
-          <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
-          <View style={tpSt.sheet}>
-            <View style={tpSt.sheetHeader}>
-              <TouchableOpacity onPress={() => setOpen(false)}>
-                <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={tpSt.sheetTitle}>{label}</Text>
-              <TouchableOpacity onPress={() => { onChange(formatTimeDate(tempDate)); setOpen(false); }}>
-                <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
-              </TouchableOpacity>
+      {/* Android: the native picker is its own dialog. Embedding a spinner in a
+          JS <Modal> lets the Modal swallow the wheel's drag gestures — that was
+          the "can't scroll" bug. Render it bare and commit on its onChange. */}
+      {open && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempDate}
+          mode="time"
+          display="spinner"
+          minuteInterval={5}
+          onChange={(event, selectedDate) => {
+            setOpen(false);
+            if (event.type === 'set' && selectedDate) onChange(formatTimeDate(selectedDate));
+          }}
+        />
+      )}
+
+      {/* iOS: the inline spinner works well inside our bottom sheet. */}
+      {Platform.OS === 'ios' && (
+        <Modal visible={open} transparent animationType="slide">
+          <View style={tpSt.overlay}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
+            <View style={tpSt.sheet}>
+              <View style={tpSt.sheetHeader}>
+                <TouchableOpacity onPress={() => setOpen(false)}>
+                  <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={tpSt.sheetTitle}>{label}</Text>
+                <TouchableOpacity onPress={() => { onChange(formatTimeDate(tempDate)); setOpen(false); }}>
+                  <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="time"
+                display="spinner"
+                minuteInterval={5}
+                themeVariant={mode}
+                textColor={COLORS.text}
+                onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
+                style={{ height: 200 }}
+              />
             </View>
-            <DateTimePicker
-              value={tempDate}
-              mode="time"
-              display="spinner"
-              minuteInterval={30}
-              themeVariant={mode}
-              textColor={COLORS.text}
-              onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
-              style={{ height: 200 }}
-            />
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -1164,6 +1185,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
     occupation: form.hostOccupation,
     hobbies: form.hostHobbies,
     gender: form.hostGender || profileGender,
+    hometown: form.hostHometown,
   });
 
   useEffect(() => {
@@ -1360,6 +1382,17 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   onChange={(v) => setHostDraft((d) => ({ ...d, hobbies: v }))}
                   optional
                 />
+                <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
+                  <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 }}>
+                    Hometown <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+                  </Text>
+                  <GooglePlacesInput
+                    value={hostDraft.hometown}
+                    placeholder="e.g. Jaipur"
+                    onSelect={(place) => setHostDraft((d) => ({ ...d, hometown: place.city || place.description }))}
+                    onChangeText={(text) => setHostDraft((d) => ({ ...d, hometown: text }))}
+                  />
+                </View>
                 <TouchableOpacity
                   style={fmSt.saveBtn}
                   onPress={() => {
@@ -1368,6 +1401,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                       hostOccupation: hostDraft.occupation,
                       hostHobbies: hostDraft.hobbies,
                       hostGender: hostDraft.gender,
+                      hostHometown: hostDraft.hometown,
                     });
                     setHostModalOpen(false);
                   }}
@@ -2613,6 +2647,7 @@ function mapListingToForm(data: any): FormData {
     hostOccupation: data.host?.occupation || '',
     hostHobbies: data.host?.hobbies || '',
     hostGender: data.host?.gender || '',
+    hostHometown: data.host?.hometown || '',
     blockedDates: (data.blocked_dates || []).map((bd: any) => ({
       startDate: bd.start_date,
       endDate: bd.end_date,
