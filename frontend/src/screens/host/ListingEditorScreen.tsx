@@ -891,7 +891,23 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
               pincode: place.pincode,
             });
           }}
+          // Accept free text as a fallback so a host whose exact area isn't in
+          // the dropdown (or who just types) can still continue. A typed value
+          // isn't a verified place, so drop the coords/placeId — otherwise a
+          // stale pin from an earlier selection would stick to new text.
+          onChangeText={(text) => {
+            update({
+              locality: text,
+              formattedAddress: text,
+              googlePlaceId: '',
+              latitude: null,
+              longitude: null,
+            });
+          }}
         />
+        <Text style={prpSt.locHint}>
+          Tip: pick from the dropdown so guests can find you on the map and in “near you” searches.
+        </Text>
         <Field
           label="City"
           placeholder="City"
@@ -932,6 +948,9 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
 }
 
 const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  // Negative marginTop pulls the tip up over the GooglePlacesInput wrapper's
+  // own 16px marginBottom, so it sits snug under the field instead of adrift.
+  locHint: { fontSize: 12.5, color: COLORS.textMut, ...FONTS.regular, marginTop: -8, marginBottom: 14, lineHeight: 17 },
   aptGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
