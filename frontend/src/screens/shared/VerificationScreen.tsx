@@ -123,11 +123,22 @@ export default function VerificationScreen({ visible, onClose, onVerified }: Ver
       const formData = new FormData();
       formData.append('aadhaar_image', { uri: aadhaarUri, type: 'image/jpeg', name: 'aadhaar.jpg' } as any);
       formData.append('selfie_image', { uri: selfieUri, type: 'image/jpeg', name: 'selfie.jpg' } as any);
-      await api.post(ENDPOINTS.USER.SUBMIT_ID_VERIFICATION, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      // Two photos over mobile data + server processing regularly exceed the
+      // global 15s timeout. Give uploads a much longer budget.
+      await api.post(ENDPOINTS.USER.SUBMIT_ID_VERIFICATION, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 90000,
+      });
       Alert.alert('Submitted!', "Your documents are under review. We'll verify within 24-48 hours.");
       fetchStatus();
     } catch (err: any) {
-      Alert.alert('Error', getErrorMessage(err, 'Failed to submit documents.'));
+      const isTimeout = err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '');
+      Alert.alert(
+        isTimeout ? 'Upload timed out' : 'Error',
+        isTimeout
+          ? 'Your photos took too long to upload. Please check your connection and try again — a stronger signal or WiFi helps.'
+          : getErrorMessage(err, 'Failed to submit documents.'),
+      );
     } finally {
       setSubmitting(false);
     }
