@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
 import { DEFAULT_REGION } from '../../constants/maps';
-import type { GuestListingCard } from '../../types/listing';
+import { cardPrice, type GuestListingCard } from '../../types/listing';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -59,7 +59,7 @@ export default function SearchResultsMap({ listings, onListingPress }: Props) {
           >
             <View style={[styles.priceBubble, selectedId === listing.listing_id && styles.priceBubbleActive]}>
               <Text style={[styles.priceBubbleText, selectedId === listing.listing_id && styles.priceBubbleTextActive]}>
-                {'₹'}{Math.round(listing.guest_price_per_night).toLocaleString('en-IN')}
+                {cardPrice(listing).amount}
               </Text>
             </View>
           </Marker>
@@ -92,8 +92,8 @@ export default function SearchResultsMap({ listings, onListingPress }: Props) {
             <Text style={styles.previewTitle} numberOfLines={1}>{selected.title}</Text>
             <Text style={styles.previewArea} numberOfLines={1}>{selected.area_name}</Text>
             <Text style={styles.previewPrice}>
-              {'₹'}{Math.round(selected.guest_price_per_night).toLocaleString('en-IN')}
-              <Text style={styles.previewPriceUnit}>/night</Text>
+              {cardPrice(selected).amount}
+              <Text style={styles.previewPriceUnit}>{cardPrice(selected).unit}</Text>
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={COLORS.textMut} />

@@ -91,8 +91,28 @@ class CreateListingRequestSerializer(serializers.Serializer):
     amenities = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     title = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True, default="")
-    host_price_per_night = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    # nightly vs monthly. host_price_per_night is required only for nightly.
+    rental_type = serializers.ChoiceField(choices=["nightly", "monthly"], default="monthly")
+    host_price_per_night = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True,
+    )
     min_nights = serializers.IntegerField(default=1)
+
+    # Monthly pricing
+    monthly_rent = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    maintenance_monthly = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=0)
+    setup_cost_onetime = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=0)
+    setup_cost_refundable = serializers.BooleanField(required=False, default=False)
+    cook_available = serializers.BooleanField(required=False, default=False)
+    cook_cost_monthly = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    maid_available = serializers.BooleanField(required=False, default=False)
+    maid_cost_monthly = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    utilities_included = serializers.BooleanField(required=False, default=False)
+    utilities_est_monthly = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    min_months = serializers.IntegerField(required=False, allow_null=True)
+    available_from = serializers.DateField(required=False, allow_null=True)
+    security_deposit = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=0)
     food_kitchen_access = serializers.BooleanField(default=False)
     food_meals_available = serializers.BooleanField(default=False)
     food_meal_cost = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)

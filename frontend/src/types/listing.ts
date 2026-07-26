@@ -2,7 +2,12 @@ export interface GuestListingCard {
   listing_id: string;
   title: string;
   area_name: string;
-  guest_price_per_night: number;
+  guest_price_per_night: number | null;
+  rental_type?: 'monthly' | 'nightly';
+  display_price?: number | null;
+  price_unit?: string;
+  monthly_rent?: number | null;
+  recurring_monthly?: number | null;
   cover_photo_url: string | null;
   average_rating: number | null;
   review_count: number;
@@ -41,11 +46,31 @@ export interface GuestListingDetail {
   title: string;
   description: string;
   booking_mode: string;
-  host_price_per_night: number;
-  guest_price_per_night: number;
+  rental_type: 'monthly' | 'nightly';
+  host_price_per_night: number | null;
+  guest_price_per_night: number | null;
+  monthly_rent: number | null;
+  recurring_monthly: number | null;
   min_nights: number;
   max_nights: number;
+  min_months: number | null;
+  available_from: string | null;
   security_deposit: number;
+  monthly_breakdown: {
+    monthly_rent: number;
+    maintenance_monthly: number;
+    security_deposit: number;
+    setup_cost_onetime: number;
+    setup_cost_refundable: boolean;
+    cook_available: boolean;
+    cook_cost_monthly: number | null;
+    maid_available: boolean;
+    maid_cost_monthly: number | null;
+    utilities_included: boolean;
+    utilities_est_monthly: number | null;
+    recurring_monthly: number;
+    move_in_cost: number;
+  } | null;
   property: {
     apartment_type: string;
     floor_number: number;
@@ -107,4 +132,29 @@ export interface GuestListingDetail {
   host_phone_masked: string | null;
   unlock_fee: number;
   area_name: string;
+}
+
+/**
+ * Price string for a listing card, handling both rental types safely.
+ * Monthly → "₹18,000" + unit "/mo"; nightly → "₹850" + unit "/night".
+ * Null-safe: monthly listings have no nightly price and vice versa.
+ */
+export function cardPrice(item: {
+  rental_type?: 'monthly' | 'nightly';
+  display_price?: number | null;
+  monthly_rent?: number | null;
+  recurring_monthly?: number | null;
+  guest_price_per_night?: number | null;
+  host_price_per_night?: number | null;
+}): { amount: string; unit: string } {
+  const isMonthly = item.rental_type === 'monthly';
+  // Monthly shows the FULL recurring cost (rent + maintenance + cook + maid +
+  // utilities), which the backend precomputes — not the bare rent.
+  const raw = isMonthly
+    ? (item.recurring_monthly ?? item.display_price ?? item.monthly_rent)
+    : (item.guest_price_per_night ?? item.host_price_per_night ?? item.display_price);
+  return {
+    amount: `₹${Math.round(raw ?? 0).toLocaleString('en-IN')}`,
+    unit: isMonthly ? '/mo' : '/night',
+  };
 }

@@ -79,6 +79,21 @@ interface FormData {
   mealDescription: string;
   nightlyRate: string;
   minStay: string;
+  // rental type + monthly pricing
+  rentalType: 'monthly' | 'nightly';
+  monthlyRent: string;
+  maintenanceMonthly: string;
+  securityDeposit: string;
+  setupCostOnetime: string;
+  setupCostRefundable: boolean;
+  cookAvailable: boolean;
+  cookCostMonthly: string;
+  maidAvailable: boolean;
+  maidCostMonthly: string;
+  utilitiesIncluded: boolean;
+  utilitiesEstMonthly: string;
+  minMonths: string;
+  availableFrom: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
   noPets: boolean;
@@ -132,6 +147,20 @@ const INIT: FormData = {
   mealDescription: '',
   nightlyRate: '',
   minStay: '1_night',
+  rentalType: 'monthly',
+  monthlyRent: '',
+  maintenanceMonthly: '',
+  securityDeposit: '',
+  setupCostOnetime: '',
+  setupCostRefundable: false,
+  cookAvailable: false,
+  cookCostMonthly: '',
+  maidAvailable: false,
+  maidCostMonthly: '',
+  utilitiesIncluded: false,
+  utilitiesEstMonthly: '',
+  minMonths: '3',
+  availableFrom: '',
   noSmoking: true,
   noLoudMusic: true,
   noPets: true,
@@ -783,7 +812,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
 }
 
 const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  content: { padding: SPACING.lg, paddingTop: SPACING.md },
+  content: { padding: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.xxl },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
   title: { fontSize: 28, ...FONTS.bold, color: COLORS.primary, textAlign: 'center', marginBottom: SPACING.sm },
   sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
@@ -1980,12 +2009,33 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const prSt = useMemo(() => makePrStyles(COLORS), [COLORS]);
   const [rateFocused, setRateFocused] = useState(false);
+  const isMonthly = form.rentalType === 'monthly';
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
 
-  const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
+  // Monthly numbers for the live breakdown.
+  const n = (s: string) => parseInt(s, 10) || 0;
+  const mRent = n(form.monthlyRent);
+  const mMaint = n(form.maintenanceMonthly);
+  const mDeposit = n(form.securityDeposit);
+  const mSetup = n(form.setupCostOnetime);
+  // Cook/maid/utilities are mandatory recurring costs when the host lists them —
+  // they roll into the monthly total. Only deposit + setup are one-time.
+  const mCook = form.cookAvailable ? n(form.cookCostMonthly) : 0;
+  const mMaid = form.maidAvailable ? n(form.maidCostMonthly) : 0;
+  const mUtils = form.utilitiesIncluded ? 0 : n(form.utilitiesEstMonthly);
+  const recurring = mRent + mMaint + mCook + mMaid + mUtils;
+  const moveInCost = recurring + mDeposit + mSetup;
+
+  const isValid = isMonthly
+    ? mRent > 0
+    : rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
 
   const validate = (): string | null => {
+    if (isMonthly) {
+      if (mRent < 1) return 'Please enter the monthly rent to continue';
+      return null;
+    }
     if (!form.nightlyRate || parseInt(form.nightlyRate, 10) < 1)
       return 'Please set your nightly rate to continue';
     if (form.homeCooked && (!form.mealCost || parseInt(form.mealCost, 10) < 1))
@@ -2002,8 +2052,114 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={stSt.title}>Set Your Price</Text>
-        <Text style={stSt.sub}>Set your nightly rate. We'll show you what guests pay and what you earn.</Text>
+        <Text style={stSt.sub}>Are you subletting for a few months, or renting by the night?</Text>
 
+        {/* Rental type toggle — gates everything below */}
+        <View style={prSt.typeRow}>
+          {([
+            { v: 'monthly', icon: 'calendar-outline', label: 'Monthly', sub: 'Sublet for weeks / months' },
+            { v: 'nightly', icon: 'moon-outline', label: 'Nightly', sub: 'Short stays, by the night' },
+          ] as const).map((opt) => {
+            const sel = form.rentalType === opt.v;
+            return (
+              <TouchableOpacity
+                key={opt.v}
+                style={[prSt.typeCard, sel && prSt.typeCardSel]}
+                onPress={() => update({ rentalType: opt.v })}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={opt.icon} size={24} color={sel ? COLORS.primary : COLORS.textSec} />
+                <Text style={[prSt.typeLabel, sel && { color: COLORS.primary }]}>{opt.label}</Text>
+                <Text style={prSt.typeSub}>{opt.sub}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {isMonthly ? (
+          <>
+            <Field label="Monthly rent" placeholder="e.g. 18000"
+              value={form.monthlyRent}
+              onChange={(v) => update({ monthlyRent: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" />
+            <Field label="Maintenance / month" placeholder="e.g. 2000 (0 if included)"
+              value={form.maintenanceMonthly}
+              onChange={(v) => update({ maintenanceMonthly: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+            <Field label="Security deposit" placeholder="e.g. 50000"
+              value={form.securityDeposit}
+              onChange={(v) => update({ securityDeposit: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+            <Field label="One-time setup cost" placeholder="e.g. 12000"
+              value={form.setupCostOnetime}
+              onChange={(v) => update({ setupCostOnetime: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+            {mSetup > 0 && (
+              <RuleRow label="Setup cost is refundable"
+                value={form.setupCostRefundable}
+                onChange={(x) => update({ setupCostRefundable: x })} />
+            )}
+
+            <RuleRow label="Cook available" value={form.cookAvailable}
+              onChange={(x) => update({ cookAvailable: x })} />
+            {form.cookAvailable && (
+              <Field label="Cook cost / month" placeholder="e.g. 2500"
+                value={form.cookCostMonthly}
+                onChange={(v) => update({ cookCostMonthly: v.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad" optional />
+            )}
+            <RuleRow label="Maid available" value={form.maidAvailable}
+              onChange={(x) => update({ maidAvailable: x })} />
+            {form.maidAvailable && (
+              <Field label="Maid cost / month" placeholder="e.g. 1000"
+                value={form.maidCostMonthly}
+                onChange={(v) => update({ maidCostMonthly: v.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad" optional />
+            )}
+            <RuleRow label="Utilities included in rent"
+              value={form.utilitiesIncluded}
+              onChange={(x) => update({ utilitiesIncluded: x })} />
+            {!form.utilitiesIncluded && (
+              <Field label="Est. utilities / month" placeholder="e.g. 2000 (electricity, water, internet)"
+                value={form.utilitiesEstMonthly}
+                onChange={(v) => update({ utilitiesEstMonthly: v.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad" optional />
+            )}
+
+            <Field label="Minimum stay (months)" placeholder="e.g. 3"
+              value={form.minMonths}
+              onChange={(v) => update({ minMonths: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+
+            {mRent > 0 && (
+              <View style={[prSt.breakdownBox, { marginTop: SPACING.md }]}>
+                <Text style={prSt.breakdownTitle}>What guests will see</Text>
+                <PriceRow label="Rent" value={`₹${mRent.toLocaleString('en-IN')}`} />
+                {mMaint > 0 && <PriceRow label="Maintenance" value={`₹${mMaint.toLocaleString('en-IN')}`} />}
+                {mCook > 0 && <PriceRow label="Cook" value={`₹${mCook.toLocaleString('en-IN')}`} />}
+                {mMaid > 0 && <PriceRow label="Maid" value={`₹${mMaid.toLocaleString('en-IN')}`} />}
+                {mUtils > 0 && <PriceRow label="Utilities (est.)" value={`₹${mUtils.toLocaleString('en-IN')}`} />}
+                <View style={prSt.divider} />
+                <PriceRow label="Monthly total" value={`₹${recurring.toLocaleString('en-IN')}/mo`} bold />
+                {(mDeposit > 0 || mSetup > 0) && (
+                  <>
+                    <View style={prSt.divider} />
+                    {mDeposit > 0 && <PriceRow label="Deposit (one-time)" value={`₹${mDeposit.toLocaleString('en-IN')}`} />}
+                    {mSetup > 0 && <PriceRow label={`Setup${form.setupCostRefundable ? ' (refundable)' : ' (one-time)'}`} value={`₹${mSetup.toLocaleString('en-IN')}`} />}
+                    <PriceRow label="Move-in cost" value={`₹${moveInCost.toLocaleString('en-IN')}`} bold />
+                  </>
+                )}
+                <Text style={prSt.breakdownNote}>
+                  Guests settle rent and setup with you directly. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} to reserve.
+                </Text>
+                <Text style={[prSt.breakdownNote, prSt.breakdownNoteBold, { marginTop: 6 }]}>
+                  You keep 100% of your rent.
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+        <>
         <Text style={[fldSt.label, { textAlign: 'center', marginBottom: SPACING.sm }]}>Your nightly rate</Text>
         <View style={prSt.rateRow}>
           <Text style={prSt.rupee}>₹</Text>
@@ -2041,8 +2197,11 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             <PriceRow label="Room rate" value={`₹${rate}/night`} />
             {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
             <View style={prSt.divider} />
-            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: 4, lineHeight: 18 }}>
-              Guests pay you directly for rent, deposit and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking — you receive 100% of your listed price.
+            <Text style={prSt.breakdownNote}>
+              Guests pay you directly for rent and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking.
+            </Text>
+            <Text style={[prSt.breakdownNote, prSt.breakdownNoteBold, { marginTop: 6 }]}>
+              You receive 100% of your listed price.
             </Text>
           </View>
         )}
@@ -2068,6 +2227,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             </TouchableOpacity>
           ))}
         </View>
+        </>
+        )}
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
@@ -2100,6 +2261,15 @@ function PriceRow({
 }
 
 const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  typeRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
+  typeCard: {
+    flex: 1, alignItems: 'center', paddingVertical: 18, paddingHorizontal: 10,
+    borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border,
+    backgroundColor: COLORS.surface, gap: 4,
+  },
+  typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.accentAlpha },
+  typeLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 4 },
+  typeSub: { fontSize: 11.5, color: COLORS.textMut, textAlign: 'center', ...FONTS.regular },
   rateRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     marginBottom: SPACING.lg, gap: 4,
@@ -2112,6 +2282,10 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 12 },
   breakdownBox: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
+  // width:100% + alignSelf:stretch guarantees the note wraps within the card
+  // instead of laying out at its intrinsic single-line width and clipping.
+  breakdownNote: { width: '100%', alignSelf: 'stretch', fontSize: 12, color: COLORS.textMut, marginTop: 6, lineHeight: 18 },
+  breakdownNoteBold: { ...FONTS.semibold, color: COLORS.textSec },
   earningsBox: { backgroundColor: 'rgba(34,197,94,0.07)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   earningTitle: { fontSize: 13, ...FONTS.semibold, color: '#16A34A', marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
@@ -2129,9 +2303,13 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
 function StepRules({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
-  const isValid = !!form.checkInTime && !!form.checkOutTime;
+  // Check-in/out times are a nightly concept — a monthly sublet has a move-in
+  // date, not a daily check-in. Skip them entirely for monthly listings.
+  const rulesMonthly = form.rentalType === 'monthly';
+  const isValid = rulesMonthly || (!!form.checkInTime && !!form.checkOutTime);
 
   const validate = (): string | null => {
+    if (rulesMonthly) return null;
     if (!form.checkInTime) return 'Please select a check-in time';
     if (!form.checkOutTime) return 'Please select a check-out time';
     return null;
@@ -2164,18 +2342,22 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <View style={{ marginTop: SPACING.lg }} />
-        <TimePicker
-          label="Check-in time"
-          value={form.checkInTime}
-          onChange={(v) => update({ checkInTime: v })}
-          placeholder="e.g. 2:00 PM"
-        />
-        <TimePicker
-          label="Check-out time"
-          value={form.checkOutTime}
-          onChange={(v) => update({ checkOutTime: v })}
-          placeholder="e.g. 11:00 AM"
-        />
+        {!rulesMonthly && (
+          <>
+            <TimePicker
+              label="Check-in time"
+              value={form.checkInTime}
+              onChange={(v) => update({ checkInTime: v })}
+              placeholder="e.g. 2:00 PM"
+            />
+            <TimePicker
+              label="Check-out time"
+              value={form.checkOutTime}
+              onChange={(v) => update({ checkOutTime: v })}
+              placeholder="e.g. 11:00 AM"
+            />
+          </>
+        )}
 
         <Field
           label="Custom rules"
@@ -2238,6 +2420,17 @@ function StepReview({
   };
 
   const rate = parseInt(form.nightlyRate, 10) || 0;
+  // Rental-type-aware headline price for the review summary.
+  const rvIsMonthly = form.rentalType === 'monthly';
+  const rvNum = (s: string) => parseInt(s, 10) || 0;
+  const rvMonthly = rvIsMonthly
+    ? rvNum(form.monthlyRent) + rvNum(form.maintenanceMonthly)
+      + (form.cookAvailable ? rvNum(form.cookCostMonthly) : 0)
+      + (form.maidAvailable ? rvNum(form.maidCostMonthly) : 0)
+      + (form.utilitiesIncluded ? 0 : rvNum(form.utilitiesEstMonthly))
+    : 0;
+  const rvPrice = rvIsMonthly ? rvMonthly : rate;
+  const rvUnit = rvIsMonthly ? '/mo' : '/night';
   const amenityHighlights = form.amenities.slice(0, 3).join(', ');
   const ruleCount = [
     form.noSmoking, form.noLoudMusic, form.noPets, form.noParties,
@@ -2391,8 +2584,8 @@ function StepReview({
       label: 'Price',
       step: 7,
       value: [
-        rate > 0 ? `₹${rate}/night` : null,
-        form.homeCooked && form.mealCost ? `+ ₹${form.mealCost}/day meals` : null,
+        rvPrice > 0 ? `₹${rvPrice.toLocaleString('en-IN')}${rvUnit}` : null,
+        !rvIsMonthly && form.homeCooked && form.mealCost ? `+ ₹${form.mealCost}/day meals` : null,
       ].filter(Boolean).join(' · '),
     },
     {
@@ -2457,10 +2650,10 @@ function StepReview({
             {form.title || 'Your listing title'}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            {rate > 0 && (
+            {rvPrice > 0 && (
               <Text style={rvSt.price}>
-                ₹{rate.toLocaleString('en-IN')}
-                <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
+                ₹{rvPrice.toLocaleString('en-IN')}
+                <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>{rvUnit}</Text>
               </Text>
             )}
             {!isEditMode && (
@@ -2648,8 +2841,22 @@ function mapListingToForm(data: any): FormData {
     mealTypes: data.food_meal_types || [],
     mealCost: data.food_meal_cost != null ? String(Math.round(data.food_meal_cost)) : '',
     mealDescription: data.food_meal_description || '',
-    nightlyRate: String(Math.round(data.host_price_per_night)),
+    nightlyRate: data.host_price_per_night != null ? String(Math.round(data.host_price_per_night)) : '',
     minStay: minStayMap[data.min_nights as number] ?? '1_night',
+    rentalType: data.rental_type === 'nightly' ? 'nightly' : 'monthly',
+    monthlyRent: data.monthly_rent != null ? String(Math.round(data.monthly_rent)) : '',
+    maintenanceMonthly: data.monthly_breakdown?.maintenance_monthly ? String(Math.round(data.monthly_breakdown.maintenance_monthly)) : '',
+    securityDeposit: data.security_deposit ? String(Math.round(data.security_deposit)) : '',
+    setupCostOnetime: data.monthly_breakdown?.setup_cost_onetime ? String(Math.round(data.monthly_breakdown.setup_cost_onetime)) : '',
+    setupCostRefundable: !!data.monthly_breakdown?.setup_cost_refundable,
+    cookAvailable: !!data.monthly_breakdown?.cook_available,
+    cookCostMonthly: data.monthly_breakdown?.cook_cost_monthly ? String(Math.round(data.monthly_breakdown.cook_cost_monthly)) : '',
+    maidAvailable: !!data.monthly_breakdown?.maid_available,
+    maidCostMonthly: data.monthly_breakdown?.maid_cost_monthly ? String(Math.round(data.monthly_breakdown.maid_cost_monthly)) : '',
+    utilitiesIncluded: !!data.monthly_breakdown?.utilities_included,
+    utilitiesEstMonthly: data.monthly_breakdown?.utilities_est_monthly ? String(Math.round(data.monthly_breakdown.utilities_est_monthly)) : '',
+    minMonths: data.min_months != null ? String(data.min_months) : '3',
+    availableFrom: data.available_from || '',
     noSmoking: hr.no_smoking,
     noLoudMusic: hr.no_loud_music,
     noPets: hr.no_pets,
