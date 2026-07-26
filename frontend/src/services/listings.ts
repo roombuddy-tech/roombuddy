@@ -40,6 +40,20 @@ export async function createListing(form: {
   mealDescription: string;
   nightlyRate: string;
   minStay: string;
+  rentalType: 'monthly' | 'nightly';
+  monthlyRent: string;
+  maintenanceMonthly: string;
+  securityDeposit: string;
+  setupCostOnetime: string;
+  setupCostRefundable: boolean;
+  cookAvailable: boolean;
+  cookCostMonthly: string;
+  maidAvailable: boolean;
+  maidCostMonthly: string;
+  utilitiesIncluded: boolean;
+  utilitiesEstMonthly: string;
+  minMonths: string;
+  availableFrom: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
   noPets: boolean;
@@ -110,8 +124,7 @@ export async function createListing(form: {
     amenities: form.amenities,
     title: form.title,
     description,
-    host_price_per_night: parseFloat(form.nightlyRate),
-    min_nights: _mapMinStay(form.minStay),
+    ..._pricingPayload(form),
     food_kitchen_access: form.kitchenAccess,
     food_meals_available: form.homeCooked,
     food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
@@ -219,8 +232,7 @@ export async function updateListing(
     amenities: form.amenities,
     title: form.title,
     description,
-    host_price_per_night: parseFloat(form.nightlyRate),
-    min_nights: _mapMinStay(form.minStay),
+    ..._pricingPayload(form),
     food_kitchen_access: form.kitchenAccess,
     food_meals_available: form.homeCooked,
     food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
@@ -269,6 +281,34 @@ function _buildDescription(form: {
       : `\n\nNearby: ${landmark}`;
   }
   return desc;
+}
+
+// Build the pricing slice of the create/update payload, branching on rental type.
+function _pricingPayload(form: any): Record<string, any> {
+  const num = (s: string) => (s ? parseInt(s, 10) : 0);
+  if (form.rentalType === 'monthly') {
+    return {
+      rental_type: 'monthly',
+      monthly_rent: num(form.monthlyRent) || null,
+      maintenance_monthly: num(form.maintenanceMonthly),
+      security_deposit: num(form.securityDeposit),
+      setup_cost_onetime: num(form.setupCostOnetime),
+      setup_cost_refundable: !!form.setupCostRefundable,
+      cook_available: !!form.cookAvailable,
+      cook_cost_monthly: form.cookAvailable ? (num(form.cookCostMonthly) || null) : null,
+      maid_available: !!form.maidAvailable,
+      maid_cost_monthly: form.maidAvailable ? (num(form.maidCostMonthly) || null) : null,
+      utilities_included: !!form.utilitiesIncluded,
+      utilities_est_monthly: form.utilitiesIncluded ? null : (num(form.utilitiesEstMonthly) || null),
+      min_months: num(form.minMonths) || null,
+      available_from: form.availableFrom || null,
+    };
+  }
+  return {
+    rental_type: 'nightly',
+    host_price_per_night: parseFloat(form.nightlyRate),
+    min_nights: _mapMinStay(form.minStay),
+  };
 }
 
 function _mapMinStay(val: string): number {

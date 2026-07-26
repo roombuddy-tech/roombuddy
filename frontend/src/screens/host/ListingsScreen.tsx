@@ -26,8 +26,13 @@ interface ListingItem {
   listing_id: string;
   title: string;
   area_name: string;
-  host_price_per_night: number;
-  guest_price_per_night: number;
+  host_price_per_night: number | null;
+  guest_price_per_night: number | null;
+  rental_type?: 'monthly' | 'nightly';
+  display_price?: number | null;
+  price_unit?: string;
+  monthly_rent?: number | null;
+  recurring_monthly?: number | null;
   status: string;
   visible_to_guests?: boolean;
   average_rating: number | null;
@@ -321,8 +326,10 @@ export default function ListingsScreen() {
 
                           <View style={styles.bottomRow}>
                             <Text style={styles.price}>
-                              ₹{item.host_price_per_night.toLocaleString('en-IN')}
-                              <Text style={styles.priceUnit}>/night</Text>
+                              ₹{((item.rental_type === 'monthly'
+                                    ? (item.recurring_monthly ?? item.display_price ?? item.monthly_rent)
+                                    : (item.host_price_per_night ?? item.display_price)) ?? 0).toLocaleString('en-IN')}
+                              <Text style={styles.priceUnit}>{item.rental_type === 'monthly' ? '/mo' : '/night'}</Text>
                             </Text>
                             <View style={styles.statsRow}>
                               {item.average_rating ? (

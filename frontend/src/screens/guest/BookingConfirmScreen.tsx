@@ -186,11 +186,11 @@ const policyMeta =  POLICY_META.flexible;
           </View>
           <Text style={styles.listingTitle} numberOfLines={2}>{listingTitle}</Text>
           <View style={styles.row}>
-            <Text style={styles.label}>Check-in</Text>
+            <Text style={styles.label}>{quote.rental_type === 'monthly' ? 'Move-in' : 'Check-in'}</Text>
             <Text style={styles.value}>{formatDate(checkIn)}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Check-out</Text>
+            <Text style={styles.label}>{quote.rental_type === 'monthly' ? 'Move-out' : 'Check-out'}</Text>
             <Text style={styles.value}>{formatDate(checkOut)}</Text>
           </View>
           <View style={styles.row}>
@@ -198,8 +198,15 @@ const policyMeta =  POLICY_META.flexible;
             <Text style={styles.value}>{numberOfGuests}</Text>
           </View>
           <View style={[styles.row, styles.lastRow]}>
-            <Text style={styles.label}>Nights</Text>
-            <Text style={styles.value}>{quote.nights}</Text>
+            <Text style={styles.label}>{quote.rental_type === 'monthly' ? 'Duration' : 'Nights'}</Text>
+            <Text style={styles.value}>
+              {quote.rental_type === 'monthly'
+                ? (() => {
+                    const m = Math.max(1, Math.round((quote.nights / 30) * 2) / 2); // nearest half-month
+                    return `${m % 1 === 0 ? m : m.toFixed(1)} month${m > 1 ? 's' : ''}`;
+                  })()
+                : quote.nights}
+            </Text>
           </View>
         </View>
 
@@ -301,32 +308,76 @@ const policyMeta =  POLICY_META.flexible;
             <View style={styles.accentBar} />
             <Text style={styles.eyebrow}>Pay host directly</Text>
           </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights (rent)</Text>
-            <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
-          </View>
-          {withMeals && quote.meal_total !== null && quote.meal_total > 0 && (
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>
-                Meals ({quote.nights} days × ₹{(quote.meal_cost_per_day ?? 0).toLocaleString('en-IN')})
+          {quote.rental_type === 'monthly' ? (
+            (() => {
+              const recurring = quote.recurring_monthly ?? 0;
+              const days = quote.days_selected ?? quote.nights ?? 30;
+              const perDay = quote.per_day_rate ?? (recurring ? recurring / 30 : 0);
+              const stayRent = quote.stay_rent ?? Math.round(perDay * days);
+              const deposit = quote.security_deposit ?? 0;
+              const setup = quote.setup_cost_onetime ?? 0;
+              const stayTotal = quote.stay_total ?? (stayRent + deposit + setup);
+              return (
+                <>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>
+                      Rent + charges (₹{Math.round(perDay).toLocaleString('en-IN')}/day × {days} days)
+                    </Text>
+                    <Text style={styles.priceValue}>₹{Math.round(stayRent).toLocaleString('en-IN')}</Text>
+                  </View>
+                  {deposit > 0 && (
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceLabel}>Deposit (one-time, refundable)</Text>
+                      <Text style={styles.priceValue}>₹{deposit.toLocaleString('en-IN')}</Text>
+                    </View>
+                  )}
+                  {setup > 0 && (
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceLabel}>Setup cost{quote.setup_cost_refundable ? ' (refundable)' : ''}</Text>
+                      <Text style={styles.priceValue}>₹{setup.toLocaleString('en-IN')}</Text>
+                    </View>
+                  )}
+                  <View style={styles.divider} />
+                  <View style={styles.priceRow}>
+                    <Text style={styles.totalLabel}>Total for your stay</Text>
+                    <Text style={styles.totalValue}>₹{Math.round(stayTotal).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <Text style={styles.payNote}>
+                    Rent is usually settled monthly with the host (₹{Math.round(recurring).toLocaleString('en-IN')}/month, cash / UPI). Deposit{setup > 0 ? ' & setup are' : ' is'} one-time.
+                  </Text>
+                </>
+              );
+            })()
+          ) : (
+            <>
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>₹{quote.host_nightly_price.toLocaleString('en-IN')} × {quote.nights} nights (rent)</Text>
+                <Text style={styles.priceValue}>₹{quote.subtotal.toLocaleString('en-IN')}</Text>
+              </View>
+              {withMeals && quote.meal_total !== null && quote.meal_total > 0 && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>
+                    Meals ({quote.nights} days × ₹{(quote.meal_cost_per_day ?? 0).toLocaleString('en-IN')})
+                  </Text>
+                  <Text style={styles.priceValue}>₹{quote.meal_total.toLocaleString('en-IN')}</Text>
+                </View>
+              )}
+              {quote.security_deposit > 0 && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Security deposit (refundable)</Text>
+                  <Text style={styles.priceValue}>₹{quote.security_deposit.toLocaleString('en-IN')}</Text>
+                </View>
+              )}
+              <View style={styles.divider} />
+              <View style={styles.priceRow}>
+                <Text style={styles.totalLabel}>Payable to host</Text>
+                <Text style={styles.totalValue}>₹{quote.pay_to_host_directly.toLocaleString('en-IN')}</Text>
+              </View>
+              <Text style={styles.payNote}>
+                Settle this with the host directly (cash / UPI) at check-in.
               </Text>
-              <Text style={styles.priceValue}>₹{quote.meal_total.toLocaleString('en-IN')}</Text>
-            </View>
+            </>
           )}
-          {quote.security_deposit > 0 && (
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Security deposit (refundable)</Text>
-              <Text style={styles.priceValue}>₹{quote.security_deposit.toLocaleString('en-IN')}</Text>
-            </View>
-          )}
-          <View style={styles.divider} />
-          <View style={styles.priceRow}>
-            <Text style={styles.totalLabel}>Payable to host</Text>
-            <Text style={styles.totalValue}>₹{quote.pay_to_host_directly.toLocaleString('en-IN')}</Text>
-          </View>
-          <Text style={styles.payNote}>
-            Settle this with the host directly (cash / UPI) at check-in.
-          </Text>
         </View>
 
         {/* Cancellation policy row — tappable */}

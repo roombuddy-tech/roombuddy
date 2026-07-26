@@ -40,6 +40,8 @@ interface GuestBooking {
   check_in_date: string;
   check_out_date: string;
   nights: number;
+  rental_type?: 'monthly' | 'nightly';
+  recurring_monthly?: number | null;
   status: string;
   payment_status: string;
   total_guest_pays: number;
@@ -313,8 +315,17 @@ export default function MyStaysScreen() {
 
           <View style={styles.datesRow}>
             <Ionicons name="calendar-outline" size={14} color={COLORS.textSec} />
-            <Text style={styles.datesText}>{fmtDateShort(item.check_in_date)} – {fmtDateShort(item.check_out_date)}</Text>
-            <Text style={styles.nightsText}>{item.nights} night{item.nights !== 1 ? 's' : ''}</Text>
+            {item.rental_type === 'monthly' ? (
+              <>
+                <Text style={styles.datesText}>{fmtDateShort(item.check_in_date)} – {fmtDateShort(item.check_out_date)}</Text>
+                <Text style={styles.nightsText}>Monthly</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.datesText}>{fmtDateShort(item.check_in_date)} – {fmtDateShort(item.check_out_date)}</Text>
+                <Text style={styles.nightsText}>{item.nights} night{item.nights !== 1 ? 's' : ''}</Text>
+              </>
+            )}
           </View>
 
           {/* Cancellation policy pill — tappable */}
@@ -332,9 +343,20 @@ export default function MyStaysScreen() {
           )}
 
           <View style={styles.cardFooter}>
-            <View>
-              <Text style={styles.priceLabel}>Total paid</Text>
-              <Text style={styles.priceValue}>₹{Math.round(item.total_guest_pays).toLocaleString('en-IN')}</Text>
+            {item.rental_type === 'monthly' && item.recurring_monthly ? (
+              <View style={styles.payRow}>
+                <Text style={styles.payLabel}>Monthly rent to host</Text>
+                <Text style={styles.payValue}>
+                  ₹{Math.round(item.recurring_monthly).toLocaleString('en-IN')}<Text style={styles.payUnit}>/mo</Text>
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.payRow}>
+              <Text style={styles.payLabel}>
+                {item.rental_type === 'monthly' ? 'Reservation fee paid' : 'Total paid'}
+              </Text>
+              <Text style={styles.payValue}>₹{Math.round(item.total_guest_pays).toLocaleString('en-IN')}</Text>
             </View>
 
             <View style={styles.footerActions}>
@@ -490,10 +512,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   policyPill: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'stretch', paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, marginBottom: SPACING.sm },
   policyPillText: { fontSize: 12, ...FONTS.semibold, flex: 1, lineHeight: 17 },
 
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
-  priceLabel: { fontSize: 11, color: COLORS.textSec, ...FONTS.semibold, textTransform: 'uppercase', letterSpacing: 0.6 },
-  priceValue: { fontSize: 22, ...FONTS.serif, color: COLORS.text, marginTop: 2 },
-  footerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardFooter: { gap: SPACING.xs, marginBottom: SPACING.sm, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: COLORS.border },
+  payRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: SPACING.sm },
+  payLabel: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium, flexShrink: 1 },
+  payValue: { fontSize: 16, color: COLORS.text, ...FONTS.semibold },
+  payUnit: { fontSize: 12, color: COLORS.textSec, ...FONTS.medium },
+  footerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0, marginTop: SPACING.sm },
 
   msgBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: COLORS.surface },
   msgBtnTxt: { color: COLORS.primary, fontSize: 13, ...FONTS.semibold },

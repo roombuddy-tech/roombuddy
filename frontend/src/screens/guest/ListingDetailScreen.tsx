@@ -208,7 +208,30 @@ export default function GuestListingDetailScreen() {
 
   const hasDatesFromSearch = !!(passedCheckIn && passedCheckOut);
 
+  const isMonthlyListing = listing?.rental_type === 'monthly';
+
+  const addMonths = (iso: string, months: number) => {
+    const d = new Date(iso);
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().slice(0, 10);
+  };
+
   const onDayPress = (day: DateData) => {
+    // Monthly: a range picker with a MINIMUM of min_months. First tap (or a tap
+    // on/before the current move-in) sets move-in and defaults move-out to the
+    // minimum, so a single tap is already valid. A later tap extends move-out —
+    // clamped so it can never drop below the minimum stay.
+    if (isMonthlyListing) {
+      const minMonths = listing?.min_months || 1;
+      if (!checkIn || day.dateString <= checkIn) {
+        setCheckIn(day.dateString);
+        setCheckOut(addMonths(day.dateString, minMonths));
+      } else {
+        const minEnd = addMonths(checkIn, minMonths);
+        setCheckOut(day.dateString >= minEnd ? day.dateString : minEnd);
+      }
+      return;
+    }
     if (!checkIn || (checkIn && checkOut)) {
       setCheckIn(day.dateString); setCheckOut(null);
     } else {
@@ -544,6 +567,72 @@ export default function GuestListingDetailScreen() {
             )}
           </View>
 
+          {/* ── Monthly cost breakdown ── */}
+          {listing.rental_type === 'monthly' && listing.monthly_breakdown && (
+            <View style={styles.section}>
+              <SectionTitle label="Cost breakdown" />
+              {(() => {
+                const b = listing.monthly_breakdown!;
+                const rupee = (v: number) => `₹${Math.round(v).toLocaleString('en-IN')}`;
+                const utils = b.utilities_included ? 0 : (b.utilities_est_monthly || 0);
+                const Row = ({ l, v, sub, strong }: { l: string; v: string; sub?: string; strong?: boolean }) => (
+                  <View style={styles.mbRow}>
+                    <Text style={[styles.mbLabel, strong && styles.mbStrong]}>
+                      {l}{sub ? <Text style={styles.mbSub}>  {sub}</Text> : null}
+                    </Text>
+                    <Text style={[styles.mbValue, strong && styles.mbStrong]}>{v}</Text>
+                  </View>
+                );
+                return (
+                  <View style={styles.mbCard}>
+                    <View style={styles.mbHeadline}>
+                      <View style={styles.mbHeadlineCol}>
+                        <Text style={styles.mbHeadlineLabel}>PER MONTH</Text>
+                        <Text style={styles.mbHeadlineValue}>{rupee(b.recurring_monthly)}</Text>
+                        <Text style={styles.mbHeadlineUnit}>all-in monthly</Text>
+                      </View>
+                      <View style={styles.mbHeadlineRule} />
+                      <View style={styles.mbHeadlineCol}>
+                        <Text style={styles.mbHeadlineLabel}>MOVE-IN</Text>
+                        <Text style={[styles.mbHeadlineValue, { color: COLORS.primary }]}>{rupee(b.move_in_cost)}</Text>
+                        <Text style={styles.mbHeadlineUnit}>first month + deposit</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.mbList}>
+                      {/* Everything that recurs monthly — all mandatory */}
+                      <Row l="Rent" v={rupee(b.monthly_rent)} />
+                      {b.maintenance_monthly > 0 && <Row l="Maintenance" v={rupee(b.maintenance_monthly)} />}
+                      {b.cook_available && b.cook_cost_monthly ? <Row l="Cook" v={rupee(b.cook_cost_monthly)} /> : null}
+                      {b.maid_available && b.maid_cost_monthly ? <Row l="Maid" v={rupee(b.maid_cost_monthly)} /> : null}
+                      {utils > 0 ? <Row l="Utilities" sub="est." v={rupee(utils)} /> : null}
+                      <View style={styles.mbDivider} />
+                      <Row l="Monthly total" v={`${rupee(b.recurring_monthly)}/mo`} strong />
+
+                      {/* One-time costs, separate from the monthly */}
+                      {(b.security_deposit > 0 || b.setup_cost_onetime > 0) && (
+                        <>
+                          <View style={styles.mbDivider} />
+                          {b.security_deposit > 0 && <Row l="Deposit" sub="one-time" v={rupee(b.security_deposit)} />}
+                          {b.setup_cost_onetime > 0 && <Row l="Setup cost" sub={b.setup_cost_refundable ? 'one-time, refundable' : 'one-time'} v={rupee(b.setup_cost_onetime)} />}
+                          <Row l="Move-in cost" v={rupee(b.move_in_cost)} strong />
+                        </>
+                      )}
+                    </View>
+
+                    <View style={styles.mbFootRow}>
+                      <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.textMut} />
+                      <Text style={styles.mbFoot}>
+                        Rent &amp; deposit paid to the host directly. RoomBuddy charges a flat ₹49 to reserve.
+                        {listing.available_from ? `  Available from ${listing.available_from}.` : ''}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+            </View>
+          )}
+
           {nearbyLine && (
             <View style={styles.section}>
               <SectionTitle label="Nearby" />
@@ -694,29 +783,48 @@ export default function GuestListingDetailScreen() {
             </View>
           )}
 
-          {/* ── Stay details (check-in/out + min stay merged) ── */}
+          {/* ── Stay details ── */}
           <View style={styles.section}>
             <SectionTitle label="Stay details" />
             <View style={styles.checkinRow}>
-              {listing.check_in_from ? (
-                <View style={styles.checkinCard}>
-                  <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.checkinLabel}>Check-in from</Text>
-                  <Text style={styles.checkinTime}>{listing.check_in_from}</Text>
-                </View>
-              ) : null}
-              {listing.check_out_by ? (
-                <View style={styles.checkinCard}>
-                  <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.checkinLabel}>Check-out by</Text>
-                  <Text style={styles.checkinTime}>{listing.check_out_by}</Text>
-                </View>
-              ) : null}
-              <View style={styles.checkinCard}>
-                <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                <Text style={styles.checkinLabel}>Min stay</Text>
-                <Text style={styles.checkinTime}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
-              </View>
+              {listing.rental_type === 'monthly' ? (
+                <>
+                  {listing.available_from ? (
+                    <View style={styles.checkinCard}>
+                      <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                      <Text style={styles.checkinLabel}>Available from</Text>
+                      <Text style={styles.checkinTime}>{listing.available_from}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.checkinCard}>
+                    <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.checkinLabel}>Min stay</Text>
+                    <Text style={styles.checkinTime}>{listing.min_months || 1} month{(listing.min_months || 1) !== 1 ? 's' : ''}</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {listing.check_in_from ? (
+                    <View style={styles.checkinCard}>
+                      <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+                      <Text style={styles.checkinLabel}>Check-in from</Text>
+                      <Text style={styles.checkinTime}>{listing.check_in_from}</Text>
+                    </View>
+                  ) : null}
+                  {listing.check_out_by ? (
+                    <View style={styles.checkinCard}>
+                      <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+                      <Text style={styles.checkinLabel}>Check-out by</Text>
+                      <Text style={styles.checkinTime}>{listing.check_out_by}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.checkinCard}>
+                    <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.checkinLabel}>Min stay</Text>
+                    <Text style={styles.checkinTime}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
+                  </View>
+                </>
+              )}
             </View>
             {listing.security_deposit > 0 && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm }}>
@@ -885,8 +993,10 @@ export default function GuestListingDetailScreen() {
       <View style={styles.stickyBar}>
         <View>
           <Text style={styles.stickyPrice}>
-            ₹{listing.guest_price_per_night.toLocaleString('en-IN')}
-            <Text style={styles.stickyPriceUnit}>/night</Text>
+            ₹{(listing.rental_type === 'monthly'
+                ? (listing.recurring_monthly ?? listing.monthly_rent ?? 0)
+                : (listing.guest_price_per_night ?? 0)).toLocaleString('en-IN')}
+            <Text style={styles.stickyPriceUnit}>{listing.rental_type === 'monthly' ? '/mo' : '/night'}</Text>
           </Text>
           {hasReviews && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
@@ -899,7 +1009,7 @@ export default function GuestListingDetailScreen() {
           if (!isAuthenticated) { gateToLogin('book'); return; }
           setBookStep('rules'); setShowBookModal(true);
         }}>
-          <Text style={styles.stickyBookBtnText}>Book now</Text>
+          <Text style={styles.stickyBookBtnText}>{listing.rental_type === 'monthly' ? 'Reserve' : 'Book now'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -981,17 +1091,23 @@ export default function GuestListingDetailScreen() {
               <>
                 <View style={styles.modalHeader}>
                   <TouchableOpacity onPress={() => setBookStep('rules')}><Ionicons name="chevron-back" size={24} color={COLORS.text} /></TouchableOpacity>
-                  <Text style={styles.modalTitle}>Select dates</Text>
+                  <Text style={styles.modalTitle}>{isMonthlyListing ? 'Move-in date' : 'Select dates'}</Text>
                   <TouchableOpacity onPress={() => setShowBookModal(false)}><Ionicons name="close" size={24} color={COLORS.text} /></TouchableOpacity>
                 </View>
                 <Text style={styles.calendarHint}>
-                  {!checkIn ? 'Select check-in date' : !checkOut ? 'Select check-out date' : `${checkIn}  to  ${checkOut}`}
+                  {isMonthlyListing
+                    ? (!checkIn
+                        ? 'Pick your move-in date'
+                        : `${checkIn}  →  ${checkOut}  ·  tap a later date to stay longer`)
+                    : (!checkIn ? 'Select check-in date' : !checkOut ? 'Select check-out date' : `${checkIn}  to  ${checkOut}`)}
                 </Text>
                 <Calendar
                   minDate={today} markingType="period" markedDates={getMarkedDates()} onDayPress={onDayPress}
                   theme={{ todayTextColor: COLORS.primary, arrowColor: COLORS.primary, textDayFontWeight: '500', textMonthFontWeight: '700', textDayHeaderFontWeight: '600', textDayFontSize: 14, textMonthFontSize: 16 }}
                 />
-                {listing.min_nights > 1 && <Text style={styles.modalHint}>Minimum stay: {listing.min_nights} nights</Text>}
+                {isMonthlyListing
+                  ? <Text style={styles.modalHint}>Minimum stay: {listing.min_months || 1} month{(listing.min_months || 1) > 1 ? 's' : ''} · you’ll settle rent with the host directly</Text>
+                  : (listing.min_nights > 1 && <Text style={styles.modalHint}>Minimum stay: {listing.min_nights} nights</Text>)}
                 <TouchableOpacity style={[styles.modalBtn, (!checkIn || !checkOut) && styles.modalBtnDisabled]} onPress={handleBookNow} activeOpacity={0.85} disabled={!checkIn || !checkOut}>
                   <Text style={styles.modalBtnText}>Continue to booking</Text>
                 </TouchableOpacity>
@@ -1186,6 +1302,33 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   sectionAccent: { width: 3, height: 16, borderRadius: 2, backgroundColor: COLORS.primary },
   sectionTitle: { ...FONTS.bold, fontSize: 13, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.text },
   description: { fontSize: 14, color: COLORS.textSec, lineHeight: 22 },
+  mbCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, marginTop: 6,
+    borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 3,
+  },
+  mbHeadline: {
+    flexDirection: 'row', alignItems: 'stretch',
+    backgroundColor: COLORS.accentAlpha, paddingVertical: 18, paddingHorizontal: SPACING.md,
+  },
+  mbHeadlineCol: { flex: 1, alignItems: 'center' },
+  mbHeadlineRule: { width: 1, backgroundColor: COLORS.border, marginHorizontal: 4 },
+  mbHeadlineLabel: { fontSize: 10.5, ...FONTS.semibold, letterSpacing: 1.2, color: COLORS.textMut, marginBottom: 5 },
+  mbHeadlineValue: { fontSize: 24, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
+  mbHeadlineUnit: { fontSize: 11, color: COLORS.textMut, marginTop: 3 },
+  mbList: { paddingHorizontal: SPACING.md, paddingTop: 14, paddingBottom: 6 },
+  mbRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 6 },
+  mbLabel: { fontSize: 14, color: COLORS.textSec, flex: 1 },
+  mbSub: { fontSize: 11.5, color: COLORS.textMut },
+  mbValue: { fontSize: 14, color: COLORS.text, ...FONTS.medium },
+  mbStrong: { fontSize: 15, color: COLORS.text, ...FONTS.semibold },
+  mbDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 9 },
+  mbFootRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 7,
+    paddingHorizontal: SPACING.md, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.bg,
+  },
+  mbFoot: { flex: 1, fontSize: 11.5, color: COLORS.textMut, lineHeight: 16 },
 
   subHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.sm },
   subHeaderText: { ...FONTS.semibold, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: COLORS.textSec },

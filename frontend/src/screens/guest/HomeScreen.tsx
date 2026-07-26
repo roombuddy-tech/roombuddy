@@ -32,7 +32,7 @@ import { useTheme } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { takePendingIntent } from '../../services/pendingIntent';
 import { searchListings, type SortOption } from '../../services/search';
-import type { GuestListingCard } from '../../types/listing';
+import { cardPrice, type GuestListingCard } from '../../types/listing';
 import ProfileMenu from '../shared/ProfileMenu';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
@@ -429,8 +429,8 @@ export default function HomeScreen() {
         )}
         <View style={styles.cardFooter}>
           <Text style={styles.cardPrice}>
-            {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
-            <Text style={styles.cardPriceUnit}>/night</Text>
+            {cardPrice(item).amount}
+            <Text style={styles.cardPriceUnit}>{cardPrice(item).unit}</Text>
           </Text>
           <View style={{ alignItems: 'flex-end' }}>
             {item.average_rating !== null && item.review_count > 0 && (
@@ -713,8 +713,8 @@ export default function HomeScreen() {
                       )}
                     </View>
                     <Text style={styles.gridPrice}>
-                      {'₹'}{Math.round(item.guest_price_per_night).toLocaleString('en-IN')}
-                      <Text style={styles.gridPriceUnit}> /night</Text>
+                      {cardPrice(item).amount}
+                      <Text style={styles.gridPriceUnit}> {cardPrice(item).unit}</Text>
                     </Text>
                   </View>
                 </TouchableOpacity>

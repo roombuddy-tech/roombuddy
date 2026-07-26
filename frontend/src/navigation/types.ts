@@ -30,8 +30,12 @@ export type HostStackParamList = {
       listing_id: string;
       title: string;
       area_name: string;
-      host_price_per_night: number;
-      guest_price_per_night: number;
+      host_price_per_night: number | null;
+      guest_price_per_night: number | null;
+      rental_type?: 'monthly' | 'nightly';
+      display_price?: number | null;
+      price_unit?: string;
+      monthly_rent?: number | null;
       status: string;
       cover_photo_url: string | null;
     };

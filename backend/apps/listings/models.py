@@ -34,8 +34,32 @@ class Listing(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
 
-    # Pricing
-    host_price_per_night = models.DecimalField(max_digits=10, decimal_places=2)
+    # Rental type — nightly (short stays) vs monthly (subletting for weeks/months).
+    # Defaults to monthly: the flatmate-sublet market is the primary use case.
+    class RentalType(models.TextChoices):
+        NIGHTLY = "nightly"
+        MONTHLY = "monthly"
+
+    rental_type = models.CharField(
+        max_length=10, choices=RentalType.choices, default=RentalType.MONTHLY,
+    )
+
+    # ── Monthly pricing (used when rental_type == monthly) ──────────────
+    monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    maintenance_monthly = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    setup_cost_onetime = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    setup_cost_refundable = models.BooleanField(default=False)
+    cook_available = models.BooleanField(default=False)
+    cook_cost_monthly = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    maid_available = models.BooleanField(default=False)
+    maid_cost_monthly = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    utilities_included = models.BooleanField(default=False)
+    utilities_est_monthly = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    min_months = models.SmallIntegerField(null=True, blank=True)
+    available_from = models.DateField(null=True, blank=True)
+
+    # Pricing (nightly — kept for rental_type == nightly)
+    host_price_per_night = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gst_pct = models.DecimalField(max_digits=5, decimal_places=2, default=12.00)
     platform_fee_pct = models.DecimalField(max_digits=5, decimal_places=2, default=5.00)
     currency = models.CharField(max_length=3, default="INR")
