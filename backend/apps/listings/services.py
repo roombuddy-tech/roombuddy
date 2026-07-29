@@ -100,7 +100,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
 
     flatmates_qs = list(
         PropertyFlatmate.objects.filter(property=prop)
-        .values("id", "name", "age", "gender", "occupation", "hobbies")
+        .values("id", "name", "age", "gender", "occupation", "hobbies", "hometown")
     )
 
     rules = getattr(listing, "house_rules", None)
@@ -182,6 +182,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
                 "gender": f["gender"] or "",
                 "occupation": f["occupation"] or "",
                 "hobbies": f["hobbies"] or "",
+                "hometown": f["hometown"] or "",
             }
             for f in real_flatmates
         ],
@@ -214,6 +215,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "occupation": host_fm["occupation"] if host_fm else "",
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
+            "hometown": host_fm["hometown"] if host_fm else "",
         },
         "photos": photos_by_category,
         "blocked_dates": [

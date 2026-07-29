@@ -955,9 +955,9 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           <View style={{ flex: 1 }}>
             <Field
               label="Pincode"
-              placeholder="Auto-filled"
+              placeholder="Enter 6-digit pincode"
               value={form.pincode}
-              onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '') })}
+              onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '').slice(0, 6) })}
               keyboardType="number-pad"
             />
           </View>

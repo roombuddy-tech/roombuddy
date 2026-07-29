@@ -117,7 +117,7 @@ export default function HomeScreen() {
         }
       }
       const data = await searchListings(params);
-      setNearbyListings(data.results.slice(0, 10));
+      setNearbyListings(data.results.slice(0, 14));
       lastNearbyFetchRef.current = Date.now();
     } catch {
       // leave the previous results in place on failure
