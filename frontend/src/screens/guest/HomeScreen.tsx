@@ -677,7 +677,7 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.emptyNearbyTitle}>Unable to load listings</Text>
               <Text style={styles.nearbyEmpty}>Check your connection and try again.</Text>
-              <TouchableOpacity style={styles.emptyCta} activeOpacity={0.85} onPress={fetchNearby}>
+              <TouchableOpacity style={styles.emptyCta} activeOpacity={0.85} onPress={() => loadNearby({ force: true })}>
                 <Ionicons name="refresh-outline" size={16} color="#fff" />
                 <Text style={styles.emptyCtaTxt}>Retry</Text>
               </TouchableOpacity>

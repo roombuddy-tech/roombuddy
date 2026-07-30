@@ -8,7 +8,7 @@ class IsAuthenticated(BasePermission):
     """User must be authenticated via JWT."""
 
     def has_permission(self, request, view):
-        return request.user is not None and hasattr(request.user, "id")
+        return getattr(request.user, "id", None) is not None
 
 
 class IsProfileComplete(BasePermission):
@@ -27,7 +27,6 @@ class IsAdminUser(BasePermission):
 
     def has_permission(self, request, view):
         return (
-            request.user is not None
-            and hasattr(request.user, "id")
+            getattr(request.user, "id", None) is not None
             and getattr(request.user, "is_staff", False)
         )

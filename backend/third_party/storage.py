@@ -127,8 +127,10 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     ext = "jpg"
     if not filename:
         filename = f"{uuid.uuid4().hex}.{ext}"
-    elif not filename.endswith(('.jpg', '.jpeg', '.png')):
-        filename = f"{filename}.{ext}"
+    else:
+        filename = Path(filename).name  # strip any path components
+        if not filename.endswith(('.jpg', '.jpeg', '.png')):
+            filename = f"{filename}.{ext}"
 
     key = f"{folder}/{filename}"
 
