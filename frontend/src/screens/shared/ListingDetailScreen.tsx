@@ -46,11 +46,12 @@ const AMENITY_ICONS: Record<string, any> = {
   'Fridge': 'cube-outline',
   'Microwave': 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   'TV': 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
@@ -291,8 +292,30 @@ export default function ListingDetailScreen() {
   // Derive display data from preview form or from list item
   const title = f?.title || item?.title || 'Listing';
   const areaName = f ? `${f.locality}${f.city ? `, ${f.city}` : ''}` : (item?.area_name ?? '');
-  const hostPrice = f ? (parseInt(f.nightlyRate, 10) || 0) : (item?.host_price_per_night ?? 0);
-  const guestPrice = f ? hostPrice : (item?.guest_price_per_night ?? 0);
+  // Respect the rental type — a monthly listing shows monthly rent, not nightly.
+  const isMonthlyView = f ? f.rentalType === 'monthly' : (item?.rental_type === 'monthly');
+  const priceUnit = isMonthlyView ? '/mo' : '/night';
+
+  // Monthly cost breakdown for the preview (computed from the form fields).
+  const num = (s?: string) => (s ? parseInt(s, 10) || 0 : 0);
+  const mb = isMonthlyView && f ? (() => {
+    const rent = num(f.monthlyRent), maint = num(f.maintenanceMonthly);
+    const deposit = num(f.securityDeposit), setup = num(f.setupCostOnetime);
+    const cook = f.cookAvailable ? num(f.cookCostMonthly) : 0;
+    const maid = f.maidAvailable ? num(f.maidCostMonthly) : 0;
+    const utils = f.utilitiesIncluded ? 0 : num(f.utilitiesEstMonthly);
+    // All recurring costs are mandatory and roll into the monthly total.
+    const recurring = rent + maint + cook + maid + utils;
+    return { rent, maint, deposit, setup, setupRefundable: !!f.setupCostRefundable,
+      cook, maid, utils, recurring, moveIn: recurring + deposit + setup };
+  })() : null;
+
+  // Headline price = full recurring for monthly (rent + maintenance + cook +
+  // maid + utilities), matching the guest view — not the bare rent.
+  const hostPrice = f
+    ? (isMonthlyView ? (mb?.recurring ?? 0) : (parseInt(f.nightlyRate, 10) || 0))
+    : (isMonthlyView ? ((item as any)?.recurring_monthly ?? item?.monthly_rent ?? 0) : (item?.host_price_per_night ?? 0));
+  const guestPrice = f ? hostPrice : (isMonthlyView ? ((item as any)?.recurring_monthly ?? item?.monthly_rent ?? 0) : (item?.guest_price_per_night ?? 0));
 
   const allPhotos: string[] = f
     ? Object.values((f.photos ?? {}) as Record<string, string[]>).flat().filter(Boolean)
@@ -498,6 +521,64 @@ export default function ListingDetailScreen() {
                 </>
               )}
 
+              {/* ── Monthly cost breakdown ── */}
+              {mb && mb.rent > 0 && (() => {
+                const rupee = (v: number) => `₹${v.toLocaleString('en-IN')}`;
+                const Row = ({ l, v, sub, strong }: { l: string; v: string; sub?: string; strong?: boolean }) => (
+                  <View style={styles.mbRow}>
+                    <Text style={[styles.mbLabel, strong && styles.mbStrong]}>
+                      {l}{sub ? <Text style={styles.mbSub}>  {sub}</Text> : null}
+                    </Text>
+                    <Text style={[styles.mbValue, strong && styles.mbStrong]}>{v}</Text>
+                  </View>
+                );
+                return (
+                  <>
+                    <Divider />
+                    <SectionHeader title="Cost breakdown" />
+                    <View style={styles.mbCard}>
+                      {/* Headline: the two numbers that matter, big */}
+                      <View style={styles.mbHeadline}>
+                        <View style={styles.mbHeadlineCol}>
+                          <Text style={styles.mbHeadlineLabel}>PER MONTH</Text>
+                          <Text style={styles.mbHeadlineValue}>{rupee(mb.recurring)}</Text>
+                          <Text style={styles.mbHeadlineUnit}>all-in monthly</Text>
+                        </View>
+                        <View style={styles.mbHeadlineRule} />
+                        <View style={styles.mbHeadlineCol}>
+                          <Text style={styles.mbHeadlineLabel}>MOVE-IN</Text>
+                          <Text style={[styles.mbHeadlineValue, { color: COLORS.primary }]}>{rupee(mb.moveIn)}</Text>
+                          <Text style={styles.mbHeadlineUnit}>first month + deposit</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.mbList}>
+                        <Row l="Rent" v={rupee(mb.rent)} />
+                        {mb.maint > 0 && <Row l="Maintenance" v={rupee(mb.maint)} />}
+                        {mb.cook > 0 && <Row l="Cook" v={rupee(mb.cook)} />}
+                        {mb.maid > 0 && <Row l="Maid" v={rupee(mb.maid)} />}
+                        {mb.utils > 0 && <Row l="Utilities" sub="est." v={rupee(mb.utils)} />}
+                        <View style={styles.mbDivider} />
+                        <Row l="Monthly total" v={`${rupee(mb.recurring)}/mo`} strong />
+                        {(mb.deposit > 0 || mb.setup > 0) && (
+                          <>
+                            <View style={styles.mbDivider} />
+                            {mb.deposit > 0 && <Row l="Deposit" sub="one-time" v={rupee(mb.deposit)} />}
+                            {mb.setup > 0 && <Row l="Setup cost" sub={mb.setupRefundable ? 'one-time, refundable' : 'one-time'} v={rupee(mb.setup)} />}
+                            <Row l="Move-in cost" v={rupee(mb.moveIn)} strong />
+                          </>
+                        )}
+                      </View>
+
+                      <View style={styles.mbFootRow}>
+                        <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.textMut} />
+                        <Text style={styles.mbFoot}>Rent &amp; deposit paid to the host directly. RoomBuddy charges a flat ₹49 to reserve.</Text>
+                      </View>
+                    </View>
+                  </>
+                );
+              })()}
+
               {/* ── Nearby landmarks ── */}
               {f.nearbyLandmarks && f.nearbyLandmarks.length > 0 && (
                 <>
@@ -517,11 +598,11 @@ export default function ListingDetailScreen() {
               )}
 
               {/* ── Meet your flatmates ── */}
-              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies) && (
+              {(f.flatmates?.length > 0 || f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender || f.hostHometown) && (
                 <>
                   <Divider />
                   <SectionHeader title="Meet your flatmates" />
-                  {(f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender) && (
+                  {(f.hostOccupation || f.hostHobbies || f.hostAge || f.hostGender || f.hostHometown) && (
                     <View style={styles.flatmateCard}>
                       <View style={styles.flatmateAvatar}>
                         <Text style={styles.flatmateInitials}>H</Text>
@@ -538,6 +619,7 @@ export default function ListingDetailScreen() {
                         {f.hostGender ? <Text style={styles.flatmateDetail}>{f.hostGender.charAt(0).toUpperCase() + f.hostGender.slice(1)}</Text> : null}
                         {f.hostOccupation ? <Text style={styles.flatmateDetail}>{f.hostOccupation}</Text> : null}
                         {f.hostHobbies ? <Text style={styles.flatmateDetail}>Hobbies: {f.hostHobbies}</Text> : null}
+                        {f.hostHometown ? <Text style={styles.flatmateDetail}>From {f.hostHometown}</Text> : null}
                       </View>
                     </View>
                   )}
@@ -598,12 +680,12 @@ export default function ListingDetailScreen() {
                   {
                     label: 'Kitchen & Food',
                     icon: 'restaurant-outline',
-                    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'].filter(a => ams.includes(a)),
+                    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'RO / Water purifier', 'Utensils provided'].filter(a => ams.includes(a)),
                   },
                   {
                     label: 'Comfort',
                     icon: 'happy-outline',
-                    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'].filter(a => ams.includes(a)),
+                    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Terrace / Garden access', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'].filter(a => ams.includes(a)),
                   },
                   {
                     label: 'Safety',
@@ -650,10 +732,11 @@ export default function ListingDetailScreen() {
                         latitudeDelta: 0.005,
                         longitudeDelta: 0.005,
                       }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
+                      scrollEnabled
+                      zoomEnabled
                       rotateEnabled={false}
                       pitchEnabled={false}
+                      toolbarEnabled={false}
                     >
                       <Marker coordinate={{ latitude: f.latitude, longitude: f.longitude }} />
                     </MapView>
@@ -698,29 +781,48 @@ export default function ListingDetailScreen() {
                 </>
               )}
 
-              {/* ── Check-in / Check-out & stay info ── */}
+              {/* ── Stay details ── */}
               <Divider />
               <SectionHeader title="Stay details" />
               <View style={styles.checkinRow}>
-                {f.checkInTime ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-in from</Text>
-                    <Text style={styles.checkinTime}>{f.checkInTime}</Text>
-                  </View>
-                ) : null}
-                {f.checkOutTime ? (
-                  <View style={styles.checkinCard}>
-                    <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Check-out by</Text>
-                    <Text style={styles.checkinTime}>{f.checkOutTime}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.checkinCard}>
-                  <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                  <Text style={styles.checkinLabel}>Min stay</Text>
-                  <Text style={styles.checkinTime}>{previewMinNights} night{previewMinNights !== 1 ? 's' : ''}</Text>
-                </View>
+                {isMonthlyView ? (
+                  <>
+                    {f.availableFrom ? (
+                      <View style={styles.checkinCard}>
+                        <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.checkinLabel}>Available from</Text>
+                        <Text style={styles.checkinTime}>{f.availableFrom}</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.checkinCard}>
+                      <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+                      <Text style={styles.checkinLabel}>Min stay</Text>
+                      <Text style={styles.checkinTime}>{(parseInt(f.minMonths, 10) || 1)} month{(parseInt(f.minMonths, 10) || 1) !== 1 ? 's' : ''}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {f.checkInTime ? (
+                      <View style={styles.checkinCard}>
+                        <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.checkinLabel}>Check-in from</Text>
+                        <Text style={styles.checkinTime}>{f.checkInTime}</Text>
+                      </View>
+                    ) : null}
+                    {f.checkOutTime ? (
+                      <View style={styles.checkinCard}>
+                        <Ionicons name="log-out-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.checkinLabel}>Check-out by</Text>
+                        <Text style={styles.checkinTime}>{f.checkOutTime}</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.checkinCard}>
+                      <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                      <Text style={styles.checkinLabel}>Min stay</Text>
+                      <Text style={styles.checkinTime}>{previewMinNights} night{previewMinNights !== 1 ? 's' : ''}</Text>
+                    </View>
+                  </>
+                )}
               </View>
             </>
           ) : (
@@ -738,7 +840,7 @@ export default function ListingDetailScreen() {
                 {hostPrice > 0 && (
                   <Text style={styles.price}>
                     ₹{hostPrice.toLocaleString('en-IN')}
-                    <Text style={styles.priceUnit}>/night</Text>
+                    <Text style={styles.priceUnit}>{priceUnit}</Text>
                   </Text>
                 )}
               </View>
@@ -917,7 +1019,7 @@ export default function ListingDetailScreen() {
           <View>
             <Text style={styles.stickyPrice}>
               ₹{guestPrice.toLocaleString('en-IN')}
-              <Text style={styles.stickyPriceUnit}>/night</Text>
+              <Text style={styles.stickyPriceUnit}>{priceUnit}</Text>
             </Text>
           </View>
           <TouchableOpacity style={styles.stickyBookBtn} activeOpacity={0.85} onPress={() => navigation.goBack()}>
@@ -1073,6 +1175,34 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   locationDisclaimer: { fontSize: 12, color: COLORS.textMut, textAlign: 'center' },
   priceRow: { marginBottom: SPACING.md },
   price: { fontSize: 26, ...FONTS.serif, color: COLORS.text },
+  mbCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, marginTop: 6,
+    borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 3,
+  },
+  // Two-column headline band, tinted, at the top of the card
+  mbHeadline: {
+    flexDirection: 'row', alignItems: 'stretch',
+    backgroundColor: COLORS.accentAlpha, paddingVertical: 18, paddingHorizontal: SPACING.md,
+  },
+  mbHeadlineCol: { flex: 1, alignItems: 'center' },
+  mbHeadlineRule: { width: 1, backgroundColor: COLORS.border, marginHorizontal: 4 },
+  mbHeadlineLabel: { fontSize: 10.5, ...FONTS.semibold, letterSpacing: 1.2, color: COLORS.textMut, marginBottom: 5 },
+  mbHeadlineValue: { fontSize: 24, ...FONTS.bold, color: COLORS.text, letterSpacing: -0.5 },
+  mbHeadlineUnit: { fontSize: 11, color: COLORS.textMut, marginTop: 3 },
+  mbList: { paddingHorizontal: SPACING.md, paddingTop: 14, paddingBottom: 6 },
+  mbRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 6 },
+  mbLabel: { fontSize: 14, color: COLORS.textSec, flex: 1 },
+  mbSub: { fontSize: 11.5, color: COLORS.textMut },
+  mbValue: { fontSize: 14, color: COLORS.text, ...FONTS.medium },
+  mbStrong: { fontSize: 15, color: COLORS.text, ...FONTS.semibold },
+  mbDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 9 },
+  mbFootRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 7,
+    paddingHorizontal: SPACING.md, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.bg,
+  },
+  mbFoot: { flex: 1, fontSize: 11.5, color: COLORS.textMut, lineHeight: 16 },
   priceUnit: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec },
   guestPrice: { fontSize: 13, color: COLORS.textSec, marginTop: 4 },
 

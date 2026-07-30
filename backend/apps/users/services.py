@@ -635,6 +635,10 @@ def submit_id_verification(user: User, aadhaar_image, selfie_image) -> dict:
         "id_submitted_at", "id_reviewed_at", "id_reviewed_by", "updated_at",
     ])
 
+    from third_party.admin_alerts import notify_admin
+    name = get_display_name(user) or (user.phone_number or "A user")
+    notify_admin(f"🪪 Aadhaar pending approval\n{name} submitted ID verification. Approve it in Django admin.")
+
     return {"status": "pending", "message": "Documents submitted. We'll review within 24-48 hours."}
 
 
@@ -739,12 +743,52 @@ def get_host_dashboard(user: User) -> dict:
     greeting_name = _get_greeting_name(user)
     month_stats = _get_month_stats(user, month_start, today)
     today_activity = _get_today_activity(user, today)
+    pending_actions = _get_pending_actions(user)
 
     return {
         "greeting_name": greeting_name,
         "this_month": month_stats,
         "today": today_activity,
+        "pending_actions": pending_actions,
     }
+
+
+def _get_pending_actions(user: User) -> list:
+    """
+    Booking requests a guest has paid for that are waiting on the host's
+    accept/decline. Surfaced as a priority banner on the dashboard so the host
+    doesn't have to dig into Bookings → Active to find them.
+    """
+    now = timezone.now()
+    pending = (
+        Booking.objects.filter(
+            host_user=user,
+            status=Booking.Status.PENDING,
+            payment_status=Booking.PaymentStatus.PAID,
+            host_responded_at__isnull=True,
+        )
+        .select_related("guest_user", "listing")
+        .order_by("host_response_deadline")
+    )
+
+    actions = []
+    for b in pending:
+        hours_left = None
+        if b.host_response_deadline:
+            secs = (b.host_response_deadline - now).total_seconds()
+            hours_left = max(0, int(secs // 3600))
+        actions.append({
+            "booking_id": str(b.id),
+            "booking_code": b.booking_code,
+            "guest_name": get_display_name(b.guest_user),
+            "listing_title": b.listing.title if b.listing else "",
+            "check_in_date": b.check_in_date.isoformat(),
+            "check_out_date": b.check_out_date.isoformat(),
+            "nights": b.nights,
+            "total_host_receives": float(b.total_host_receives),
+            "hours_left": hours_left,
+        })
+    return actions
 
 
 def _get_greeting_name(user: User) -> str:

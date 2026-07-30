@@ -1,4 +1,6 @@
 import logging
+import re
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Q
@@ -15,6 +17,53 @@ logger = logging.getLogger(__name__)
 
 MESSAGE_PAGE_SIZE = 50
 MESSAGE_MAX_LENGTH = 2000
+ACTIVE_VIEW_WINDOW = timedelta(seconds=90)
+
+# Contact info is hidden in pre-booking chats so deals stay on-platform.
+# Matches phone numbers (7+ digits, possibly spaced/dashed/with +91), emails,
+# and URLs — the channels someone would use to take the conversation off-app.
+_PHONE_RE = re.compile(r"(?:\+?\d[\d\s().-]{6,}\d)")
+_EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
+_URL_RE = re.compile(
+    r"\b(?:https?://|www\.)\S+"
+    r"|\b[\w-]+\.(?:com|in|co|me|link|io|org|net)(?:\.[a-z]{2,})?\b",
+    re.IGNORECASE,
+)
+_MASK = "[hidden until you book]"
+
+
+# Spelled-out digits ("nine nine three five...") are a common way to dodge a
+# numeric filter, so a run of number-words is masked too.
+_NUM_WORDS = {
+    "zero", "oh", "o", "one", "two", "three", "four", "five", "six", "seven",
+    "eight", "nine", "double", "triple", "nought", "naught", "tripple",
+}
+_WORD_NUM_RE = re.compile(
+    r"\b(?:(?:zero|oh|o|one|two|three|four|five|six|seven|eight|nine|double|triple|nought|naught|tripple)\b[\s,.-]*){5,}",
+    re.IGNORECASE,
+)
+
+
+def mask_contact_info(text: str) -> str:
+    """Redact phone numbers, emails, links and spelled-out numbers.
+
+    This raises the effort to share contact info in a pre-booking chat; it is
+    deliberately not a perfect filter (a determined user can still split a
+    number across messages or send an image).
+    """
+    if not text:
+        return text
+    text = _EMAIL_RE.sub(_MASK, text)
+    text = _URL_RE.sub(_MASK, text)
+    # Spelled-out number runs (5+ number-words in a row).
+    text = _WORD_NUM_RE.sub(_MASK + " ", text)
+    # Numeric phones last: only mask digit runs with 7+ actual digits, so
+    # prices like "₹12000" or "5 min" aren't clobbered.
+    def _phone_sub(m):
+        digits = re.sub(r"\D", "", m.group(0))
+        return _MASK if len(digits) >= 7 else m.group(0)
+    text = _PHONE_RE.sub(_phone_sub, text)
+    return text
 
 
 def is_participant(conversation, user) -> bool:
@@ -30,6 +79,33 @@ def get_or_create_conversation(booking) -> Conversation:
         },
     )
     return conversation
+
+
+def get_or_create_inquiry_conversation(guest, listing) -> Conversation:
+    """Pre-booking conversation between a guest and a listing's host.
+
+    Reuses an existing inquiry for the same (guest, host, listing); otherwise
+    promotes an existing booking conversation if one already exists between
+    them for this listing.
+    """
+    host_id = listing.host_user_id
+    # Reuse any existing conversation between them for this listing —
+    # prefer the inquiry (no booking) row if several exist.
+    existing = (
+        Conversation.objects
+        .filter(guest_user_id=guest.id, host_user_id=host_id, listing_id=listing.id)
+        .order_by("booking_id")  # NULLs sort first on Postgres → inquiry wins
+        .first()
+    )
+    if existing:
+        return existing
+    with transaction.atomic():
+        return Conversation.objects.create(
+            guest_user_id=guest.id,
+            host_user_id=host_id,
+            listing_id=listing.id,
+            booking=None,
+        )
 
 
 def _counterpart(conversation, user):
@@ -65,20 +141,23 @@ def serialize_message(message, user) -> dict:
 def serialize_conversation(conversation, user, *, last_message=None) -> dict:
     other = _counterpart(conversation, user)
     booking = conversation.booking
-    listing = booking.listing
+    # Inquiry (pre-booking) conversations reference the listing directly.
+    listing = booking.listing if booking is not None else conversation.listing
     if last_message is None:
         last_message = (
             Message.objects.filter(conversation=conversation)
             .order_by("-created_at")
             .first()
         )
-    chat_disabled = booking.status in Booking.CHAT_DISABLED_STATUSES
+    chat_disabled = booking is not None and booking.status in Booking.CHAT_DISABLED_STATUSES
     return {
         "conversation_id": str(conversation.id),
-        "booking_id": str(conversation.booking_id),
-        "booking_code": booking.booking_code,
-        "booking_status": booking.status,
+        "booking_id": str(conversation.booking_id) if conversation.booking_id else None,
+        "booking_code": booking.booking_code if booking is not None else None,
+        "booking_status": booking.status if booking is not None else None,
+        "is_inquiry": conversation.is_inquiry,
         "chat_disabled": chat_disabled,
+        "listing_id": str(listing.id) if listing else None,
         "listing_title": listing.title if listing else None,
         "counterpart_name": get_display_name(other),
         "counterpart_initials": get_initials(other),
@@ -96,7 +175,7 @@ def list_conversations(user) -> list:
         Conversation.objects
         .filter(Q(guest_user=user) | Q(host_user=user))
         .filter(last_message_at__isnull=False)
-        .select_related("booking__listing", "guest_user__profile", "host_user__profile")
+        .select_related("booking__listing", "listing", "guest_user__profile", "host_user__profile")
         .order_by("-last_message_at")
     )
     return [serialize_conversation(c, user) for c in conversations]
@@ -121,9 +200,12 @@ def get_messages(conversation, user, *, after=None) -> list:
 def create_message(conversation, sender, body: str) -> Message:
     logger.info("create_message conversation_id=%s sender_id=%s", getattr(conversation, "id", None), getattr(sender, "id", None))
     booking = conversation.booking
-    if booking.status in Booking.CHAT_DISABLED_STATUSES:
+    if booking is not None and booking.status in Booking.CHAT_DISABLED_STATUSES:
         from django.core.exceptions import ValidationError
         raise ValidationError("Messaging is disabled for this booking.")
+    # Pre-booking (inquiry) chats hide contact info to keep deals on-platform.
+    if booking is None:
+        body = mask_contact_info(body)
     message = Message.objects.create(
         conversation=conversation, sender_user=sender, body=body,
     )
@@ -160,10 +242,36 @@ def _notify_new_message(conversation, sender, message) -> None:
     if recipient is None:
         return
     try:
-        listing_title = conversation.booking.listing.title
+        listing = (
+            conversation.booking.listing
+            if conversation.booking_id else conversation.listing
+        )
+        listing_title = listing.title if listing else None
     except Exception:
         logger.exception("_notify_new_message failed")
         listing_title = None
+
+    # Skip the phone buzz if the recipient is currently looking at this thread.
+    recipient_last_read = (
+        conversation.guest_last_read_at
+        if recipient.id == conversation.guest_user_id
+        else conversation.host_last_read_at
+    )
+    is_viewing = (
+        recipient_last_read is not None
+        and (timezone.now() - recipient_last_read) <= ACTIVE_VIEW_WINDOW
+    )
+    channels = (
+        [NotificationChannel.IN_APP]
+        if is_viewing
+        else [NotificationChannel.PUSH, NotificationChannel.IN_APP]
+    )
+    if is_viewing:
+        logger.info(
+            "Skipping push for message %s — recipient %s is viewing the thread",
+            message.id, recipient.id,
+        )
+
     dispatch(
         event_type=EventType.MESSAGE_RECEIVED,
         recipients=[recipient],
@@ -172,6 +280,6 @@ def _notify_new_message(conversation, sender, message) -> None:
             "conversation_id": str(conversation.id),
             "listing_title": listing_title or "",
         },
-        idempotency_event_id=f"message:{conversation.id}:{recipient.id}",
-        channels=[NotificationChannel.IN_APP],
+        idempotency_event_id=f"message:{message.id}:{recipient.id}",
+        channels=channels,
     )

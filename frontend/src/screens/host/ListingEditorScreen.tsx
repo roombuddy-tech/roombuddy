@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,7 +24,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { CONFIG } from '../../constants/config';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
@@ -79,6 +79,21 @@ interface FormData {
   mealDescription: string;
   nightlyRate: string;
   minStay: string;
+  // rental type + monthly pricing
+  rentalType: 'monthly' | 'nightly';
+  monthlyRent: string;
+  maintenanceMonthly: string;
+  securityDeposit: string;
+  setupCostOnetime: string;
+  setupCostRefundable: boolean;
+  cookAvailable: boolean;
+  cookCostMonthly: string;
+  maidAvailable: boolean;
+  maidCostMonthly: string;
+  utilitiesIncluded: boolean;
+  utilitiesEstMonthly: string;
+  minMonths: string;
+  availableFrom: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
   noPets: boolean;
@@ -96,6 +111,7 @@ interface FormData {
   hostOccupation: string;
   hostHobbies: string;
   hostGender: string;
+  hostHometown: string;
   blockedDates: Array<{ startDate: string; endDate: string }>;
 }
 
@@ -131,6 +147,20 @@ const INIT: FormData = {
   mealDescription: '',
   nightlyRate: '',
   minStay: '1_night',
+  rentalType: 'monthly',
+  monthlyRent: '',
+  maintenanceMonthly: '',
+  securityDeposit: '',
+  setupCostOnetime: '',
+  setupCostRefundable: false,
+  cookAvailable: false,
+  cookCostMonthly: '',
+  maidAvailable: false,
+  maidCostMonthly: '',
+  utilitiesIncluded: false,
+  utilitiesEstMonthly: '',
+  minMonths: '3',
+  availableFrom: '',
   noSmoking: true,
   noLoudMusic: true,
   noPets: true,
@@ -148,6 +178,7 @@ const INIT: FormData = {
   hostOccupation: '',
   hostHobbies: '',
   hostGender: '',
+  hostHometown: '',
   blockedDates: [],
 };
 
@@ -171,12 +202,12 @@ const AMENITY_GROUPS = [
   {
     label: 'Kitchen & Food',
     optional: true,
-    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'Water purifier', 'Utensils provided'],
+    items: ['Full kitchen access', 'Fridge', 'Microwave', 'Gas stove', 'RO / Water purifier', 'Utensils provided'],
   },
   {
     label: 'Comfort',
     optional: true,
-    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
+    items: ['TV', 'Sofa / Common area', 'Workspace / Desk', 'Terrace / Garden access', 'Parking (2-wheeler)', 'Parking (4-wheeler)', 'Lift / Elevator'],
   },
   {
     label: 'Safety',
@@ -197,11 +228,12 @@ const AMENITY_ICONS: Record<string, any> = {
   'Fridge': 'cube-outline',
   'Microwave': 'radio-outline',
   'Gas stove': 'flame-outline',
-  'Water purifier': 'filter-outline',
+  'RO / Water purifier': 'filter-outline',
   'Utensils provided': 'cafe-outline',
   'TV': 'tv-outline',
   'Sofa / Common area': 'people-outline',
   'Workspace / Desk': 'desktop-outline',
+  'Terrace / Garden access': 'leaf-outline',
   'Parking (2-wheeler)': 'bicycle-outline',
   'Parking (4-wheeler)': 'car-outline',
   'Lift / Elevator': 'arrow-up-circle-outline',
@@ -619,6 +651,7 @@ function TimePicker({
   optional?: boolean;
   placeholder?: string;
 }) {
+  const { mode } = useTheme();
   const COLORS = useThemeColors();
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
@@ -642,30 +675,51 @@ function TimePicker({
         <Ionicons name="time-outline" size={18} color={COLORS.textSec} />
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="slide">
-        <View style={tpSt.overlay}>
-          <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
-          <View style={tpSt.sheet}>
-            <View style={tpSt.sheetHeader}>
-              <TouchableOpacity onPress={() => setOpen(false)}>
-                <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={tpSt.sheetTitle}>{label}</Text>
-              <TouchableOpacity onPress={() => { onChange(formatTimeDate(tempDate)); setOpen(false); }}>
-                <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
-              </TouchableOpacity>
+      {/* Android: the native picker is its own dialog. Embedding a spinner in a
+          JS <Modal> lets the Modal swallow the wheel's drag gestures — that was
+          the "can't scroll" bug. Render it bare and commit on its onChange. */}
+      {open && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempDate}
+          mode="time"
+          display="spinner"
+          minuteInterval={5}
+          onChange={(event, selectedDate) => {
+            setOpen(false);
+            if (event.type === 'set' && selectedDate) onChange(formatTimeDate(selectedDate));
+          }}
+        />
+      )}
+
+      {/* iOS: the inline spinner works well inside our bottom sheet. */}
+      {Platform.OS === 'ios' && (
+        <Modal visible={open} transparent animationType="slide">
+          <View style={tpSt.overlay}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
+            <View style={tpSt.sheet}>
+              <View style={tpSt.sheetHeader}>
+                <TouchableOpacity onPress={() => setOpen(false)}>
+                  <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={tpSt.sheetTitle}>{label}</Text>
+                <TouchableOpacity onPress={() => { onChange(formatTimeDate(tempDate)); setOpen(false); }}>
+                  <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="time"
+                display="spinner"
+                minuteInterval={5}
+                themeVariant={mode}
+                textColor={COLORS.text}
+                onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
+                style={{ height: 200 }}
+              />
             </View>
-            <DateTimePicker
-              value={tempDate}
-              mode="time"
-              display="spinner"
-              minuteInterval={30}
-              onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
-              style={{ height: 200 }}
-            />
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -758,7 +812,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
 }
 
 const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  content: { padding: SPACING.lg, paddingTop: SPACING.md },
+  content: { padding: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.xxl },
   hero: { alignItems: 'center', marginBottom: SPACING.xl },
   title: { fontSize: 28, ...FONTS.bold, color: COLORS.primary, textAlign: 'center', marginBottom: SPACING.sm },
   sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
@@ -796,7 +850,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
   const validate = (): string | null => {
     if (!form.apartmentType) return 'Please select an apartment type';
     if (!form.floorNumber.trim()) return 'Please enter the floor number';
-    if (!form.apartmentName.trim()) return 'Please enter the society / apartment name';
+    if (!form.apartmentName.trim()) return 'Please enter the building name or number';
     if (!form.locality.trim()) return 'Please enter the locality / area';
     if (!form.city.trim()) return 'Please enter the city';
     return null;
@@ -845,8 +899,8 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           keyboardType="number-pad"
         />
         <Field
-          label="Society / Apartment name"
-          placeholder="e.g. Prestige Shantiniketan"
+          label="Building name or number"
+          placeholder="e.g. Prestige Shantiniketan, or House 42"
           value={form.apartmentName}
           onChange={(v) => update({ apartmentName: v })}
         />
@@ -866,7 +920,23 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
               pincode: place.pincode,
             });
           }}
+          // Accept free text as a fallback so a host whose exact area isn't in
+          // the dropdown (or who just types) can still continue. A typed value
+          // isn't a verified place, so drop the coords/placeId — otherwise a
+          // stale pin from an earlier selection would stick to new text.
+          onChangeText={(text) => {
+            update({
+              locality: text,
+              formattedAddress: text,
+              googlePlaceId: '',
+              latitude: null,
+              longitude: null,
+            });
+          }}
         />
+        <Text style={prpSt.locHint}>
+          Tip: pick from the dropdown so guests can find you on the map and in “near you” searches.
+        </Text>
         <Field
           label="City"
           placeholder="City"
@@ -885,9 +955,9 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           <View style={{ flex: 1 }}>
             <Field
               label="Pincode"
-              placeholder="Auto-filled"
+              placeholder="Enter 6-digit pincode"
               value={form.pincode}
-              onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '') })}
+              onChange={(v) => update({ pincode: v.replace(/[^0-9]/g, '').slice(0, 6) })}
               keyboardType="number-pad"
             />
           </View>
@@ -907,6 +977,9 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
 }
 
 const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  // Negative marginTop pulls the tip up over the GooglePlacesInput wrapper's
+  // own 16px marginBottom, so it sits snug under the field instead of adrift.
+  locHint: { fontSize: 12.5, color: COLORS.textMut, ...FONTS.regular, marginTop: -8, marginBottom: 14, lineHeight: 17 },
   aptGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1160,6 +1233,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
     occupation: form.hostOccupation,
     hobbies: form.hostHobbies,
     gender: form.hostGender || profileGender,
+    hometown: form.hostHometown,
   });
 
   useEffect(() => {
@@ -1356,6 +1430,17 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   onChange={(v) => setHostDraft((d) => ({ ...d, hobbies: v }))}
                   optional
                 />
+                <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
+                  <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 }}>
+                    Hometown <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+                  </Text>
+                  <GooglePlacesInput
+                    value={hostDraft.hometown}
+                    placeholder="e.g. Jaipur"
+                    onSelect={(place) => setHostDraft((d) => ({ ...d, hometown: place.city || place.description }))}
+                    onChangeText={(text) => setHostDraft((d) => ({ ...d, hometown: text }))}
+                  />
+                </View>
                 <TouchableOpacity
                   style={fmSt.saveBtn}
                   onPress={() => {
@@ -1364,6 +1449,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                       hostOccupation: hostDraft.occupation,
                       hostHobbies: hostDraft.hobbies,
                       hostGender: hostDraft.gender,
+                      hostHometown: hostDraft.hometown,
                     });
                     setHostModalOpen(false);
                   }}
@@ -1785,6 +1871,11 @@ function StepPhotos({ form, update, onNext, onBack }: StepProps) {
                     <Text style={phSt.requiredTxt}>Required</Text>
                   </View>
                 )}
+                {!cat.required && !hasPhotos && (
+                  <View style={phSt.optionalBadge}>
+                    <Text style={phSt.optionalTxt}>Optional</Text>
+                  </View>
+                )}
                 {hasPhotos && (
                   <View style={phSt.doneBadge}>
                     <Ionicons name="checkmark" size={11} color={COLORS.primary} />
@@ -1872,6 +1963,8 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
   categoryName: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
   requiredBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   requiredTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
+  optionalBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.chip },
+  optionalTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.textSec },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha },
   doneTxt: { fontSize: 10, ...FONTS.semibold, color: COLORS.primary },
   addBtn: {
@@ -1916,12 +2009,33 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const prSt = useMemo(() => makePrStyles(COLORS), [COLORS]);
   const [rateFocused, setRateFocused] = useState(false);
+  const isMonthly = form.rentalType === 'monthly';
   const rate = parseInt(form.nightlyRate, 10) || 0;
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
 
-  const isValid = rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
+  // Monthly numbers for the live breakdown.
+  const n = (s: string) => parseInt(s, 10) || 0;
+  const mRent = n(form.monthlyRent);
+  const mMaint = n(form.maintenanceMonthly);
+  const mDeposit = n(form.securityDeposit);
+  const mSetup = n(form.setupCostOnetime);
+  // Cook/maid/utilities are mandatory recurring costs when the host lists them —
+  // they roll into the monthly total. Only deposit + setup are one-time.
+  const mCook = form.cookAvailable ? n(form.cookCostMonthly) : 0;
+  const mMaid = form.maidAvailable ? n(form.maidCostMonthly) : 0;
+  const mUtils = form.utilitiesIncluded ? 0 : n(form.utilitiesEstMonthly);
+  const recurring = mRent + mMaint + mCook + mMaid + mUtils;
+  const moveInCost = recurring + mDeposit + mSetup;
+
+  const isValid = isMonthly
+    ? mRent > 0
+    : rate > 0 && (!form.homeCooked || parseInt(form.mealCost, 10) > 0);
 
   const validate = (): string | null => {
+    if (isMonthly) {
+      if (mRent < 1) return 'Please enter the monthly rent to continue';
+      return null;
+    }
     if (!form.nightlyRate || parseInt(form.nightlyRate, 10) < 1)
       return 'Please set your nightly rate to continue';
     if (form.homeCooked && (!form.mealCost || parseInt(form.mealCost, 10) < 1))
@@ -1938,8 +2052,114 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={stSt.title}>Set Your Price</Text>
-        <Text style={stSt.sub}>Set your nightly rate. We'll show you what guests pay and what you earn.</Text>
+        <Text style={stSt.sub}>Are you subletting for a few months, or renting by the night?</Text>
 
+        {/* Rental type toggle — gates everything below */}
+        <View style={prSt.typeRow}>
+          {([
+            { v: 'monthly', icon: 'calendar-outline', label: 'Monthly', sub: 'Sublet for weeks / months' },
+            { v: 'nightly', icon: 'moon-outline', label: 'Nightly', sub: 'Short stays, by the night' },
+          ] as const).map((opt) => {
+            const sel = form.rentalType === opt.v;
+            return (
+              <TouchableOpacity
+                key={opt.v}
+                style={[prSt.typeCard, sel && prSt.typeCardSel]}
+                onPress={() => update({ rentalType: opt.v })}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={opt.icon} size={24} color={sel ? COLORS.primary : COLORS.textSec} />
+                <Text style={[prSt.typeLabel, sel && { color: COLORS.primary }]}>{opt.label}</Text>
+                <Text style={prSt.typeSub}>{opt.sub}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {isMonthly ? (
+          <>
+            <Field label="Monthly rent" placeholder="e.g. 18000"
+              value={form.monthlyRent}
+              onChange={(v) => update({ monthlyRent: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" />
+            <Field label="Maintenance / month" placeholder="e.g. 2000 (0 if included)"
+              value={form.maintenanceMonthly}
+              onChange={(v) => update({ maintenanceMonthly: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+            <Field label="Security deposit" placeholder="e.g. 50000"
+              value={form.securityDeposit}
+              onChange={(v) => update({ securityDeposit: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+            <Field label="One-time setup cost" placeholder="e.g. 12000"
+              value={form.setupCostOnetime}
+              onChange={(v) => update({ setupCostOnetime: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+            {mSetup > 0 && (
+              <RuleRow label="Setup cost is refundable"
+                value={form.setupCostRefundable}
+                onChange={(x) => update({ setupCostRefundable: x })} />
+            )}
+
+            <RuleRow label="Cook available" value={form.cookAvailable}
+              onChange={(x) => update({ cookAvailable: x })} />
+            {form.cookAvailable && (
+              <Field label="Cook cost / month" placeholder="e.g. 2500"
+                value={form.cookCostMonthly}
+                onChange={(v) => update({ cookCostMonthly: v.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad" optional />
+            )}
+            <RuleRow label="Maid available" value={form.maidAvailable}
+              onChange={(x) => update({ maidAvailable: x })} />
+            {form.maidAvailable && (
+              <Field label="Maid cost / month" placeholder="e.g. 1000"
+                value={form.maidCostMonthly}
+                onChange={(v) => update({ maidCostMonthly: v.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad" optional />
+            )}
+            <RuleRow label="Utilities included in rent"
+              value={form.utilitiesIncluded}
+              onChange={(x) => update({ utilitiesIncluded: x })} />
+            {!form.utilitiesIncluded && (
+              <Field label="Est. utilities / month" placeholder="e.g. 2000 (electricity, water, internet)"
+                value={form.utilitiesEstMonthly}
+                onChange={(v) => update({ utilitiesEstMonthly: v.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad" optional />
+            )}
+
+            <Field label="Minimum stay (months)" placeholder="e.g. 3"
+              value={form.minMonths}
+              onChange={(v) => update({ minMonths: v.replace(/[^0-9]/g, '') })}
+              keyboardType="number-pad" optional />
+
+            {mRent > 0 && (
+              <View style={[prSt.breakdownBox, { marginTop: SPACING.md }]}>
+                <Text style={prSt.breakdownTitle}>What guests will see</Text>
+                <PriceRow label="Rent" value={`₹${mRent.toLocaleString('en-IN')}`} />
+                {mMaint > 0 && <PriceRow label="Maintenance" value={`₹${mMaint.toLocaleString('en-IN')}`} />}
+                {mCook > 0 && <PriceRow label="Cook" value={`₹${mCook.toLocaleString('en-IN')}`} />}
+                {mMaid > 0 && <PriceRow label="Maid" value={`₹${mMaid.toLocaleString('en-IN')}`} />}
+                {mUtils > 0 && <PriceRow label="Utilities (est.)" value={`₹${mUtils.toLocaleString('en-IN')}`} />}
+                <View style={prSt.divider} />
+                <PriceRow label="Monthly total" value={`₹${recurring.toLocaleString('en-IN')}/mo`} bold />
+                {(mDeposit > 0 || mSetup > 0) && (
+                  <>
+                    <View style={prSt.divider} />
+                    {mDeposit > 0 && <PriceRow label="Deposit (one-time)" value={`₹${mDeposit.toLocaleString('en-IN')}`} />}
+                    {mSetup > 0 && <PriceRow label={`Setup${form.setupCostRefundable ? ' (refundable)' : ' (one-time)'}`} value={`₹${mSetup.toLocaleString('en-IN')}`} />}
+                    <PriceRow label="Move-in cost" value={`₹${moveInCost.toLocaleString('en-IN')}`} bold />
+                  </>
+                )}
+                <Text style={prSt.breakdownNote}>
+                  Guests settle rent and setup with you directly. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} to reserve.
+                </Text>
+                <Text style={[prSt.breakdownNote, prSt.breakdownNoteBold, { marginTop: 6 }]}>
+                  You keep 100% of your rent.
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+        <>
         <Text style={[fldSt.label, { textAlign: 'center', marginBottom: SPACING.sm }]}>Your nightly rate</Text>
         <View style={prSt.rateRow}>
           <Text style={prSt.rupee}>₹</Text>
@@ -1977,8 +2197,11 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             <PriceRow label="Room rate" value={`₹${rate}/night`} />
             {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
             <View style={prSt.divider} />
-            <Text style={{ fontSize: 12, color: COLORS.textMut, marginTop: 4, lineHeight: 18 }}>
-              Guests pay you directly for rent, deposit and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking — you receive 100% of your listed price.
+            <Text style={prSt.breakdownNote}>
+              Guests pay you directly for rent and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking.
+            </Text>
+            <Text style={[prSt.breakdownNote, prSt.breakdownNoteBold, { marginTop: 6 }]}>
+              You receive 100% of your listed price.
             </Text>
           </View>
         )}
@@ -2004,6 +2227,8 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             </TouchableOpacity>
           ))}
         </View>
+        </>
+        )}
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
       </ScrollView>
@@ -2036,6 +2261,15 @@ function PriceRow({
 }
 
 const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  typeRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
+  typeCard: {
+    flex: 1, alignItems: 'center', paddingVertical: 18, paddingHorizontal: 10,
+    borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border,
+    backgroundColor: COLORS.surface, gap: 4,
+  },
+  typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.accentAlpha },
+  typeLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginTop: 4 },
+  typeSub: { fontSize: 11.5, color: COLORS.textMut, textAlign: 'center', ...FONTS.regular },
   rateRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     marginBottom: SPACING.lg, gap: 4,
@@ -2048,6 +2282,10 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   perNight: { fontSize: 14, color: COLORS.textSec, alignSelf: 'flex-end', paddingBottom: 12 },
   breakdownBox: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   breakdownTitle: { fontSize: 13, ...FONTS.semibold, color: COLORS.textSec, marginBottom: 8 },
+  // width:100% + alignSelf:stretch guarantees the note wraps within the card
+  // instead of laying out at its intrinsic single-line width and clipping.
+  breakdownNote: { width: '100%', alignSelf: 'stretch', fontSize: 12, color: COLORS.textMut, marginTop: 6, lineHeight: 18 },
+  breakdownNoteBold: { ...FONTS.semibold, color: COLORS.textSec },
   earningsBox: { backgroundColor: 'rgba(34,197,94,0.07)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', borderRadius: RADIUS.md, padding: SPACING.md, marginBottom: SPACING.sm },
   earningTitle: { fontSize: 13, ...FONTS.semibold, color: '#16A34A', marginBottom: 8 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 6 },
@@ -2065,9 +2303,13 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
 function StepRules({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
-  const isValid = !!form.checkInTime && !!form.checkOutTime;
+  // Check-in/out times are a nightly concept — a monthly sublet has a move-in
+  // date, not a daily check-in. Skip them entirely for monthly listings.
+  const rulesMonthly = form.rentalType === 'monthly';
+  const isValid = rulesMonthly || (!!form.checkInTime && !!form.checkOutTime);
 
   const validate = (): string | null => {
+    if (rulesMonthly) return null;
     if (!form.checkInTime) return 'Please select a check-in time';
     if (!form.checkOutTime) return 'Please select a check-out time';
     return null;
@@ -2100,18 +2342,22 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <View style={{ marginTop: SPACING.lg }} />
-        <TimePicker
-          label="Check-in time"
-          value={form.checkInTime}
-          onChange={(v) => update({ checkInTime: v })}
-          placeholder="e.g. 2:00 PM"
-        />
-        <TimePicker
-          label="Check-out time"
-          value={form.checkOutTime}
-          onChange={(v) => update({ checkOutTime: v })}
-          placeholder="e.g. 11:00 AM"
-        />
+        {!rulesMonthly && (
+          <>
+            <TimePicker
+              label="Check-in time"
+              value={form.checkInTime}
+              onChange={(v) => update({ checkInTime: v })}
+              placeholder="e.g. 2:00 PM"
+            />
+            <TimePicker
+              label="Check-out time"
+              value={form.checkOutTime}
+              onChange={(v) => update({ checkOutTime: v })}
+              placeholder="e.g. 11:00 AM"
+            />
+          </>
+        )}
 
         <Field
           label="Custom rules"
@@ -2158,8 +2404,33 @@ function StepReview({
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const rvSt = useMemo(() => makeRvStyles(COLORS, SHADOW), [COLORS, SHADOW]);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [showVerifyPrompt, setShowVerifyPrompt] = useState(false);
+
+  const leaveToListings = (openVerification: boolean) => {
+    setShowVerifyPrompt(false);
+    setTimeout(() => {
+      onSuccess();
+      setTimeout(() => {
+        navigation.navigate('HostTabs', {
+          screen: 'Listing',
+          params: openVerification ? { openVerification: true } : undefined,
+        });
+      }, 320);
+    }, 220);
+  };
 
   const rate = parseInt(form.nightlyRate, 10) || 0;
+  // Rental-type-aware headline price for the review summary.
+  const rvIsMonthly = form.rentalType === 'monthly';
+  const rvNum = (s: string) => parseInt(s, 10) || 0;
+  const rvMonthly = rvIsMonthly
+    ? rvNum(form.monthlyRent) + rvNum(form.maintenanceMonthly)
+      + (form.cookAvailable ? rvNum(form.cookCostMonthly) : 0)
+      + (form.maidAvailable ? rvNum(form.maidCostMonthly) : 0)
+      + (form.utilitiesIncluded ? 0 : rvNum(form.utilitiesEstMonthly))
+    : 0;
+  const rvPrice = rvIsMonthly ? rvMonthly : rate;
+  const rvUnit = rvIsMonthly ? '/mo' : '/night';
   const amenityHighlights = form.amenities.slice(0, 3).join(', ');
   const ruleCount = [
     form.noSmoking, form.noLoudMusic, form.noPets, form.noParties,
@@ -2194,6 +2465,7 @@ function StepReview({
     setUploadProgress(null);
     try {
       let propertyId: string | null = null;
+      let needsAadhaar = false;
 
       if (isEditMode && listingId) {
         const result = await updateListing(listingId, form);
@@ -2201,8 +2473,18 @@ function StepReview({
       } else {
         const result = await createListing(form);
         propertyId = result.property_id ?? null;
+        // Backend returns 'pending' when the host's Aadhaar isn't approved yet —
+        // that's exactly when the listing stays hidden from guests.
+        needsAadhaar = result.status === 'pending';
         if (draftKey) await AsyncStorage.removeItem(draftKey);
       }
+
+      // A brand-new listing published by an unverified host is invisible to guests.
+      // Prompt for Aadhaar here instead of silently dropping the host on Today.
+      const finish = () => {
+        if (needsAadhaar) setShowVerifyPrompt(true);
+        else onSuccess();
+      };
 
       // Upload only newly added local photos (skip existing S3 URLs)
       const newPhotoCount = Object.values(form.photos)
@@ -2220,7 +2502,7 @@ function StepReview({
           Alert.alert(
             isEditMode ? 'Updated' : 'Listing published!',
             `Your listing was saved, but all ${failed} photo${failed > 1 ? 's' : ''} failed to upload. You can add them later via Edit listing.`,
-            [{ text: 'OK', onPress: onSuccess }],
+            [{ text: 'OK', onPress: finish }],
           );
           return;
         }
@@ -2228,16 +2510,21 @@ function StepReview({
           Alert.alert(
             isEditMode ? 'Updated' : 'Listing published!',
             `${uploaded} photo${uploaded > 1 ? 's' : ''} uploaded. ${failed} failed — you can add them later via Edit listing.`,
-            [{ text: 'OK', onPress: onSuccess }],
+            [{ text: 'OK', onPress: finish }],
           );
           return;
         }
       }
 
+      if (needsAadhaar) {
+        finish();
+        return;
+      }
+
       Alert.alert(
         isEditMode ? 'Updated!' : 'Listing published!',
         isEditMode ? 'Your listing has been updated.' : 'Your listing will be available for booking in a few hours.',
-        [{ text: 'OK', onPress: onSuccess }],
+        [{ text: 'OK', onPress: finish }],
       );
     } catch (err: any) {
       const msg =
@@ -2297,8 +2584,8 @@ function StepReview({
       label: 'Price',
       step: 7,
       value: [
-        rate > 0 ? `₹${rate}/night` : null,
-        form.homeCooked && form.mealCost ? `+ ₹${form.mealCost}/day meals` : null,
+        rvPrice > 0 ? `₹${rvPrice.toLocaleString('en-IN')}${rvUnit}` : null,
+        !rvIsMonthly && form.homeCooked && form.mealCost ? `+ ₹${form.mealCost}/day meals` : null,
       ].filter(Boolean).join(' · '),
     },
     {
@@ -2317,6 +2604,31 @@ function StepReview({
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
     >
+      {/* Post-publish nudge: the listing is saved but hidden until Aadhaar clears */}
+      <Modal visible={showVerifyPrompt} transparent animationType="fade" onRequestClose={() => leaveToListings(false)}>
+        <View style={rvSt.vpBackdrop}>
+          <View style={rvSt.vpCard}>
+            <View style={rvSt.vpIcon}>
+              <Ionicons name="shield-checkmark" size={30} color={COLORS.primary} />
+            </View>
+            <Text style={rvSt.vpTitle}>Listing published!</Text>
+            <Text style={rvSt.vpBody}>
+              One last step — your listing stays hidden from guests until your Aadhaar is verified.
+              It takes 2 minutes, and we review it within 24-48 hours.
+            </Text>
+
+            <TouchableOpacity style={rvSt.vpPrimary} onPress={() => leaveToListings(true)} activeOpacity={0.85}>
+              <Text style={rvSt.vpPrimaryTxt}>Verify now</Text>
+              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={rvSt.vpSecondary} onPress={() => leaveToListings(false)} activeOpacity={0.7}>
+              <Text style={rvSt.vpSecondaryTxt}>I'll do it later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Text style={stSt.title}>{isEditMode ? 'Review & Update' : 'Review & List'}</Text>
       <Text style={stSt.sub}>Here's what guests will see. Tap the card for a full preview.</Text>
 
@@ -2338,10 +2650,10 @@ function StepReview({
             {form.title || 'Your listing title'}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            {rate > 0 && (
+            {rvPrice > 0 && (
               <Text style={rvSt.price}>
-                ₹{rate.toLocaleString('en-IN')}
-                <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>/night</Text>
+                ₹{rvPrice.toLocaleString('en-IN')}
+                <Text style={{ fontSize: 13, ...FONTS.regular, color: COLORS.textSec }}>{rvUnit}</Text>
               </Text>
             )}
             {!isEditMode && (
@@ -2407,6 +2719,17 @@ function StepReview({
 }
 
 const makeRvStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
+  // Aadhaar verification prompt shown right after a listing is published
+  vpBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', paddingHorizontal: SPACING.lg },
+  vpCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center', ...SHADOW.md },
+  vpIcon: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.accentAlpha, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
+  vpTitle: { fontSize: 19, ...FONTS.bold, color: COLORS.text, marginBottom: 8, textAlign: 'center' },
+  vpBody: { fontSize: 14, ...FONTS.regular, color: COLORS.textSec, textAlign: 'center', lineHeight: 21, marginBottom: SPACING.lg },
+  vpPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 15, width: '100%' },
+  vpPrimaryTxt: { fontSize: 15, ...FONTS.semibold, color: '#fff' },
+  vpSecondary: { paddingVertical: 14, marginTop: 4 },
+  vpSecondaryTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.textMut },
+
   previewCard: { borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: SPACING.lg, backgroundColor: COLORS.surface, ...SHADOW.md },
   summaryCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, paddingHorizontal: SPACING.md, marginBottom: SPACING.sm, ...SHADOW.md },
   coverPhoto: { width: '100%', height: 150, borderRadius: 0 },
@@ -2518,8 +2841,22 @@ function mapListingToForm(data: any): FormData {
     mealTypes: data.food_meal_types || [],
     mealCost: data.food_meal_cost != null ? String(Math.round(data.food_meal_cost)) : '',
     mealDescription: data.food_meal_description || '',
-    nightlyRate: String(Math.round(data.host_price_per_night)),
+    nightlyRate: data.host_price_per_night != null ? String(Math.round(data.host_price_per_night)) : '',
     minStay: minStayMap[data.min_nights as number] ?? '1_night',
+    rentalType: data.rental_type === 'nightly' ? 'nightly' : 'monthly',
+    monthlyRent: data.monthly_rent != null ? String(Math.round(data.monthly_rent)) : '',
+    maintenanceMonthly: data.monthly_breakdown?.maintenance_monthly ? String(Math.round(data.monthly_breakdown.maintenance_monthly)) : '',
+    securityDeposit: data.security_deposit ? String(Math.round(data.security_deposit)) : '',
+    setupCostOnetime: data.monthly_breakdown?.setup_cost_onetime ? String(Math.round(data.monthly_breakdown.setup_cost_onetime)) : '',
+    setupCostRefundable: !!data.monthly_breakdown?.setup_cost_refundable,
+    cookAvailable: !!data.monthly_breakdown?.cook_available,
+    cookCostMonthly: data.monthly_breakdown?.cook_cost_monthly ? String(Math.round(data.monthly_breakdown.cook_cost_monthly)) : '',
+    maidAvailable: !!data.monthly_breakdown?.maid_available,
+    maidCostMonthly: data.monthly_breakdown?.maid_cost_monthly ? String(Math.round(data.monthly_breakdown.maid_cost_monthly)) : '',
+    utilitiesIncluded: !!data.monthly_breakdown?.utilities_included,
+    utilitiesEstMonthly: data.monthly_breakdown?.utilities_est_monthly ? String(Math.round(data.monthly_breakdown.utilities_est_monthly)) : '',
+    minMonths: data.min_months != null ? String(data.min_months) : '3',
+    availableFrom: data.available_from || '',
     noSmoking: hr.no_smoking,
     noLoudMusic: hr.no_loud_music,
     noPets: hr.no_pets,
@@ -2536,6 +2873,7 @@ function mapListingToForm(data: any): FormData {
     hostOccupation: data.host?.occupation || '',
     hostHobbies: data.host?.hobbies || '',
     hostGender: data.host?.gender || '',
+    hostHometown: data.host?.hometown || '',
     blockedDates: (data.blocked_dates || []).map((bd: any) => ({
       startDate: bd.start_date,
       endDate: bd.end_date,

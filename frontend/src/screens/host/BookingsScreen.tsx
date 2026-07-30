@@ -24,6 +24,8 @@ interface BookingItem {
   check_in_date: string;
   check_out_date: string;
   nights: number;
+  rental_type?: 'monthly' | 'nightly';
+  recurring_monthly?: number | null;
   guest_purpose: string | null;
   listing_title?: string;
   status: string;
@@ -155,7 +157,7 @@ export default function BookingsScreen() {
                   <View style={styles.bookingDetails}>
                     <Text style={styles.guestName}>{b.guest_name}</Text>
                     <Text style={styles.bookingMeta} numberOfLines={1}>
-                      {b.listing_title ? `${b.listing_title} · ` : ''}{b.nights} night{b.nights === 1 ? '' : 's'}
+                      {b.listing_title ? `${b.listing_title} · ` : ''}{b.rental_type === 'monthly' ? 'Monthly' : `${b.nights} night${b.nights === 1 ? '' : 's'}`}
                     </Text>
                   </View>
                   <View style={[styles.statusPill, { backgroundColor: statusColor + '18' }]}>
@@ -168,7 +170,13 @@ export default function BookingsScreen() {
                 {/* Row 2: Date range + Price */}
                 <View style={styles.cardBottomRow}>
                   <Text style={styles.dateRange}>{formatDateRange(b.check_in_date, b.check_out_date)}</Text>
-                  <Text style={styles.bookingPrice}>₹{b.total_host_receives.toLocaleString('en-IN')}</Text>
+                  {b.rental_type === 'monthly' ? (
+                    <Text style={styles.bookingPrice}>
+                      ₹{Math.round(b.recurring_monthly ?? 0).toLocaleString('en-IN')}<Text style={styles.bookingPriceUnit}>/mo</Text>
+                    </Text>
+                  ) : (
+                    <Text style={styles.bookingPrice}>₹{b.total_host_receives.toLocaleString('en-IN')}</Text>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -218,6 +226,7 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
   bookingMeta: { fontSize: 13, color: COLORS.textSec, marginTop: 2 },
   dateRange: { fontSize: 13, color: COLORS.textSec, ...FONTS.medium },
   bookingPrice: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
+  bookingPriceUnit: { fontSize: 12, ...FONTS.medium, color: COLORS.textSec },
   statusPill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: RADIUS.pill },
   statusBadge: { fontSize: 12, ...FONTS.semibold },
 });

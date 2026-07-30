@@ -124,10 +124,22 @@ class GuestSearchView(APIView):
         check_out = request.query_params.get("check_out")
         lat = request.query_params.get("lat")
         lng = request.query_params.get("lng")
+
+        def _num(name):
+            raw = request.query_params.get(name)
+            try:
+                return float(raw) if raw not in (None, "") else None
+            except (TypeError, ValueError):
+                return None
+
         results = search_guest_listings(
             query=q, area=area, check_in=check_in, check_out=check_out,
             lat=float(lat) if lat else None,
             lng=float(lng) if lng else None,
+            min_price=_num("min_price"),
+            max_price=_num("max_price"),
+            min_rating=_num("min_rating"),
+            sort=request.query_params.get("sort") or None,
         )
         return Response({"count": len(results), "results": results})
 

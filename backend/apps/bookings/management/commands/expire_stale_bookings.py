@@ -7,12 +7,17 @@ Backup cleanup for stale pending bookings.
 Run via cron every 5 minutes:
     */5 * * * *  cd /path/to/backend && python manage.py expire_stale_bookings
 """
+from decimal import Decimal
+
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.notifications.models import EventType
 from apps.notifications.services import dispatch
+from apps.payments.services import initiate_refund_for_cancelled_booking
 from common.constants import StatusChangeReason
 import logging
 
@@ -74,16 +79,44 @@ class Command(BaseCommand):
 
         for booking in unresponded:
             from_status = booking.status
-            booking.status = Booking.Status.EXPIRED
-            booking.save(update_fields=["status", "updated_at"])
+            refund_amount = Decimal("0.00")
 
-            BookingStatusHistory.objects.create(
-                booking=booking,
-                from_status=from_status,
-                to_status=Booking.Status.EXPIRED,
-                changed_by_user=None,
-                reason=StatusChangeReason.HOST_NO_RESPONSE,
-            )
+            with transaction.atomic():
+                booking.status = Booking.Status.EXPIRED
+                update_fields = ["status", "updated_at"]
+
+                # The guest paid up front and the host never answered — they got
+                # nothing for it, so the fee goes back in full. Without this the
+                # notification below promises a refund that never arrives.
+                if booking.payment_status == Booking.PaymentStatus.PAID:
+                    refund_amount = booking.total_guest_pays or Decimal("0.00")
+                    if refund_amount > 0:
+                        booking.refund_amount = refund_amount
+                        booking.payment_status = Booking.PaymentStatus.REFUND_PENDING
+                        update_fields += ["refund_amount", "payment_status"]
+
+                booking.save(update_fields=update_fields)
+
+                BookingStatusHistory.objects.create(
+                    booking=booking,
+                    from_status=from_status,
+                    to_status=Booking.Status.EXPIRED,
+                    changed_by_user=None,
+                    reason=StatusChangeReason.HOST_NO_RESPONSE,
+                )
+
+            # Gateway call outside the transaction, and guarded per booking so a
+            # single failure can't abort the rest of the batch.
+            if booking.payment_status == Booking.PaymentStatus.REFUND_PENDING:
+                try:
+                    initiate_refund_for_cancelled_booking(
+                        booking, refund_amount, Booking.CancelledBy.SYSTEM,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Auto-expire refund failed for %s — left REFUND_PENDING",
+                        booking.booking_code,
+                    )
 
             if booking.guest_user:
                 try:
@@ -95,7 +128,12 @@ class Command(BaseCommand):
                             "recipient_name": (
                                 booking.guest_name.split()[0] if booking.guest_name else "there"
                             ),
-                            "reason": "The host did not respond within 24 hours. Your payment will be refunded.",
+                            "reason": (
+                                f"The host did not respond within "
+                                f"{settings.HOST_RESPONSE_DEADLINE_HOURS} hours. "
+                                f"Your ₹{refund_amount:.0f} has been refunded and should "
+                                f"reach you in 5–7 working days."
+                            ),
                         },
                     )
                 except Exception:

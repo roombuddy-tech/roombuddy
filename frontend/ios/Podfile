@@ -64,5 +64,19 @@ target 'RoomBuddy' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Workaround for the `fmt` library failing to compile on recent Xcode/Clang:
+    #   "Call to consteval function 'fmt::basic_format_string::basic_format_string'
+    #    is not a constant expression" (Pods/fmt/include/fmt/format-inl.h)
+    # Disable fmt's consteval-based compile-time format checking; format strings
+    # are then checked at runtime instead. Not our code — a toolchain regression.
+    installer.pods_project.targets.each do |target|
+      if target.name == 'fmt'
+        target.build_configurations.each do |config|
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FMT_USE_CONSTEVAL=0'
+        end
+      end
+    end
   end
 end

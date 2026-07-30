@@ -4,7 +4,17 @@ from apps.conversations.services import MESSAGE_MAX_LENGTH
 
 
 class StartConversationRequestSerializer(serializers.Serializer):
-    booking_id = serializers.UUIDField()
+    # Provide exactly one: booking_id (post-booking chat) or
+    # listing_id (pre-booking inquiry).
+    booking_id = serializers.UUIDField(required=False)
+    listing_id = serializers.UUIDField(required=False)
+
+    def validate(self, data):
+        if bool(data.get("booking_id")) == bool(data.get("listing_id")):
+            raise serializers.ValidationError(
+                "Provide exactly one of booking_id or listing_id."
+            )
+        return data
 
 
 class SendMessageRequestSerializer(serializers.Serializer):

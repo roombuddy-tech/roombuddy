@@ -59,11 +59,12 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
   const firstNameError = firstNameTouched && firstName.trim().length > 0 && firstName.trim().length < 2
     ? 'First name must be at least 2 characters' : '';
-  const lastNameError = lastNameTouched && lastName.trim().length > 0 && lastName.trim().length < 2
-    ? 'Last name must be at least 2 characters' : '';
+  // Single-letter surnames are common (e.g. "Mayank K"), so one character is valid.
+  const lastNameError = lastNameTouched && lastName.trim().length === 0
+    ? 'Last name is required' : '';
 
   const isFormValid =
-    firstName.trim().length >= 2 && lastName.trim().length >= 2 && acceptedTerms;
+    firstName.trim().length >= 2 && lastName.trim().length >= 1 && acceptedTerms;
 
   const handleVerifyEmail = async () => {
     if (!email.trim() || !isValidEmail(email)) {

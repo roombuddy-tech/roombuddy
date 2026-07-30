@@ -16,6 +16,7 @@ from apps.notifications.services import dispatch
 
 from apps.bookings.models import Booking, BookingStatusHistory
 from apps.listings.models import Listing
+from apps.listings.services import _pricing_dict
 from apps.payments.services import initiate_refund_for_cancelled_booking
 from apps.users.models import User, PayoutAccount
 from apps.reviews.models import Review
@@ -105,6 +106,83 @@ def _quantize(value: Decimal) -> Decimal:
 
 # ─── Quote ───────────────────────────────────────────────────────────────
 
+def _quote_monthly(listing: Listing, check_in: date, check_out: date) -> dict:
+    """
+    Quote for a monthly sublet. The guest pays only the flat platform fee to
+    reserve; rent/deposit/setup are settled with the host directly. Rent is
+    prorated over the selected period at a 30-day-month rate, so a 46-day stay
+    shows the real cost (not just "one month"). Returns the full breakdown.
+    """
+    def d(v):
+        return v if v is not None else Decimal("0")
+
+    rent = d(listing.monthly_rent)
+    maintenance = d(listing.maintenance_monthly)
+    deposit = d(listing.security_deposit)
+    setup = d(listing.setup_cost_onetime)
+    # Cook/maid/utilities are mandatory recurring when listed (see _pricing_dict).
+    cook = d(listing.cook_cost_monthly) if listing.cook_available else Decimal("0")
+    maid = d(listing.maid_cost_monthly) if listing.maid_available else Decimal("0")
+    utils = Decimal("0") if listing.utilities_included else d(listing.utilities_est_monthly)
+    recurring = _quantize(rent + maintenance + cook + maid + utils)
+    move_in_cost = _quantize(recurring + deposit + setup)
+    platform_fee = _quantize(settings.BOOKING_PLATFORM_FEE)
+
+    # ── Duration-aware proration ────────────────────────────────────────────
+    # Rent + charges are a monthly rate; prorate at recurring / 30 per day over
+    # the number of days the guest selected (never below the listing minimum).
+    min_days = (listing.min_months or 1) * 30
+    days_selected = max((check_out - check_in).days, min_days)
+    per_day_rate = _quantize(recurring / Decimal("30"))
+    stay_rent = _quantize(per_day_rate * days_selected)   # rent+charges for the whole period
+    stay_total = _quantize(stay_rent + deposit + setup)   # + one-time deposit & setup
+
+    return {
+        "listing_id": str(listing.id),
+        "rental_type": "monthly",
+        "monthly_rent": float(rent),
+        "maintenance_monthly": float(maintenance),
+        "security_deposit": float(deposit),
+        "setup_cost_onetime": float(setup),
+        "setup_cost_refundable": listing.setup_cost_refundable,
+        "cook_available": listing.cook_available,
+        "cook_cost_monthly": float(listing.cook_cost_monthly) if listing.cook_cost_monthly else None,
+        "maid_available": listing.maid_available,
+        "maid_cost_monthly": float(listing.maid_cost_monthly) if listing.maid_cost_monthly else None,
+        "utilities_included": listing.utilities_included,
+        "utilities_est_monthly": float(listing.utilities_est_monthly) if listing.utilities_est_monthly else None,
+        "min_months": listing.min_months,
+        "available_from": listing.available_from.isoformat() if listing.available_from else None,
+        "recurring_monthly": float(recurring),   # rent + maintenance + cook + maid + utilities (per month)
+        "move_in_cost": float(move_in_cost),      # first month + deposit + setup
+        # Duration-aware figures for the selected period.
+        "nights": days_selected,                  # days selected (for display "X days")
+        "days_selected": days_selected,
+        "per_day_rate": float(per_day_rate),      # recurring / 30
+        "stay_rent": float(stay_rent),            # prorated rent+charges for the whole stay
+        "stay_total": float(stay_total),          # stay_rent + deposit + setup
+        # What flows through the app right now — just the reservation fee.
+        "platform_fee": float(platform_fee),
+        "total_guest_pays": float(platform_fee),
+        "pay_to_host_directly": float(stay_total),
+        "currency": listing.currency,
+        "booking_mode": listing.booking_mode,
+        "cancellation_policy": _get_cancellation_policy(listing),
+        # ── Compatibility keys so create_booking's shared insert works ──
+        # Prorated stay rent stands in for "subtotal"; nothing is collected by
+        # us, so host_receives / revenue reflect the ₹49 reservation only.
+        "host_nightly_price": float(per_day_rate),
+        "guest_nightly_price": float(per_day_rate),
+        "subtotal": float(stay_rent),
+        "gst_amount": 0.0,
+        "host_platform_fee": 0.0,
+        "total_host_receives": 0.0,
+        "platform_revenue": float(platform_fee),
+        "meal_cost_per_day": None,
+        "meal_total": None,
+    }
+
+
 def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool = False) -> dict:
     """
     Return a price breakdown for the given listing/dates without creating
@@ -121,6 +199,11 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
             "error": "Listing not found or not available",
             "code": ErrorCode.LISTING_NOT_FOUND,
         })
+
+    # Monthly listings (Option A): the guest reserves for the flat platform fee;
+    # rent, deposit and setup are settled directly with the host. No nights math.
+    if listing.rental_type == Listing.RentalType.MONTHLY:
+        return _quote_monthly(listing, check_in, check_out)
 
     nights = (check_out - check_in).days
     if nights < listing.min_nights:
@@ -491,7 +574,7 @@ def get_host_bookings(user: User, status_filter: str = Booking.HostBookingFilter
     today = timezone.localdate()
     queryset = (
         Booking.objects.filter(host_user=user)
-        .select_related("guest_user")
+        .select_related("guest_user", "listing")
         .order_by("-created_at")
     )
 
@@ -617,12 +700,21 @@ def _get_primary_payout(user: User) -> dict:
 
 def get_booking_detail(booking: Booking) -> dict:
     """Full booking details for the detail screen — for guest or host view."""
+    listing = booking.listing
+    is_monthly = bool(listing and listing.rental_type == Listing.RentalType.MONTHLY)
+    # Monthly receipts pull the cost breakdown from the listing, since the Booking
+    # row stores nightly-shaped values (host_nightly_price=0 etc. for monthly).
+    monthly = None
+    if is_monthly:
+        monthly = _pricing_dict(listing).get("monthly_breakdown")
     return {
         "booking_id": str(booking.id),
         "booking_code": booking.booking_code,
         "status": booking.status,
         "payment_status": booking.payment_status,
         "booking_mode": booking.booking_mode,
+        "rental_type": listing.rental_type if listing else "nightly",
+        "monthly": monthly,
         "check_in_date": booking.check_in_date.isoformat(),
         "check_out_date": booking.check_out_date.isoformat(),
         "nights": booking.nights,
@@ -712,6 +804,12 @@ def get_guest_bookings(user: User) -> list[dict]:
             "check_in_date": b.check_in_date.isoformat(),
             "check_out_date": b.check_out_date.isoformat(),
             "nights": b.nights,
+            "rental_type": b.listing.rental_type if b.listing else "nightly",
+            "recurring_monthly": (
+                float(_pricing_dict(b.listing).get("recurring_monthly") or 0)
+                if b.listing and b.listing.rental_type == Listing.RentalType.MONTHLY
+                else None
+            ),
             "status": b.status,
             "payment_status": b.payment_status,
             "total_guest_pays": float(b.total_guest_pays),
@@ -752,13 +850,32 @@ def accept_booking(booking: Booking, host: User) -> Booking:
 
 
 def reject_booking(booking: Booking, host: User, reason: str = "") -> Booking:
-    """Host declines a pending booking."""
+    """
+    Host declines a pending booking.
+
+    The guest pays the platform fee up front, before the host has responded, so
+    a decline must return it in full — they got nothing for it. Mirrors the
+    refund path in cancel_booking: flag REFUND_PENDING inside the transaction,
+    then call the gateway after it commits.
+    """
     logger.info("reject_booking booking_id=%s host_id=%s", booking.id, host.id)
+    refund_amount = Decimal("0.00")
+
     with transaction.atomic():
         booking.status = Booking.Status.REJECTED
         booking.host_responded_at = timezone.now()
         booking.cancellation_reason = reason or None
-        booking.save(update_fields=["status", "host_responded_at", "cancellation_reason", "updated_at"])
+        update_fields = ["status", "host_responded_at", "cancellation_reason", "updated_at"]
+
+        # Only money that actually reached us can be sent back.
+        if booking.payment_status == Booking.PaymentStatus.PAID:
+            refund_amount = booking.total_guest_pays or Decimal("0.00")
+            if refund_amount > 0:
+                booking.refund_amount = refund_amount
+                booking.payment_status = Booking.PaymentStatus.REFUND_PENDING
+                update_fields += ["refund_amount", "payment_status"]
+
+        booking.save(update_fields=update_fields)
         BookingStatusHistory.objects.create(
             booking=booking,
             from_status=Booking.Status.PENDING,
@@ -766,6 +883,19 @@ def reject_booking(booking: Booking, host: User, reason: str = "") -> Booking:
             changed_by_user=host,
         )
         _notify_host_responded(booking, accepted=False)
+
+    # Outside the transaction — a gateway failure must not roll back the
+    # decline itself. A stuck REFUND_PENDING row is recoverable; a booking
+    # the host thinks they declined but is still live is not.
+    if booking.payment_status == Booking.PaymentStatus.REFUND_PENDING:
+        initiate_refund_for_cancelled_booking(
+            booking, refund_amount, Booking.CancelledBy.HOST,
+        )
+
+    logger.info(
+        "Booking %s declined by host; refund=₹%s",
+        booking.booking_code, refund_amount,
+    )
     return booking
 
 
@@ -812,6 +942,11 @@ def _notify_host_responded(booking: Booking, accepted: bool) -> None:
 
 def _booking_to_dict(b: Booking) -> dict:
     """Convert a Booking model instance to a response dict."""
+    is_monthly = bool(b.listing and b.listing.rental_type == Listing.RentalType.MONTHLY)
+    recurring_monthly = (
+        float(_pricing_dict(b.listing).get("recurring_monthly") or 0)
+        if is_monthly else None
+    )
     return {
         "booking_id": str(b.id),
         "booking_code": b.booking_code,
@@ -820,6 +955,8 @@ def _booking_to_dict(b: Booking) -> dict:
         "check_in_date": b.check_in_date.isoformat(),
         "check_out_date": b.check_out_date.isoformat(),
         "nights": b.nights,
+        "rental_type": b.listing.rental_type if b.listing else "nightly",
+        "recurring_monthly": recurring_monthly,
         "guest_purpose": b.guest_purpose,
         "status": b.status,
         "total_guest_pays": float(b.total_guest_pays),

@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
@@ -13,14 +15,14 @@ export type GuestTabParamList = {
 
 export type HostTabParamList = {
   Today: undefined;
-  Listing: undefined;
+  Listing: { openVerification?: boolean } | undefined;
   Bookings: undefined;
   Earnings: undefined;
   Messages: undefined;
 };
 
 export type HostStackParamList = {
-  HostTabs: undefined;
+  HostTabs: NavigatorScreenParams<HostTabParamList> | undefined;
   ListingEditor: { listingId?: string; resumeDraft?: boolean };
   ListingDetail: {
     preview?: any;
@@ -28,8 +30,12 @@ export type HostStackParamList = {
       listing_id: string;
       title: string;
       area_name: string;
-      host_price_per_night: number;
-      guest_price_per_night: number;
+      host_price_per_night: number | null;
+      guest_price_per_night: number | null;
+      rental_type?: 'monthly' | 'nightly';
+      display_price?: number | null;
+      price_unit?: string;
+      monthly_rent?: number | null;
       status: string;
       cover_photo_url: string | null;
     };
@@ -38,7 +44,7 @@ export type HostStackParamList = {
   GuestProfile: { userId: string };
   Notifications: undefined;
   NotificationPreferences: undefined;
-  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
+  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean; isInquiry?: boolean; listingId?: string };
   Verification: undefined;
 };
 
@@ -49,6 +55,7 @@ export type GuestStackParamList = {
     checkIn?: string;
     checkOut?: string;
     unlockedContact?: { name: string; phone: string | null };
+    autoAction?: 'unlock' | 'message' | 'book';
   };
   BookTest: undefined;
   BookingConfirm: {
@@ -77,6 +84,6 @@ export type GuestStackParamList = {
   };
   Notifications: undefined;
   NotificationPreferences: undefined;
-  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean };
+  Chat: { conversationId: string; title?: string; subtitle?: string; chatDisabled?: boolean; isInquiry?: boolean; listingId?: string };
   WriteReview: { bookingId: string; listingTitle: string; hostName: string };
 };

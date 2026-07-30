@@ -3,7 +3,7 @@ from datetime import datetime
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Count, Q
 
 from apps.amenities.models import AmenityDefinition
 from apps.listings.models import Listing, ListingAmenity, ListingBlockedDate, ListingHouseRules
@@ -18,6 +18,28 @@ from datetime import date as date_type
 from urllib.parse import urlparse
 from third_party.storage import get_photo_url, delete_image
 from third_party.maps import geocode_address
+
+
+def _age_from_dob(dob) -> int | None:
+    """Whole years from a date of birth, or None if not available."""
+    if not dob:
+        return None
+    from datetime import date
+    today = date.today()
+    years = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    return years if 0 < years < 120 else None
+
+
+# Amenities are matched by display name, so a renamed amenity would silently
+# stop matching for clients still running the old app build. Map the old name
+# onto the new one until those builds age out.
+_AMENITY_ALIASES = {
+    "Water purifier": "RO / Water purifier",
+}
+
+
+def _resolve_amenity_names(names) -> list[str]:
+    return [_AMENITY_ALIASES.get(n, n) for n in (names or [])]
 
 
 def _photo_storage_key(url: str) -> str:
@@ -78,7 +100,7 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
 
     flatmates_qs = list(
         PropertyFlatmate.objects.filter(property=prop)
-        .values("id", "name", "age", "gender", "occupation", "hobbies")
+        .values("id", "name", "age", "gender", "occupation", "hobbies", "hometown")
     )
 
     rules = getattr(listing, "house_rules", None)
@@ -160,14 +182,14 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
                 "gender": f["gender"] or "",
                 "occupation": f["occupation"] or "",
                 "hobbies": f["hobbies"] or "",
+                "hometown": f["hometown"] or "",
             }
             for f in real_flatmates
         ],
         "amenities": amenity_names,
         "title": listing.title,
         "description": listing.description or "",
-        "host_price_per_night": float(listing.host_price_per_night),
-        "min_nights": listing.min_nights,
+        **_pricing_dict(listing),
         "food_kitchen_access": listing.food_kitchen_access,
         "food_meals_available": listing.food_meals_available,
         "food_meal_cost": float(listing.food_meal_cost) if listing.food_meal_cost else None,
@@ -188,10 +210,12 @@ def get_listing_form_data(user: User, listing_id: str) -> dict | None:
             "check_out_time": _format_time(rules.check_out_by) if rules else "",
         },
         "host": {
-            "age": host_fm["age"] if host_fm else None,
+            "age": (host_fm["age"] if host_fm else None)
+            or _age_from_dob(getattr(getattr(listing.host_user, "profile", None), "date_of_birth", None)),
             "occupation": host_fm["occupation"] if host_fm else "",
             "hobbies": host_fm["hobbies"] if host_fm else "",
             "gender": host_fm["gender"] if host_fm else "",
+            "hometown": host_fm["hometown"] if host_fm else "",
         },
         "photos": photos_by_category,
         "blocked_dates": [
@@ -254,17 +278,22 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         else:
             logger.info("update_listing: no kept_photo_urls in payload — skipping photo sync")
 
-        PropertyFlatmate.objects.filter(property=prop).delete()
-        for fm in d.get("flatmates", []):
-            PropertyFlatmate.objects.create(
-                property=prop,
-                name=fm["name"],
-                age=fm.get("age"),
-                gender=fm.get("gender", "") or None,
-                occupation=fm.get("occupation", ""),
-                hobbies=fm.get("hobbies", ""),
-                hometown=fm.get("hometown", ""),
-            )
+        if "flatmates" in data:
+            incoming = d.get("flatmates", [])
+            incoming = [fm for fm in incoming if (fm.get("name") or "").strip()]
+            PropertyFlatmate.objects.filter(property=prop).delete()
+            for fm in incoming:
+                PropertyFlatmate.objects.create(
+                    property=prop,
+                    name=fm["name"],
+                    age=fm.get("age"),
+                    gender=fm.get("gender", "") or None,
+                    occupation=fm.get("occupation", ""),
+                    hobbies=fm.get("hobbies", ""),
+                    hometown=fm.get("hometown", ""),
+                )
+        else:
+            logger.info("update_listing: no flatmates in payload — leaving existing rows intact")
 
         room = listing.room
         room_data = d["room"]
@@ -278,8 +307,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         meal_desc = _build_meal_description(d)
         listing.title = d["title"]
         listing.description = d.get("description", "")
-        listing.host_price_per_night = d["host_price_per_night"]
-        listing.min_nights = d.get("min_nights", 1)
+        _apply_pricing_fields(listing, d)
         listing.food_kitchen_access = d.get("food_kitchen_access", False)
         listing.food_meals_available = d.get("food_meals_available", False)
         listing.food_meal_cost = d.get("food_meal_cost")
@@ -292,7 +320,7 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         ListingAmenity.objects.filter(listing=listing).delete()
         amenity_names = d.get("amenities", [])
         if amenity_names:
-            amenity_defs = AmenityDefinition.objects.filter(display_name__in=amenity_names)
+            amenity_defs = AmenityDefinition.objects.filter(display_name__in=_resolve_amenity_names(amenity_names))
             ListingAmenity.objects.bulk_create([
                 ListingAmenity(listing=listing, amenity=amenity)
                 for amenity in amenity_defs
@@ -332,12 +360,28 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
 
 
 def delete_listing(user: User, listing_id: str) -> bool:
-    """Delete a listing and its associated property, room, and related data."""
+    """
+    Remove a listing. If it has no bookings, hard-delete it and its property.
+    If bookings exist, the booking FK is RESTRICT (history must survive), so we
+    soft-delete instead: mark the listing (and property) delisted so it drops
+    out of the host's list and guest search while the bookings stay intact.
+    """
     logger.info("delete_listing user_id=%s listing_id=%s", getattr(user, "id", None), listing_id)
     try:
         listing = Listing.objects.select_related("property", "room").get(id=listing_id, host_user=user)
     except Listing.DoesNotExist:
         return False
+
+    if listing.bookings.exists():
+        with transaction.atomic():
+            listing.status = Listing.Status.DELISTED
+            listing.save(update_fields=["status"])
+            prop = listing.property
+            if prop:
+                prop.status = Property.Status.DELISTED
+                prop.save(update_fields=["status"])
+        logger.info("delete_listing: soft-deleted (has bookings) listing_id=%s", listing_id)
+        return True
 
     with transaction.atomic():
         prop = listing.property
@@ -395,10 +439,24 @@ def toggle_snooze(user: User, listing_id: str) -> dict | None:
 
 def get_host_listings(user: User) -> list[dict]:
     """Returns all listings owned by a host."""
+    from apps.bookings.models import Booking
 
-    listings = Listing.objects.filter(
-        host_user=user
-    ).select_related("property", "room").order_by("-created_at")
+    # The stored `total_bookings` column is never incremented, so compute the
+    # real count live: bookings the host has committed to (accepted/active/
+    # completed). Annotated under a separate name so it doesn't shadow the field.
+    listings = (
+        Listing.objects.filter(host_user=user)
+        .exclude(status=Listing.Status.DELISTED)
+        .select_related("property", "room")
+        .annotate(
+            _live_bookings=Count(
+                "bookings",
+                filter=Q(bookings__status__in=Booking.BLOCKING_STATUSES),
+                distinct=True,
+            )
+        )
+        .order_by("-created_at")
+    )
 
     results = [_listing_to_dict(listing) for listing in listings]
     _attach_cover_photos(listings, results)
@@ -477,21 +535,21 @@ def create_listing(user: User, data: dict) -> dict:
             room=room,
             title=d["title"],
             description=d.get("description", ""),
-            host_price_per_night=d["host_price_per_night"],
-            min_nights=d.get("min_nights", 1),
             food_kitchen_access=d.get("food_kitchen_access", False),
             food_meals_available=d.get("food_meals_available", False),
             food_meal_cost=d.get("food_meal_cost"),
             food_meal_description=meal_desc or None,
             status=_listing_status_for_user(user),
         )
+        _apply_pricing_fields(listing, d)
+        listing.save()
         if listing.status == Listing.Status.LIVE:
             listing.published_at = datetime.now()
             listing.save(update_fields=["published_at"])
 
         amenity_names = d.get("amenities", [])
         if amenity_names:
-            amenity_defs = AmenityDefinition.objects.filter(display_name__in=amenity_names)
+            amenity_defs = AmenityDefinition.objects.filter(display_name__in=_resolve_amenity_names(amenity_names))
             ListingAmenity.objects.bulk_create([
                 ListingAmenity(listing=listing, amenity=amenity)
                 for amenity in amenity_defs
@@ -522,6 +580,13 @@ def create_listing(user: User, data: dict) -> dict:
                 reason=bd.get("reason", ""),
             )
 
+    try:
+        from third_party.admin_alerts import notify_admin
+        state = "LIVE" if listing.status == Listing.Status.LIVE else "PENDING review"
+        notify_admin(f"📋 New listing ({state})\n“{listing.title}” — {prop.city_name or ''}")
+    except Exception:
+        logger.exception("admin listing alert failed")
+
     return {
         "listing_id": str(listing.id),
         "property_id": str(listing.property_id),
@@ -545,6 +610,97 @@ def _build_meal_description(d: dict) -> str:
     if meal_desc:
         parts.append(meal_desc)
     return "\n".join(parts)
+
+
+def _apply_pricing_fields(listing: Listing, d: dict) -> None:
+    """
+    Set pricing fields on a listing from the request dict, branching on
+    rental_type. Monthly listings leave host_price_per_night null and vice
+    versa. Shared by create_listing and update_listing.
+    """
+    rental_type = d.get("rental_type", Listing.RentalType.MONTHLY)
+    listing.rental_type = rental_type
+    listing.security_deposit = d.get("security_deposit") or 0
+
+    if rental_type == Listing.RentalType.MONTHLY:
+        listing.monthly_rent = d.get("monthly_rent")
+        listing.maintenance_monthly = d.get("maintenance_monthly") or 0
+        listing.setup_cost_onetime = d.get("setup_cost_onetime") or 0
+        listing.setup_cost_refundable = bool(d.get("setup_cost_refundable", False))
+        listing.cook_available = bool(d.get("cook_available", False))
+        listing.cook_cost_monthly = d.get("cook_cost_monthly") if listing.cook_available else None
+        listing.maid_available = bool(d.get("maid_available", False))
+        listing.maid_cost_monthly = d.get("maid_cost_monthly") if listing.maid_available else None
+        listing.utilities_included = bool(d.get("utilities_included", False))
+        listing.utilities_est_monthly = d.get("utilities_est_monthly")
+        listing.min_months = d.get("min_months")
+        listing.available_from = d.get("available_from")
+        # Nightly rate not used for monthly; null it so stale values don't linger.
+        listing.host_price_per_night = None
+        listing.min_nights = 1
+    else:
+        listing.host_price_per_night = d.get("host_price_per_night")
+        listing.min_nights = d.get("min_nights", 1)
+        # Clear any monthly leftovers on a nightly listing.
+        listing.monthly_rent = None
+
+
+def _pricing_dict(listing: Listing) -> dict:
+    """
+    Null-safe pricing block for API responses, covering both rental types.
+    Includes a precomputed monthly breakdown so the client doesn't re-derive it.
+    """
+    def f(v):
+        return float(v) if v is not None else None
+
+    is_monthly = listing.rental_type == Listing.RentalType.MONTHLY
+    monthly_rent = f(listing.monthly_rent)
+    maintenance = f(listing.maintenance_monthly) or 0.0
+    deposit = f(listing.security_deposit) or 0.0
+    setup = f(listing.setup_cost_onetime) or 0.0
+    # Cook, maid and utilities are mandatory recurring costs when the host lists
+    # them — they come with the flat, the guest can't opt out. They roll into
+    # the monthly total. Only deposit + setup are separate one-time costs.
+    cook = (f(listing.cook_cost_monthly) or 0.0) if listing.cook_available else 0.0
+    maid = (f(listing.maid_cost_monthly) or 0.0) if listing.maid_available else 0.0
+    utils = 0.0 if listing.utilities_included else (f(listing.utilities_est_monthly) or 0.0)
+
+    breakdown = None
+    recurring = None
+    if is_monthly and monthly_rent is not None:
+        recurring = monthly_rent + maintenance + cook + maid + utils
+        breakdown = {
+            "monthly_rent": monthly_rent,
+            "maintenance_monthly": maintenance,
+            "security_deposit": deposit,
+            "setup_cost_onetime": setup,
+            "setup_cost_refundable": listing.setup_cost_refundable,
+            "cook_available": listing.cook_available,
+            "cook_cost_monthly": f(listing.cook_cost_monthly),
+            "maid_available": listing.maid_available,
+            "maid_cost_monthly": f(listing.maid_cost_monthly),
+            "utilities_included": listing.utilities_included,
+            "utilities_est_monthly": f(listing.utilities_est_monthly),
+            # recurring_monthly = every mandatory monthly cost. move_in = first
+            # month (full recurring) + deposit + setup.
+            "recurring_monthly": recurring,
+            "move_in_cost": recurring + deposit + setup,
+        }
+
+    return {
+        "rental_type": listing.rental_type,
+        "host_price_per_night": f(listing.host_price_per_night),
+        "guest_price_per_night": f(listing.host_price_per_night),
+        "monthly_rent": monthly_rent,
+        # Full mandatory monthly (rent + maintenance + cook + maid + utilities).
+        # This is what cards/headlines should show, not the bare rent.
+        "recurring_monthly": recurring,
+        "min_nights": listing.min_nights,
+        "min_months": listing.min_months,
+        "available_from": listing.available_from.isoformat() if listing.available_from else None,
+        "security_deposit": deposit,
+        "monthly_breakdown": breakdown,
+    }
 
 
 def _listing_status_for_user(user: User) -> str:
@@ -590,16 +746,33 @@ def _build_extra_rules(rules: dict) -> str:
 
 
 def _listing_to_dict(listing: Listing) -> dict:
+    is_monthly = listing.rental_type == Listing.RentalType.MONTHLY
+    nightly = float(listing.host_price_per_night) if listing.host_price_per_night is not None else None
+    monthly = float(listing.monthly_rent) if listing.monthly_rent is not None else None
+    # Card shows the FULL mandatory monthly (rent + maintenance + cook + maid +
+    # utilities), not the bare rent — that's the real recurring cost.
+    recurring = _pricing_dict(listing).get("recurring_monthly") if is_monthly else None
+    display_price = (recurring if recurring is not None else monthly) if is_monthly else nightly
     return {
         "listing_id": str(listing.id),
         "title": listing.title,
         "area_name": _get_area_name(listing),
-        "host_price_per_night": float(listing.host_price_per_night),
-        "guest_price_per_night": float(listing.guest_price_per_night),
+        "rental_type": listing.rental_type,
+        "display_price": display_price,
+        "price_unit": "month" if is_monthly else "night",
+        # Kept for backward-compat with nightly clients; null on monthly.
+        "host_price_per_night": nightly,
+        "guest_price_per_night": nightly,
+        "monthly_rent": monthly,
+        "recurring_monthly": recurring,
         "status": listing.status,
         "average_rating": float(listing.average_rating) if listing.average_rating else None,
         "review_count": listing.review_count,
-        "total_bookings": listing.total_bookings,
+        # Prefer the live-annotated count (get_host_listings) over the stale
+        # stored column, which is never incremented.
+        "total_bookings": getattr(listing, "_live_bookings", None)
+            if getattr(listing, "_live_bookings", None) is not None
+            else listing.total_bookings,
         "cover_photo_url": None,
     }
 
@@ -648,6 +821,10 @@ def search_guest_listings(
     lat: float | None = None,
     lng: float | None = None,
     radius_km: float = 5.0,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    min_rating: float | None = None,
+    sort: str | None = None,
 ) -> list[dict]:
 
     qs = (
@@ -656,8 +833,28 @@ def search_guest_listings(
         .filter(host_user__profile__id_verification_status="approved")
         .select_related("property", "room")
         .prefetch_related("listing_amenities__amenity")
-        .order_by("-average_rating", "-created_at")
     )
+
+    # ── Price & rating filters ──────────────────────────────────────────
+    if min_price is not None:
+        qs = qs.filter(host_price_per_night__gte=min_price)
+    if max_price is not None:
+        qs = qs.filter(host_price_per_night__lte=max_price)
+    if min_rating is not None:
+        qs = qs.filter(average_rating__gte=min_rating)
+
+    # ── Sort ────────────────────────────────────────────────────────────
+    has_geo = lat is not None and lng is not None
+    sort = (sort or ("distance" if has_geo else "recommended")).lower()
+    DB_ORDER = {
+        "price_low": ("host_price_per_night", "-created_at"),
+        "price_high": ("-host_price_per_night", "-created_at"),
+        "rating": ("-average_rating", "-created_at"),
+        "recommended": ("-average_rating", "-created_at"),
+    }
+    # "distance" is applied in Python after the query (needs lat/lng); until
+    # then order by the recommended default so the [:50] slice is sensible.
+    qs = qs.order_by(*DB_ORDER.get(sort, DB_ORDER["recommended"]))
 
     CITY_ALIASES = {
         "bangalore": "bengaluru",
@@ -687,24 +884,15 @@ def search_guest_listings(
         return combined
 
     if lat is not None and lng is not None:
-        # Early-stage: widen the floor so guests still see listings even when
-        # nothing is within a tight radius of their location.
-        effective_radius = max(radius_km, 100.0)
-        delta_lat = effective_radius / 111.0
-        delta_lng = effective_radius / (111.0 * math.cos(math.radians(lat)))
-        geo_filter = Q(
-            property__latitude__isnull=False,
-            property__longitude__isnull=False,
-            property__latitude__gte=lat - delta_lat,
-            property__latitude__lte=lat + delta_lat,
-            property__longitude__gte=lng - delta_lng,
-            property__longitude__lte=lng + delta_lng,
-        )
+        # Early-stage: no distance cutoff. If the guest also typed a place,
+        # narrow to text matches; otherwise show every live listing. Results
+        # are ordered closest-first by the distance sort below, so a guest in
+        # a city with no inventory still sees the nearest available rooms
+        # (just far away) instead of an empty screen.
         search_term = query or area
         if search_term:
-            qs = qs.filter(geo_filter | _text_filter(search_term))
-        else:
-            qs = qs.filter(geo_filter)
+            qs = qs.filter(_text_filter(search_term))
+        # else: no geo/text filter — all live listings, sorted by distance.
     else:
         search_term = query or area
         if search_term:
@@ -743,13 +931,16 @@ def search_guest_listings(
     results = [_listing_to_guest_card(l) for l in qs]
     _attach_cover_photos(qs, results)
 
-    if lat is not None and lng is not None:
+    if has_geo:
         for r in results:
             if r["latitude"] and r["longitude"]:
                 r["distance_km"] = _haversine(lat, lng, r["latitude"], r["longitude"])
             else:
                 r["distance_km"] = None
-        results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
+        # Only reorder by distance when that's the chosen sort; otherwise keep
+        # the DB ordering (price / rating / recommended) and just show distance.
+        if sort == "distance":
+            results.sort(key=lambda r: r["distance_km"] if r["distance_km"] is not None else float("inf"))
 
     return results
 
@@ -818,6 +1009,7 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
     # Host profile
     host_name = ""
     host_profile_data = {}
+    profile = None
     try:
         profile = listing.host_user.profile
         host_name = f"{profile.first_name} {profile.last_name[0]}." if profile.last_name else profile.first_name
@@ -827,6 +1019,12 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
             "gender": profile.gender or "",
             "member_since": listing.host_user.created_at.strftime("%b %Y"),
         }
+        # Host age: prefer the value entered in the flatmates section,
+        # otherwise derive it from the host's date of birth.
+        host_profile_data["age"] = (
+            (host_fm.age if host_fm else None)
+            or _age_from_dob(getattr(profile, "date_of_birth", None))
+        )
         if host_fm:
             host_profile_data["occupation"] = host_fm.occupation or ""
             host_profile_data["hobbies"] = host_fm.hobbies or ""
@@ -869,11 +1067,8 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
         "title": listing.title,
         "description": listing.description or "",
         "booking_mode": listing.booking_mode,
-        "host_price_per_night": float(listing.host_price_per_night),
-        "guest_price_per_night": float(listing.guest_price_per_night),
-        "min_nights": listing.min_nights,
+        **_pricing_dict(listing),
         "max_nights": listing.max_nights,
-        "security_deposit": float(listing.security_deposit),
         "property": {
             "apartment_type": prop.apartment_type,
             "apartment_name": prop.apartment_name,
@@ -892,6 +1087,7 @@ def get_guest_listing_detail(listing_id: str, viewer=None) -> dict | None:
         "amenities": amenities,
         "flatmates": flatmates,
         "host_info": {
+            "age": (host_fm.age if host_fm else None) or _age_from_dob(getattr(profile, "date_of_birth", None)),
             "occupation": host_fm.occupation if host_fm else "",
             "hobbies": host_fm.hobbies if host_fm else "",
             "gender": host_fm.gender if host_fm else "",
@@ -989,7 +1185,7 @@ def _listing_to_guest_card(listing: Listing) -> dict:
         "title": listing.title,
         "description": desc,
         "area_name": _get_area_name(listing),
-        "guest_price_per_night": float(listing.guest_price_per_night),
+        **_pricing_dict(listing),
         "cover_photo_url": None,
         "average_rating": float(listing.average_rating) if listing.average_rating else None,
         "review_count": listing.review_count,

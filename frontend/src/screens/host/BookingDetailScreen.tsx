@@ -54,6 +54,8 @@ function mapApiToBooking(d: any): any {
     check_in_date: d.check_in_date,
     check_out_date: d.check_out_date,
     nights: d.nights,
+    rental_type: d.rental_type ?? 'nightly',
+    monthly: d.monthly ?? null,
     total_guest_pays: d.pricing?.total_guest_pays ?? 0,
     total_host_receives: d.pricing?.total_host_receives ?? 0,
     subtotal: d.pricing?.subtotal ?? 0,
@@ -103,6 +105,7 @@ export default function BookingDetailScreen() {
         title: booking.guest_name,
         subtitle: convo.listing_title ?? undefined,
         chatDisabled: chatOff,
+        listingId: convo.listing_id ?? undefined,
       });
     } catch {
       // network error — screen stays as-is; user can retry
@@ -167,6 +170,9 @@ export default function BookingDetailScreen() {
     );
   }
 
+  const isMonthly = booking.rental_type === 'monthly';
+  const mb = booking.monthly;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -203,36 +209,75 @@ export default function BookingDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stay details</Text>
           <DetailRow styles={styles} label="Booking code" value={booking.booking_code} />
-          <DetailRow styles={styles} label="Check-in" value={formatDate(booking.check_in_date)} />
-          <DetailRow styles={styles} label="Check-out" value={formatDate(booking.check_out_date)} />
-          <DetailRow styles={styles} label="Nights" value={`${booking.nights} night${booking.nights > 1 ? 's' : ''}`} />
+          {isMonthly ? (
+            <DetailRow styles={styles} label="Move-in" value={formatDate(booking.check_in_date)} />
+          ) : (
+            <>
+              <DetailRow styles={styles} label="Check-in" value={formatDate(booking.check_in_date)} />
+              <DetailRow styles={styles} label="Check-out" value={formatDate(booking.check_out_date)} />
+              <DetailRow styles={styles} label="Nights" value={`${booking.nights} night${booking.nights > 1 ? 's' : ''}`} />
+            </>
+          )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Earnings</Text>
-          <DetailRow
-            styles={styles}
-            label="Rent"
-            value={`₹${(booking.subtotal ?? booking.total_host_receives).toLocaleString('en-IN')}`}
-          />
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Meals</Text>
-            <Text style={styles.detailValue}>
-              {booking.meal_option_selected
-                ? `₹${(booking.meal_total ?? 0).toLocaleString('en-IN')}${booking.meal_cost_per_day ? ` (₹${booking.meal_cost_per_day.toLocaleString('en-IN')}/day)` : ''}`
-                : 'Not opted'}
+        {isMonthly && mb ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Earnings</Text>
+            <DetailRow
+              styles={styles}
+              label="Monthly rent + charges"
+              value={`₹${Math.round(mb.recurring_monthly).toLocaleString('en-IN')}/mo`}
+            />
+            <DetailRow
+              styles={styles}
+              label="Security deposit"
+              value={`₹${Math.round(mb.security_deposit).toLocaleString('en-IN')}`}
+            />
+            {mb.setup_cost_onetime > 0 ? (
+              <DetailRow
+                styles={styles}
+                label={`Setup${mb.setup_cost_refundable ? ' (refundable)' : ''}`}
+                value={`₹${Math.round(mb.setup_cost_onetime).toLocaleString('en-IN')}`}
+              />
+            ) : null}
+            <View style={styles.earningsRow}>
+              <Text style={styles.earningsLabel}>Collect at move-in</Text>
+              <Text style={styles.earningsValue}>
+                ₹{Math.round(mb.move_in_cost).toLocaleString('en-IN')}
+              </Text>
+            </View>
+            <Text style={styles.earningsNote}>
+              You receive 100% directly from the guest (cash / UPI). RoomBuddy only
+              charges the guest a ₹49 reservation fee. Then ₹{Math.round(mb.recurring_monthly).toLocaleString('en-IN')}/month.
             </Text>
           </View>
-          <View style={styles.earningsRow}>
-            <Text style={styles.earningsLabel}>You receive</Text>
-            <Text style={styles.earningsValue}>
-              ₹{booking.total_host_receives.toLocaleString('en-IN')}
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Earnings</Text>
+            <DetailRow
+              styles={styles}
+              label="Rent"
+              value={`₹${(booking.subtotal ?? booking.total_host_receives).toLocaleString('en-IN')}`}
+            />
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Meals</Text>
+              <Text style={styles.detailValue}>
+                {booking.meal_option_selected
+                  ? `₹${(booking.meal_total ?? 0).toLocaleString('en-IN')}${booking.meal_cost_per_day ? ` (₹${booking.meal_cost_per_day.toLocaleString('en-IN')}/day)` : ''}`
+                  : 'Not opted'}
+              </Text>
+            </View>
+            <View style={styles.earningsRow}>
+              <Text style={styles.earningsLabel}>You receive</Text>
+              <Text style={styles.earningsValue}>
+                ₹{booking.total_host_receives.toLocaleString('en-IN')}
+              </Text>
+            </View>
+            <Text style={styles.earningsNote}>
+              Collect directly from the guest (cash / UPI) at check-in.
             </Text>
           </View>
-          <Text style={styles.earningsNote}>
-            Collect directly from the guest (cash / UPI) at check-in.
-          </Text>
-        </View>
+        )}
 
         {bookingStatus === 'pending' && (
           <View style={styles.actionRow}>
