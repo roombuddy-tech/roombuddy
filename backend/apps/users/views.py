@@ -57,9 +57,8 @@ from apps.users.services import (
     get_public_profile,
 )
 from common.authentication import JWTAuthentication
-from common.permissions import IsAuthenticated, IsAdminUser
+from common.permissions import IsAuthenticated
 from common.utils import get_client_ip
-from rest_framework.throttling import ScopedRateThrottle
 import logging
 
 logger = logging.getLogger(__name__)
@@ -76,8 +75,6 @@ def _error_response(err: AuthServiceError) -> Response:
 class SendOTPView(APIView):
     authentication_classes = []
     permission_classes = []
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "otp_send"
     serializer_class = SendOTPSerializer
 
     @extend_schema(tags=["Auth"], request=SendOTPSerializer, responses={200: OTPSentResponseSerializer})
@@ -279,13 +276,12 @@ class VerifyEmailWebView(APIView):
             return self._render("emails/verify_error.html", {"message": "User not found."})
 
         try:
+            
             result = verify_email_token(user, token)
             return self._render("emails/verify_success.html", {"email": result["email"]})
-        except Exception:
+        except Exception as e:
             logger.exception("VerifyEmailWebView.get failed")
-            return self._render("emails/verify_error.html", {
-                "message": "Verification failed. The link may have expired. Please request a new one."
-            })
+            return self._render("emails/verify_error.html", {"message": str(e)})
 
     @staticmethod
     def _render(template_name: str, context: dict) -> HttpResponse:
@@ -402,10 +398,13 @@ class SubmitIDVerificationView(APIView):
 class PendingVerificationsView(APIView):
     """Returns list of users awaiting ID verification review."""
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(tags=["Admin"])
     def get(self, request):
+        if not request.user.is_staff:
+            return Response({"error": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+
         result = get_pending_verifications()
         return Response({"pending_count": len(result), "verifications": result})
 
@@ -413,10 +412,13 @@ class PendingVerificationsView(APIView):
 class ReviewIDVerificationView(APIView):
     """Approve or reject a user's ID verification."""
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(tags=["Admin"])
     def post(self, request):
+        if not request.user.is_staff:
+            return Response({"error": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+
         user_id = request.data.get("user_id")
         action = request.data.get("action")
         reason = request.data.get("reason", "")

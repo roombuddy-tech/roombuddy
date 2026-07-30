@@ -114,8 +114,8 @@ def send_otp_to_phone(phone_number: str, country_code: str, mode: str = "auto") 
         )
         return {"message": "OTP sent successfully", "phone": full_phone}
 
-    # ── Seed/demo bypass: static OTP for seeded test accounts (DEBUG only) ───
-    if settings.DEBUG and phone_number in getattr(settings, "SEED_PHONE_NUMBERS", set()):
+    # ── Seed/demo bypass: static OTP 111111 for seeded test accounts ──────────
+    if phone_number in getattr(settings, "SEED_PHONE_NUMBERS", set()):
         logger.info("send_otp: seed account — using static OTP")
         OTPCode.objects.create(
             user=user,
@@ -188,8 +188,7 @@ def verify_otp_and_login(phone_number: str, country_code: str, otp_code: str, re
         logger.info("verify_otp: reviewer account — static OTP accepted")
         OTPCode.objects.filter(phone=full_phone, is_consumed=False).update(is_consumed=True)
 
-    elif (settings.DEBUG
-          and phone_number in getattr(settings, "SEED_PHONE_NUMBERS", set())
+    elif (phone_number in getattr(settings, "SEED_PHONE_NUMBERS", set())
           and otp_code == getattr(settings, "SEED_OTP", "")):
         logger.info("verify_otp: seed account — static OTP accepted")
         OTPCode.objects.filter(phone=full_phone, is_consumed=False).update(is_consumed=True)
