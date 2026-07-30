@@ -184,10 +184,25 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "common.authentication.JWTAuthentication",
     ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
+    "DEFAULT_RENDERER_CLASSES": (
+        [
+            "rest_framework.renderers.JSONRenderer",
+            "rest_framework.renderers.BrowsableAPIRenderer",
+        ]
+        if DEBUG
+        else ["rest_framework.renderers.JSONRenderer"]
+    ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "600/hour",
+        "user": "4000/hour",
+        "otp_send": "5/hour",
+        "booking_create": "20/hour",
+        "unlock": "10/day",
+    },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
@@ -223,7 +238,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # ── JWT ──────────────────────────────────────────────────────
-ACCESS_TOKEN_LIFETIME_MINUTES = int(os.environ.get("ACCESS_TOKEN_LIFETIME_MINUTES", "10080"))
+ACCESS_TOKEN_LIFETIME_MINUTES = int(os.environ.get("ACCESS_TOKEN_LIFETIME_MINUTES", "60"))
 REFRESH_TOKEN_LIFETIME_DAYS = int(os.environ.get("REFRESH_TOKEN_LIFETIME_DAYS", "30"))
 
 # ── Logging ──────────────────────────────────────────────────

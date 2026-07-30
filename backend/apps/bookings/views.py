@@ -29,6 +29,7 @@ from apps.bookings.services import (
 from common.authentication import JWTAuthentication
 from common.error_codes import ErrorCode
 from common.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 import logging
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,8 @@ class CreateBookingView(APIView):
     """Create a new booking in pending state."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "booking_create"
 
     @extend_schema(
         tags=["Booking"],
