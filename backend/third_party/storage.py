@@ -16,10 +16,11 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-MAX_IMAGE_SIZE_MB = 10
+# Generous input cap — we always re-encode to a 1200px JPEG, so the stored file
+# is small regardless. A high limit just lets high-res phone/internet photos
+# through; it's a DoS guard, not a quality gate.
+MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
-
-ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP", "MPO", "HEIF", "HEIC"}
 
 
 class StorageError(Exception):
@@ -102,19 +103,8 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
         file_obj.seek(0)
         image = Image.open(file_obj)
     except Exception:
-        logger.exception("upload_image: invalid image data")
-        raise StorageError("Invalid image file. Please upload a JPEG, PNG, or WebP file.")
-
-    if image.format not in ALLOWED_IMAGE_FORMATS:
-        raise StorageError(
-            f"Unsupported image format '{image.format}'. "
-            "Please upload a JPEG, PNG, HEIC or WebP file."
-        )
-
-    try:
-        image = ImageOps.exif_transpose(image) or image
-    except Exception:
-        logger.exception("exif_transpose failed; using image as-is")
+        logger.exception("upload_image failed")
+        raise StorageError("Invalid image file. Please upload a JPEG or PNG.")
 
     try:
         image = ImageOps.exif_transpose(image) or image
@@ -127,10 +117,8 @@ def upload_image(file_obj, folder: str, filename: str = None, max_width: int = 1
     ext = "jpg"
     if not filename:
         filename = f"{uuid.uuid4().hex}.{ext}"
-    else:
-        filename = Path(filename).name  # strip any path components
-        if not filename.endswith(('.jpg', '.jpeg', '.png')):
-            filename = f"{filename}.{ext}"
+    elif not filename.endswith(('.jpg', '.jpeg', '.png')):
+        filename = f"{filename}.{ext}"
 
     key = f"{folder}/{filename}"
 

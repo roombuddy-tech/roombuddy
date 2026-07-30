@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_PLACES_API_KEY } from '../../constants/maps';
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
@@ -38,47 +38,6 @@ export default function GooglePlacesInput({ value, placeholder, onSelect, onChan
       ref.current.setAddressText(value);
     }
   }, []);
-
-  // Fallback to plain text input when Google Places API key is not configured.
-  // This keeps the form functional even if the key is missing (e.g. dev without .env).
-  if (!GOOGLE_PLACES_API_KEY) {
-    if (__DEV__) {
-      console.error(
-        '[GooglePlacesInput] GOOGLE_PLACES_API_KEY is empty. ' +
-        'Add EAS secrets and update eas.json. Falling back to plain text input.'
-      );
-    }
-    return (
-      <View style={styles.wrap}>
-        <TextInput
-          style={styles.input}
-          value={value}
-          placeholder={placeholder ?? 'Search for your locality...'}
-          placeholderTextColor={COLORS.textMut}
-          onChangeText={(text) => {
-            onChangeText?.(text);
-            // Emit a minimal PlaceResult so callers get at least the typed text
-            onSelect({
-              description: text,
-              placeId: '',
-              lat: 0,
-              lng: 0,
-              city: text,
-              state: '',
-              pincode: '',
-              addressLine1: text,
-            });
-          }}
-          autoCorrect={false}
-        />
-        {__DEV__ && (
-          <Text style={styles.fallbackWarning}>
-            ⚠️ Google Places unavailable — plain text mode
-          </Text>
-        )}
-      </View>
-    );
-  }
 
   return (
     <View style={styles.wrap}>
@@ -184,11 +143,5 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: COLORS.border,
-  },
-  fallbackWarning: {
-    fontSize: 11,
-    color: '#D97706',
-    marginTop: 4,
-    ...FONTS.medium,
   },
 });
