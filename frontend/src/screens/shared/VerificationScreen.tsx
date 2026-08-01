@@ -233,7 +233,11 @@ export default function VerificationScreen({ visible, onClose, onVerified }: Ver
                   <View style={styles.sentSection}>
                     <View style={styles.sentIcon}><Ionicons name="mail-open-outline" size={32} color={COLORS.primary} /></View>
                     <Text style={styles.sentTitle}>Check your inbox</Text>
-                    <Text style={styles.sentText}>We sent a verification link to{'\n'}<Text style={styles.sentEmail}>{emailInput}</Text></Text>
+                    {/* Two Texts rather than a nested one: a nested <Text> with a
+                        different fontFamily is clipped instead of wrapped on
+                        Android, which would cut off longer email addresses. */}
+                    <Text style={styles.sentText}>We sent a verification link to</Text>
+                    <Text style={[styles.sentText, styles.sentEmail]}>{emailInput}</Text>
                     <Text style={styles.sentHint}>Click the link in the email, then tap the button below.</Text>
                     <TouchableOpacity style={styles.checkBtn} onPress={handleCheckStatus} disabled={checkingStatus}>
                       <Ionicons name="refresh-outline" size={18} color="#fff" />
@@ -359,7 +363,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   sentSection: { alignItems: 'center', paddingVertical: SPACING.md },
   sentIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
   sentTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text, marginBottom: SPACING.xs },
-  sentText: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
+  sentText: { fontSize: 14, color: COLORS.textSec, textAlign: 'center', lineHeight: 22, alignSelf: 'stretch' },
   sentEmail: { color: COLORS.text, ...FONTS.semibold },
   sentHint: { fontSize: 13, color: COLORS.textMut, textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.lg },
   checkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: RADIUS.md },

@@ -323,15 +323,19 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           <View style={[styles.checkbox, acceptedTerms && styles.checkboxActive]}>
             {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          <Text style={styles.termsText}>
-            I have read and agree to the{' '}
-            <Text style={styles.termsLink} onPress={() => Linking.openURL('https://roombuddy.co.in/terms/')}>
+          {/* Separate Texts in a wrapping row — a nested <Text> with a different
+              fontFamily is clipped instead of wrapped on Android, which would
+              hide these links on narrower screens. */}
+          <View style={styles.termsTextWrap}>
+            <Text style={styles.termsPiece}>I have read and agree to the </Text>
+            <Text style={[styles.termsPiece, styles.termsLink]} onPress={() => Linking.openURL('https://roombuddy.co.in/terms/')}>
               Terms of Service
-            </Text>{' '}and{' '}
-            <Text style={styles.termsLink} onPress={() => Linking.openURL('https://roombuddy.co.in/privacy/')}>
+            </Text>
+            <Text style={styles.termsPiece}> and </Text>
+            <Text style={[styles.termsPiece, styles.termsLink]} onPress={() => Linking.openURL('https://roombuddy.co.in/privacy/')}>
               Privacy Policy
             </Text>
-          </Text>
+          </View>
         </TouchableOpacity>
 
         {/* Submit */}
@@ -475,6 +479,10 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.textSec,
     lineHeight: 20,
   },
+  // flex lives on the wrapper; the pieces size to their own text so the row
+  // can wrap them onto a second line.
+  termsTextWrap: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
+  termsPiece: { fontSize: 13, color: COLORS.textSec, lineHeight: 20 },
   termsLink: {
     color: COLORS.primary,
     ...FONTS.semibold,

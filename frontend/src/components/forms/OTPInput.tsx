@@ -86,7 +86,13 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     gap: SPACING.sm,
   },
   box: {
-    width: 48,
+    // Six fixed 48pt boxes + gaps need ~376pt of screen; that fits an iPhone
+    // (390pt) but overflows the 360dp most Android phones report. Flexing with
+    // a 48pt cap keeps the original look on wide screens and shrinks to fit on
+    // narrow ones instead of running off the edge.
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 48,
     height: 56,
     borderWidth: 1.5,
     borderColor: COLORS.border,

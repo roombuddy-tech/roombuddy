@@ -32,7 +32,7 @@ import { createUnlockOrder } from '../../services/payments';
 import { savePendingIntent, type PendingAction } from '../../services/pendingIntent';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
-import type { GuestListingDetail } from '../../types/listing';
+import { genderPrefMeta, type GuestListingDetail } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
 type Rt = RouteProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -551,6 +551,15 @@ export default function GuestListingDetailScreen() {
                   <Text style={styles.spaceRowSub}>Bathroom</Text>
                 </View>
               </View>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}>
+                  <Ionicons name={genderPrefMeta(listing.property.gender_preference).icon} size={18} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>{genderPrefMeta(listing.property.gender_preference).label}</Text>
+                  <Text style={styles.spaceRowSub}>Preferred guests</Text>
+                </View>
+              </View>
             </View>
             {listing.room.room_features.length > 0 && (
               <>
@@ -798,7 +807,7 @@ export default function GuestListingDetailScreen() {
                   ) : null}
                   <View style={styles.checkinCard}>
                     <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Min stay</Text>
+                    <Text style={styles.checkinLabel}>Minimum stay</Text>
                     <Text style={styles.checkinTime}>{listing.min_months || 1} month{(listing.min_months || 1) !== 1 ? 's' : ''}</Text>
                   </View>
                 </>
@@ -820,7 +829,7 @@ export default function GuestListingDetailScreen() {
                   ) : null}
                   <View style={styles.checkinCard}>
                     <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Min stay</Text>
+                    <Text style={styles.checkinLabel}>Minimum stay</Text>
                     <Text style={styles.checkinTime}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
                   </View>
                 </>

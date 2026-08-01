@@ -158,3 +158,19 @@ export function cardPrice(item: {
     unit: isMonthly ? '/mo' : '/night',
   };
 }
+
+/**
+ * Human-readable label + icon for a property's gender preference.
+ * Used on listing cards, the guest detail page and the host preview so the
+ * wording stays identical everywhere.
+ */
+export function genderPrefMeta(pref?: string | null): { label: string; short: string; icon: any } {
+  switch (pref) {
+    case 'female_only':
+      return { label: 'Female guests only', short: 'Female only', icon: 'female-outline' };
+    case 'male_only':
+      return { label: 'Male guests only', short: 'Male only', icon: 'male-outline' };
+    default:
+      return { label: 'Open to all genders', short: 'Any gender', icon: 'people-outline' };
+  }
+}
