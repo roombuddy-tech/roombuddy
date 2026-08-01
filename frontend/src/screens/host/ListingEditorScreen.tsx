@@ -1431,9 +1431,12 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   optional
                 />
                 <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
-                  <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 }}>
-                    Hometown <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
-                  </Text>
+                  {/* Row + separate Texts: a nested <Text> in a different
+                      fontFamily is clipped rather than wrapped on Android. */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text }}>Hometown </Text>
+                    <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+                  </View>
                   <GooglePlacesInput
                     value={hostDraft.hometown}
                     placeholder="e.g. Jaipur"
@@ -1520,9 +1523,12 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                   optional
                 />
                 <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
-                  <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text, marginBottom: 8 }}>
-                    Hometown <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
-                  </Text>
+                  {/* Row + separate Texts: a nested <Text> in a different
+                      fontFamily is clipped rather than wrapped on Android. */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text }}>Hometown </Text>
+                    <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+                  </View>
                   <GooglePlacesInput
                     value={draft.hometown}
                     placeholder="e.g. Jaipur"

@@ -93,10 +93,13 @@ export default function OTPScreen({ navigation, route }: Props) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Verify your number</Text>
-          <Text style={styles.subtitle}>
-            We sent a 6-digit code to{' '}
-            <Text style={styles.phone}>{maskedPhone}</Text>
-          </Text>
+          {/* Two separate Texts in a wrapping row. A nested <Text> with a
+              different fontFamily is not broken across lines on Android — it
+              gets clipped instead — so the phone number is its own element. */}
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subtitle}>We sent a 6-digit code to </Text>
+            <Text style={[styles.subtitle, styles.phone]}>{maskedPhone}</Text>
+          </View>
         </View>
 
         {/* OTP */}
@@ -124,16 +127,16 @@ export default function OTPScreen({ navigation, route }: Props) {
         <View style={styles.resendSection}>
           {canResend ? (
             <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendText}>
-                Didn't receive?{' '}
-                <Text style={styles.resendActive}>Resend OTP</Text>
-              </Text>
+              <View style={styles.subtitleRow}>
+                <Text style={styles.resendText}>Didn't receive? </Text>
+                <Text style={[styles.resendText, styles.resendActive]}>Resend OTP</Text>
+              </View>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.resendText}>
-              Didn't receive?{' '}
-              <Text style={styles.resendActive}>Resend in {countdown}s</Text>
-            </Text>
+            <View style={styles.subtitleRow}>
+              <Text style={styles.resendText}>Didn't receive? </Text>
+              <Text style={[styles.resendText, styles.resendActive]}>Resend in {countdown}s</Text>
+            </View>
           )}
         </View>
       </View>
@@ -170,6 +173,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.textSec,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  // Wrapping row: the styled half drops to the next line when it doesn't fit,
+  // instead of being clipped at the screen edge.
+  subtitleRow: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    justifyContent: 'center', alignSelf: 'stretch',
   },
   phone: { color: COLORS.text, ...FONTS.semibold },
   otpSection: { marginBottom: SPACING.xl },

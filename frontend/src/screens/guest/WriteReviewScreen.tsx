@@ -128,7 +128,10 @@ export default function WriteReviewScreen() {
 
           {/* Sub-categories */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Rate specific aspects <Text style={styles.optional}>(optional)</Text></Text>
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.sectionLabelTxt}>Rate specific aspects </Text>
+              <Text style={[styles.sectionLabelTxt, styles.optional]}>(optional)</Text>
+            </View>
             {SUB_CATEGORIES.map(({ key, label }) => (
               <View key={key} style={styles.subRow}>
                 <Text style={styles.subLabel}>{label}</Text>
@@ -139,7 +142,10 @@ export default function WriteReviewScreen() {
 
           {/* Text */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Write your review <Text style={styles.optional}>(optional)</Text></Text>
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.sectionLabelTxt}>Write your review </Text>
+              <Text style={[styles.sectionLabelTxt, styles.optional]}>(optional)</Text>
+            </View>
             <TextInput
               style={styles.titleInput}
               placeholder="Give it a title…"
@@ -191,6 +197,10 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   hostLine: { fontSize: 14, color: COLORS.textSec, marginBottom: SPACING.xl },
   section: { marginBottom: SPACING.xl },
   sectionLabel: { fontSize: 15, ...FONTS.semibold, color: COLORS.text, marginBottom: SPACING.md },
+  // Row + pieces: a nested <Text> in a different fontFamily is clipped, not
+  // wrapped, on Android when the label runs past one line.
+  sectionLabelRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: SPACING.md },
+  sectionLabelTxt: { fontSize: 15, ...FONTS.semibold, color: COLORS.text },
   optional: { ...FONTS.regular, color: COLORS.textMut },
   stars: { flexDirection: 'row', gap: 8 },
   ratingHint: { fontSize: 14, color: COLORS.textSec, marginTop: 6 },

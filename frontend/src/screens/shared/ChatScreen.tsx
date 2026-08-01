@@ -241,7 +241,10 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   bubbleRow: { flexDirection: 'row', marginBottom: SPACING.sm },
   rowMine: { justifyContent: 'flex-end' },
   rowTheirs: { justifyContent: 'flex-start' },
-  bubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 9, borderRadius: RADIUS.lg },
+  // flexShrink is required: inside a row, a percentage maxWidth alone leaves the
+  // child measured as unbounded on Android, so long messages render on one line
+  // and get clipped by the bubble instead of wrapping.
+  bubble: { maxWidth: '78%', flexShrink: 1, paddingHorizontal: 14, paddingVertical: 9, borderRadius: RADIUS.lg },
   bubbleMine: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
   bubbleTheirs: { backgroundColor: COLORS.surface, borderBottomLeftRadius: 4 },
   bubbleText: { fontSize: 15, color: COLORS.text, lineHeight: 20 },
@@ -250,7 +253,9 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   bubbleTimeMine: { color: 'rgba(255,255,255,0.7)' },
 
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
-  emptySub: { fontSize: 14, color: COLORS.textMut, textAlign: 'center' },
+  // alignSelf stretch gives the text the parent's full width to wrap into —
+  // without it, a centred child is measured unbounded on Android and clipped.
+  emptySub: { fontSize: 14, color: COLORS.textMut, textAlign: 'center', alignSelf: 'stretch' },
 
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: SPACING.sm,

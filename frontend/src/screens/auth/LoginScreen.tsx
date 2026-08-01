@@ -128,22 +128,25 @@ export default function LoginScreen({ navigation }: Props) {
         </View>
 
         {/* Footer */}
-        <Text style={styles.terms}>
-          By continuing, you agree to our{' '}
+        {/* Separate Texts in a wrapping row: a nested <Text> with a different
+            fontFamily is clipped rather than wrapped on Android, which would
+            hide the Terms / Privacy links on narrower screens. */}
+        <View style={styles.termsRow}>
+          <Text style={styles.terms}>By continuing, you agree to our </Text>
           <Text
-            style={styles.link}
+            style={[styles.terms, styles.link]}
             onPress={() => Linking.openURL('https://roombuddy.co.in/terms')}
           >
             Terms of Service
-          </Text>{' '}
-          and{' '}
+          </Text>
+          <Text style={styles.terms}> and </Text>
           <Text
-            style={styles.link}
+            style={[styles.terms, styles.link]}
             onPress={() => Linking.openURL('https://roombuddy.co.in/privacy')}
           >
             Privacy Policy
           </Text>
-        </Text>
+        </View>
       </View>
     </ScreenWrapper>
   );
@@ -195,6 +198,12 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.textMut,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  termsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   link: {
     color: COLORS.primary,
