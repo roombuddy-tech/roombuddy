@@ -28,6 +28,7 @@ import { CONFIG } from '../../constants/config';
 import type { HostStackParamList } from '../../navigation/types';
 import { getListing, updateBlockedDates, deleteListing, toggleSnooze } from '../../services/listings';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
+import { genderPrefMeta } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<HostStackParamList, 'ListingDetail'>;
 type Route = RouteProp<HostStackParamList, 'ListingDetail'>;
@@ -504,6 +505,15 @@ export default function ListingDetailScreen() {
                         </View>
                       </View>
                     ) : null}
+                    <View style={styles.spaceRow}>
+                      <View style={styles.spaceRowIconWrap}>
+                        <Ionicons name={genderPrefMeta(f.guestGenderPref).icon} size={18} color={COLORS.primary} />
+                      </View>
+                      <View>
+                        <Text style={styles.spaceRowLabel}>{genderPrefMeta(f.guestGenderPref).label}</Text>
+                        <Text style={styles.spaceRowSub}>Preferred guests</Text>
+                      </View>
+                    </View>
                   </View>
                   {f.roomFeatures && f.roomFeatures.length > 0 && (
                     <>

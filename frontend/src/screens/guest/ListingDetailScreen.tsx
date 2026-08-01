@@ -32,7 +32,7 @@ import { createUnlockOrder } from '../../services/payments';
 import { savePendingIntent, type PendingAction } from '../../services/pendingIntent';
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
-import type { GuestListingDetail } from '../../types/listing';
+import { genderPrefMeta, type GuestListingDetail } from '../../types/listing';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
 type Rt = RouteProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -549,6 +549,15 @@ export default function GuestListingDetailScreen() {
                 <View>
                   <Text style={styles.spaceRowLabel}>{listing.room.bathroom_type === 'attached' ? 'Attached bath' : 'Shared bath'}</Text>
                   <Text style={styles.spaceRowSub}>Bathroom</Text>
+                </View>
+              </View>
+              <View style={styles.spaceRow}>
+                <View style={styles.spaceRowIconWrap}>
+                  <Ionicons name={genderPrefMeta(listing.property.gender_preference).icon} size={18} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.spaceRowLabel}>{genderPrefMeta(listing.property.gender_preference).label}</Text>
+                  <Text style={styles.spaceRowSub}>Preferred guests</Text>
                 </View>
               </View>
             </View>

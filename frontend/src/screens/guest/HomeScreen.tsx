@@ -32,7 +32,7 @@ import { useTheme } from '../../context/ThemeContext';
 import type { GuestStackParamList } from '../../navigation/types';
 import { takePendingIntent } from '../../services/pendingIntent';
 import { searchListings, type SortOption } from '../../services/search';
-import { cardPrice, type GuestListingCard } from '../../types/listing';
+import { cardPrice, genderPrefMeta, type GuestListingCard } from '../../types/listing';
 import ProfileMenu from '../shared/ProfileMenu';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList>;
@@ -419,12 +419,20 @@ export default function HomeScreen() {
             })}
           </View>
         )}
-        {item.meals_available && (
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            <View style={styles.mealTag}>
-              <Ionicons name="restaurant-outline" size={11} color={COLORS.accent} />
-              <Text style={styles.mealTagText}>Meals available</Text>
-            </View>
+        {(item.meals_available || (item.gender_preference && item.gender_preference !== 'any')) && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            {item.meals_available && (
+              <View style={styles.mealTag}>
+                <Ionicons name="restaurant-outline" size={11} color={COLORS.accent} />
+                <Text style={styles.mealTagText}>Meals available</Text>
+              </View>
+            )}
+            {item.gender_preference && item.gender_preference !== 'any' && (
+              <View style={styles.genderTag}>
+                <Ionicons name={genderPrefMeta(item.gender_preference).icon} size={11} color={COLORS.primary} />
+                <Text style={styles.genderTagText}>{genderPrefMeta(item.gender_preference).short}</Text>
+              </View>
+            )}
           </View>
         )}
         <View style={styles.cardFooter}>
@@ -685,12 +693,21 @@ export default function HomeScreen() {
                       style={styles.gridImg}
                       resizeMode="cover"
                     />
-                    {item.meals_available && (
-                      <View style={styles.gridBadge}>
-                        <Ionicons name="restaurant" size={11} color="#fff" />
-                        <Text style={styles.gridBadgeTxt}>Meals</Text>
-                      </View>
-                    )}
+                    {/* Badges stack vertically so they never overlap on narrow cards. */}
+                    <View style={styles.gridBadgeStack} pointerEvents="none">
+                      {item.meals_available && (
+                        <View style={styles.gridBadge}>
+                          <Ionicons name="restaurant" size={10} color="#fff" />
+                          <Text style={styles.gridBadgeTxt}>Meals</Text>
+                        </View>
+                      )}
+                      {item.gender_preference && item.gender_preference !== 'any' && (
+                        <View style={styles.gridGenderBadge}>
+                          <Ionicons name={genderPrefMeta(item.gender_preference).icon} size={10} color="#fff" />
+                          <Text style={styles.gridBadgeTxt}>{genderPrefMeta(item.gender_preference).short}</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                   <View style={styles.gridBody}>
                     <Text style={styles.gridTitle} numberOfLines={1}>{item.title}</Text>
@@ -1059,14 +1076,26 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     overflow: 'hidden', marginBottom: SPACING.md, ...SHADOW.md,
   },
   gridImgWrap: { position: 'relative' },
-  gridImg: { width: '100%', height: 134, backgroundColor: COLORS.chip },
-  gridBadge: {
-    position: 'absolute', top: 8, left: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(20,18,16,0.5)', borderRadius: RADIUS.pill,
-    paddingHorizontal: 9, paddingVertical: 4,
+  gridImg: { width: '100%', height: 152, backgroundColor: COLORS.chip },
+  // Badges stack top-left, one under the other, so they never overlap. Kept
+  // compact so they read as labels on the photo, not a banner over it.
+  gridBadgeStack: {
+    position: 'absolute', top: 6, left: 6, right: 6,
+    alignItems: 'flex-start', gap: 4,
   },
-  gridBadgeTxt: { fontSize: 10, color: '#fff', ...FONTS.semibold },
+  gridGenderBadge: {
+    alignSelf: 'flex-start', maxWidth: '100%',
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(184,92,56,0.88)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 7, paddingVertical: 3,
+  },
+  gridBadge: {
+    alignSelf: 'flex-start', maxWidth: '100%',
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(20,18,16,0.55)', borderRadius: RADIUS.pill,
+    paddingHorizontal: 7, paddingVertical: 3,
+  },
+  gridBadgeTxt: { fontSize: 9.5, color: '#fff', ...FONTS.semibold },
   gridBody: { padding: 12 },
   gridTitle: { fontSize: 14, ...FONTS.semibold, color: COLORS.text, marginBottom: 3 },
   gridArea: { fontSize: 12, color: COLORS.textMut, marginBottom: 8 },
@@ -1160,6 +1189,11 @@ const makeStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.cre
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.accentAlpha,
   },
   mealTagText: { fontSize: 11, color: COLORS.accent, ...FONTS.medium },
+  genderTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: COLORS.primaryAlpha,
+  },
+  genderTagText: { fontSize: 11, color: COLORS.primary, ...FONTS.medium },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardPrice: { fontSize: 20, ...FONTS.serif, color: COLORS.text },
   cardPriceUnit: { fontSize: 12, ...FONTS.regular, color: COLORS.textSec },
