@@ -796,7 +796,7 @@ export default function ListingDetailScreen() {
                     ) : null}
                     <View style={styles.checkinCard}>
                       <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-                      <Text style={styles.checkinLabel}>Min stay</Text>
+                      <Text style={styles.checkinLabel}>Minimum stay</Text>
                       <Text style={styles.checkinTime}>{(parseInt(f.minMonths, 10) || 1)} month{(parseInt(f.minMonths, 10) || 1) !== 1 ? 's' : ''}</Text>
                     </View>
                   </>
@@ -818,7 +818,7 @@ export default function ListingDetailScreen() {
                     ) : null}
                     <View style={styles.checkinCard}>
                       <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                      <Text style={styles.checkinLabel}>Min stay</Text>
+                      <Text style={styles.checkinLabel}>Minimum stay</Text>
                       <Text style={styles.checkinTime}>{previewMinNights} night{previewMinNights !== 1 ? 's' : ''}</Text>
                     </View>
                   </>

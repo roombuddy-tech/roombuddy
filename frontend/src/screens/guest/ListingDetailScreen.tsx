@@ -798,7 +798,7 @@ export default function GuestListingDetailScreen() {
                   ) : null}
                   <View style={styles.checkinCard}>
                     <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Min stay</Text>
+                    <Text style={styles.checkinLabel}>Minimum stay</Text>
                     <Text style={styles.checkinTime}>{listing.min_months || 1} month{(listing.min_months || 1) !== 1 ? 's' : ''}</Text>
                   </View>
                 </>
@@ -820,7 +820,7 @@ export default function GuestListingDetailScreen() {
                   ) : null}
                   <View style={styles.checkinCard}>
                     <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                    <Text style={styles.checkinLabel}>Min stay</Text>
+                    <Text style={styles.checkinLabel}>Minimum stay</Text>
                     <Text style={styles.checkinTime}>{listing.min_nights} night{listing.min_nights !== 1 ? 's' : ''}</Text>
                   </View>
                 </>
