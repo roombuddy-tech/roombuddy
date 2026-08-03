@@ -15,7 +15,7 @@ import {
   Switch,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -69,6 +69,8 @@ export default function ListingDetailScreen() {
   const { preview, item } = route.params ?? {};
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  // Bottom inset so the fixed bar clears the Android nav bar / iOS home indicator.
+  const insets = useSafeAreaInsets();
 
   const Divider = () => (
     <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: SPACING.md }} />
@@ -995,7 +997,7 @@ export default function ListingDetailScreen() {
 
       {/* Sticky bottom bar — host view */}
       {!isPreview && item && (
-        <View style={styles.stickyBar}>
+        <View style={[styles.stickyBar, { paddingBottom: SPACING.md + insets.bottom }]}>
           <TouchableOpacity
             style={[styles.deleteBarBtn, deleting && { opacity: 0.7 }]}
             onPress={handleDeleteListing}
@@ -1025,7 +1027,7 @@ export default function ListingDetailScreen() {
       )}
 
       {isPreview && (
-        <View style={styles.stickyBar}>
+        <View style={[styles.stickyBar, { paddingBottom: SPACING.md + insets.bottom }]}>
           <View>
             <Text style={styles.stickyPrice}>
               ₹{guestPrice.toLocaleString('en-IN')}
@@ -1355,7 +1357,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    paddingBottom: 32,
+    
     backgroundColor: COLORS.bg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,

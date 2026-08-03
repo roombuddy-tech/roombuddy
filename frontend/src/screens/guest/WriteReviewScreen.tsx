@@ -14,7 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
@@ -39,6 +39,8 @@ export default function WriteReviewScreen() {
   const { bookingId, listingTitle, hostName } = route.params;
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  // Bottom inset so the fixed bar clears the Android nav bar / iOS home indicator.
+  const insets = useSafeAreaInsets();
 
   const StarRow = ({ rating, onRate }: { rating: number; onRate: (n: number) => void }) => (
     <View style={styles.stars}>
@@ -167,7 +169,7 @@ export default function WriteReviewScreen() {
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: SPACING.lg + insets.bottom }]}>
           <TouchableOpacity
             style={[styles.submitBtn, (overall === 0 || submitting) && styles.submitBtnDisabled]}
             onPress={onSubmit}

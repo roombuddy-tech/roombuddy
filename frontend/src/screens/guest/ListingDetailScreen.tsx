@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
@@ -136,6 +136,8 @@ export default function GuestListingDetailScreen() {
   const { isAuthenticated } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  // Bottom inset so the fixed bar clears the Android nav bar / iOS home indicator.
+  const insets = useSafeAreaInsets();
 
   const SectionTitle = ({ label }: { label: string }) => (
     <View style={styles.sectionHeader}>
@@ -999,7 +1001,7 @@ export default function GuestListingDetailScreen() {
       </ScrollView>
 
       {/* ── Sticky bar ── */}
-      <View style={styles.stickyBar}>
+      <View style={[styles.stickyBar, { paddingBottom: SPACING.md + insets.bottom }]}>
         <View>
           <Text style={styles.stickyPrice}>
             ₹{(listing.rental_type === 'monthly'
@@ -1442,7 +1444,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   allReviewsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   allReviewsTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
-  stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, paddingBottom: 30, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
+  stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
   stickyPrice: { fontSize: 24, ...FONTS.serifMedium, color: COLORS.text, letterSpacing: -0.3 },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyRating: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },
