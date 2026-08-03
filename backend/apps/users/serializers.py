@@ -1,5 +1,12 @@
+import logging
+import re
+
 from rest_framework import serializers
+
 from apps.users.models import UserProfile
+from third_party.ifsc import IFSCUnavailable, lookup_ifsc
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Reusable mixin ─────────────────────────────────────────
@@ -189,27 +196,86 @@ class AddBankAccountSerializer(serializers.Serializer):
     account_number = serializers.CharField(max_length=20, min_length=8)
     confirm_account_number = serializers.CharField(max_length=20)
     ifsc_code = serializers.CharField(max_length=11, min_length=11)
-    bank_name = serializers.CharField(max_length=100)
+    # Resolved from the IFSC directory when reachable; the client-supplied value
+    # is only a fallback, so it isn't required.
+    bank_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+    def validate_account_number(self, value):
+        value = value.strip()
+        if not value.isdigit():
+            raise serializers.ValidationError("Account number must contain digits only.")
+        return value
 
     def validate_ifsc_code(self, value):
-        value = value.upper()
-        if len(value) != 11 or not value[:4].isalpha() or value[4] != '0':
+        value = value.strip().upper()
+        # Format: 4 letters (bank) + '0' (reserved) + 6 alphanumeric (branch).
+        if (
+            len(value) != 11
+            or not value[:4].isalpha()
+            or value[4] != "0"
+            or not value[5:].isalnum()
+        ):
             raise serializers.ValidationError("Enter a valid 11-character IFSC code (e.g. SBIN0001234).")
         return value
 
     def validate(self, data):
-        if data["account_number"] != data["confirm_account_number"]:
+        if data["account_number"] != data["confirm_account_number"].strip():
             raise serializers.ValidationError({"confirm_account_number": "Account numbers do not match."})
+
+        # Verify the IFSC exists and take the bank name from the directory rather
+        # than trusting what was typed. If the directory is unreachable we fall
+        # back to the supplied name — a lookup outage shouldn't block a host.
+        try:
+            branch = lookup_ifsc(data["ifsc_code"])
+            if branch is None:
+                raise serializers.ValidationError(
+                    {"ifsc_code": "We couldn't find this IFSC code. Please double-check it."}
+                )
+            data["bank_name"] = branch["bank"] or data.get("bank_name", "")
+        except IFSCUnavailable:
+            logger.warning("IFSC directory unavailable; accepting client-supplied bank name")
+            data.setdefault("bank_name", "")
+
+        if not data.get("bank_name"):
+            raise serializers.ValidationError({"bank_name": "Bank name is required."})
         return data
+
+
+# Known UPI handles (the part after '@'). Typing an email address instead of a
+# UPI ID is the most common mistake here, and this catches it.
+UPI_HANDLES = {
+    # NPCI / common PSP apps
+    "upi", "ybl", "ibl", "axl", "apl", "yapl", "abfspay", "airtel", "freecharge",
+    "paytm", "ptyes", "ptaxis", "pthdfc", "ptsbi", "okaxis", "okhdfcbank",
+    "okicici", "oksbi", "jupiteraxis", "fam", "naviaxis", "slc", "superyes",
+    "timecosmos", "waaxis", "waicici", "wahdfcbank", "wasbi", "rmhdfcbank",
+    # Bank handles
+    "sbi", "hdfcbank", "icici", "axisbank", "kotak", "pnb", "barodampay",
+    "idfcbank", "indus", "yesbank", "unionbank", "uboi", "cnrb", "cbin",
+    "federal", "fbl", "rbl", "dbs", "citi", "aubank", "equitas", "idbi",
+    "jkb", "kbl", "kvb", "mahb", "myicici", "psb", "sib", "tjsb", "utbi", "uco",
+}
+
+UPI_RE = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9.\-_]{0,255})@[a-zA-Z][a-zA-Z0-9]{1,63}$")
 
 
 class AddUPISerializer(serializers.Serializer):
     upi_id = serializers.CharField(max_length=100)
 
     def validate_upi_id(self, value):
-        if '@' not in value:
-            raise serializers.ValidationError("Enter a valid UPI ID (e.g. name@upi or name@bank).")
-        return value.lower()
+        value = value.strip().lower()
+        if not UPI_RE.match(value):
+            raise serializers.ValidationError(
+                "Enter a valid UPI ID (e.g. yourname@oksbi or 9876543210@ybl)."
+            )
+        handle = value.split("@", 1)[1]
+        if "." in handle or handle not in UPI_HANDLES:
+            # A dot in the handle almost always means an email was entered.
+            raise serializers.ValidationError(
+                f"“@{handle}” isn't a recognised UPI handle. Use the UPI ID from your "
+                "payment app (e.g. @oksbi, @okhdfcbank, @ybl, @paytm) — not your email address."
+            )
+        return value
 
 
 class PayoutAccountResponseSerializer(serializers.Serializer):
