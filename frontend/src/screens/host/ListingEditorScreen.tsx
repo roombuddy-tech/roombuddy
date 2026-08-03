@@ -2204,7 +2204,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
             <View style={prSt.divider} />
             <Text style={prSt.breakdownNote}>
-              Guests pay you directly for rent and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking.
+              Guests pay you directly for rent and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} booking fee to the guest at the time of booking.
             </Text>
             <Text style={[prSt.breakdownNote, prSt.breakdownNoteBold, { marginTop: 6 }]}>
               You receive 100% of your listed price.

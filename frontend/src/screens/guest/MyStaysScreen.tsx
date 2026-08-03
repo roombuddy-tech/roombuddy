@@ -354,7 +354,7 @@ export default function MyStaysScreen() {
 
             <View style={styles.payRow}>
               <Text style={styles.payLabel}>
-                {item.rental_type === 'monthly' ? 'Reservation fee paid' : 'Total paid'}
+                {item.rental_type === 'monthly' ? 'Booking fee paid' : 'Total paid'}
               </Text>
               <Text style={styles.payValue}>₹{Math.round(item.total_guest_pays).toLocaleString('en-IN')}</Text>
             </View>

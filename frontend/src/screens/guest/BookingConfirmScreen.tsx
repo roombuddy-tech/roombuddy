@@ -289,7 +289,7 @@ const policyMeta =  POLICY_META.flexible;
             <Text style={styles.eyebrow}>Pay now</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Platform fee</Text>
+            <Text style={styles.priceLabel}>Booking fee</Text>
             <Text style={styles.priceValue}>₹{quote.platform_fee.toLocaleString('en-IN')}</Text>
           </View>
           <View style={styles.divider} />
