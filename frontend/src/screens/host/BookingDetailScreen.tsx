@@ -248,7 +248,7 @@ export default function BookingDetailScreen() {
             </View>
             <Text style={styles.earningsNote}>
               You receive 100% directly from the guest (cash / UPI). RoomBuddy only
-              charges the guest a ₹49 reservation fee. Then ₹{Math.round(mb.recurring_monthly).toLocaleString('en-IN')}/month.
+              charges the guest a ₹49 booking fee. Then ₹{Math.round(mb.recurring_monthly).toLocaleString('en-IN')}/month.
             </Text>
           </View>
         ) : (

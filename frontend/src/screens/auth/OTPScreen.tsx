@@ -14,10 +14,7 @@ import { getErrorMessage } from '../../utils/errors';
 type Props = NativeStackScreenProps<any, 'OTP'>;
 
 export default function OTPScreen({ navigation, route }: Props) {
-  const { phoneNumber, isSignup = false } = route.params as {
-    phoneNumber: string;
-    isSignup?: boolean;
-  };
+  const { phoneNumber } = route.params as { phoneNumber: string };
   const { login } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
@@ -66,8 +63,7 @@ export default function OTPScreen({ navigation, route }: Props) {
 
   const handleResend = async () => {
     try {
-      const mode = isSignup ? 'signup' : 'login';
-      await authService.sendOTP(phoneNumber, '+91', mode);
+      await authService.sendOTP(phoneNumber, '+91', 'auto');
       setCountdown(30);
       setCanResend(false);
       Alert.alert('OTP Sent', 'A new OTP has been sent to your phone.');

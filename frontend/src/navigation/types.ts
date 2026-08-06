@@ -3,7 +3,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
-  OTP: { phoneNumber: string; isSignup: boolean };
+  OTP: { phoneNumber: string };
   ProfileSetup: undefined;
 };
 

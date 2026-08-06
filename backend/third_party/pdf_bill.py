@@ -243,7 +243,7 @@ def generate_booking_invoice(booking) -> bytes:
         + (booking.security_deposit or 0)
     )
     price_rows.append(["Payable to host directly", fmt(pay_to_host)])
-    price_rows.append(["RoomBuddy platform fee (paid online)", fmt(booking.platform_fee)])
+    price_rows.append(["RoomBuddy booking fee (paid online)", fmt(booking.platform_fee)])
 
     n = len(price_rows)
 

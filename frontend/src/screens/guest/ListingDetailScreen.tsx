@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import MapView, { Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, RADIUS, SHADOW, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeColors } from '../../context/ThemeContext';
@@ -136,6 +136,8 @@ export default function GuestListingDetailScreen() {
   const { isAuthenticated } = useAuth();
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  // Bottom inset so the fixed bar clears the Android nav bar / iOS home indicator.
+  const insets = useSafeAreaInsets();
 
   const SectionTitle = ({ label }: { label: string }) => (
     <View style={styles.sectionHeader}>
@@ -216,19 +218,32 @@ export default function GuestListingDetailScreen() {
     return d.toISOString().slice(0, 10);
   };
 
+  // Monthly picker phase: 'start' means the next tap picks a fresh move-in
+  // date; 'end' means a move-in is already picked and the next tap extends
+  // move-out. Without this, once checkIn was pre-filled (e.g. from search
+  // defaults) every later tap only extended checkOut and move-in could never
+  // be changed to a new date.
+  const [monthlyStep, setMonthlyStep] = useState<'start' | 'end'>('start');
+
   const onDayPress = (day: DateData) => {
     // Monthly: a range picker with a MINIMUM of min_months. First tap (or a tap
-    // on/before the current move-in) sets move-in and defaults move-out to the
-    // minimum, so a single tap is already valid. A later tap extends move-out —
-    // clamped so it can never drop below the minimum stay.
+    // on/before the current move-in, or one that falls short of the minimum
+    // stay) starts a fresh selection: move-in = tapped date, move-out defaults
+    // to the minimum. A later tap — once a valid move-in/move-out pair exists —
+    // extends move-out; the tap after that starts a fresh selection again.
     if (isMonthlyListing) {
       const minMonths = listing?.min_months || 1;
-      if (!checkIn || day.dateString <= checkIn) {
+      const minEnd = checkIn ? addMonths(checkIn, minMonths) : null;
+      const canExtend =
+        monthlyStep === 'end' && checkIn && minEnd && day.dateString >= minEnd;
+
+      if (canExtend) {
+        setCheckOut(day.dateString);
+        setMonthlyStep('start');
+      } else {
         setCheckIn(day.dateString);
         setCheckOut(addMonths(day.dateString, minMonths));
-      } else {
-        const minEnd = addMonths(checkIn, minMonths);
-        setCheckOut(day.dateString >= minEnd ? day.dateString : minEnd);
+        setMonthlyStep('end');
       }
       return;
     }
@@ -999,7 +1014,7 @@ export default function GuestListingDetailScreen() {
       </ScrollView>
 
       {/* ── Sticky bar ── */}
-      <View style={styles.stickyBar}>
+      <View style={[styles.stickyBar, { paddingBottom: SPACING.md + insets.bottom }]}>
         <View>
           <Text style={styles.stickyPrice}>
             ₹{(listing.rental_type === 'monthly'
@@ -1442,7 +1457,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   allReviewsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   allReviewsTitle: { fontSize: 16, ...FONTS.bold, color: COLORS.text },
 
-  stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, paddingBottom: 30, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
+  stickyBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, backgroundColor: COLORS.bg, borderTopWidth: 1, borderTopColor: COLORS.border, ...SHADOW.md },
   stickyPrice: { fontSize: 24, ...FONTS.serifMedium, color: COLORS.text, letterSpacing: -0.3 },
   stickyPriceUnit: { fontSize: 13, ...FONTS.regular, color: COLORS.textSec },
   stickyRating: { fontSize: 12, color: COLORS.textSec, marginTop: 2 },

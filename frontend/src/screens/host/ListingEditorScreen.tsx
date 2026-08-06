@@ -5,6 +5,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
@@ -23,8 +24,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
+import GooglePlacesInput, { GooglePlacesInputHandle } from '../../components/forms/GooglePlacesInput';
 import { CONFIG } from '../../constants/config';
 import { FONTS, RADIUS, SPACING, ThemeColors, ThemeShadows } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -121,7 +123,7 @@ const INIT: FormData = {
   totalFloors: '',
   apartmentName: '',
   locality: '',
-  city: 'Bengaluru',
+  city: '',
   googlePlaceId: '',
   formattedAddress: '',
   latitude: null,
@@ -766,80 +768,14 @@ const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   timeSel: { color: COLORS.primary, ...FONTS.semibold },
 });
 
-// ─── Step 0: Welcome ──────────────────────────────────────────────────────────
-
-function StepWelcome({ onNext }: { onNext: () => void }) {
-  const { colors: COLORS, shadows: SHADOW } = useTheme();
-  const wlSt = useMemo(() => makeWlStyles(COLORS, SHADOW), [COLORS, SHADOW]);
-  return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={wlSt.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={wlSt.hero}>
-        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.chip, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md }}>
-          <Ionicons name="home-outline" size={32} color={COLORS.primary} />
-        </View>
-        <Text style={wlSt.title}>List your spare room</Text>
-        <Text style={wlSt.sub}>
-          Turn your temporarily empty room into income.{'\n'}Takes just a few minutes.
-        </Text>
-      </View>
-
-      {[
-        { icon: 'create-outline' as const, label: 'Property & room details', desc: 'Address, room type & amenities' },
-        { icon: 'people-outline' as const, label: 'Flatmate profiles', desc: 'Who else lives there' },
-        { icon: 'camera-outline' as const, label: 'Photos', desc: 'Show off your space' },
-        { icon: 'pricetag-outline' as const, label: 'Pricing & availability', desc: 'Set your rate & calendar' },
-      ].map((s) => (
-        <View key={s.label} style={wlSt.card}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-            <Ionicons name={s.icon} size={20} color={COLORS.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, ...FONTS.semibold, color: COLORS.text }}>{s.label}</Text>
-            <Text style={{ fontSize: 13, color: COLORS.textSec, marginTop: 2 }}>{s.desc}</Text>
-          </View>
-        </View>
-      ))}
-
-      <TouchableOpacity style={wlSt.cta} onPress={onNext} activeOpacity={0.85}>
-        <Text style={{ color: COLORS.onPrimary, fontSize: 16, ...FONTS.semibold }}>Get started</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
-}
-
-const makeWlStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.create({
-  content: { padding: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.xxl },
-  hero: { alignItems: 'center', marginBottom: SPACING.xl },
-  title: { fontSize: 28, ...FONTS.bold, color: COLORS.primary, textAlign: 'center', marginBottom: SPACING.sm },
-  sub: { fontSize: 15, color: COLORS.textSec, textAlign: 'center', lineHeight: 22 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.md,
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.md,
-    backgroundColor: COLORS.surface,
-    ...SHADOW.md,
-  },
-  cta: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: SPACING.xl,
-  },
-});
-
 // ─── Step 1: Your Property ────────────────────────────────────────────────────
 
 function StepProperty({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const prpSt = useMemo(() => makePrpStyles(COLORS), [COLORS]);
+  const placesRef = useRef<GooglePlacesInputHandle>(null);
+  const [locating, setLocating] = useState(false);
   const isValid =
     !!form.apartmentType &&
     form.floorNumber.trim().length > 0 &&
@@ -856,14 +792,63 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
     return null;
   };
 
+  const handleUseCurrentLocation = async () => {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location permission needed',
+          'Enable location access in Settings to use this, or enter your address manually.'
+        );
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      if (!address) {
+        Alert.alert('Location not found', "Couldn't determine your address. Please enter it manually.");
+        return;
+      }
+
+      const city = address.city || address.subregion || '';
+      const state = address.region || '';
+      const pincode = address.postalCode || '';
+      const locality = [address.name, address.street, address.district].filter(Boolean).join(', ') || address.subregion || city;
+      const formattedAddress = [locality, city, state].filter(Boolean).join(', ');
+
+      update({
+        locality,
+        city,
+        state,
+        pincode,
+        googlePlaceId: '',
+        formattedAddress,
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      placesRef.current?.setAddressText(formattedAddress);
+    } catch {
+      Alert.alert('Error', 'Failed to get your location. Please try again or enter it manually.');
+    } finally {
+      setLocating(false);
+    }
+  };
+
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={stSt.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={stSt.content}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardOpeningTime={0}
+    >
         <Text style={stSt.title}>Your Property</Text>
         <Text style={stSt.sub}>Share your apartment details so guests know what to expect.</Text>
 
@@ -905,7 +890,23 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
           onChange={(v) => update({ apartmentName: v })}
         />
         <SectionLabel label="Location" />
+        <TouchableOpacity
+          style={prpSt.useLocationBtn}
+          onPress={handleUseCurrentLocation}
+          disabled={locating}
+          activeOpacity={0.7}
+        >
+          {locating ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Ionicons name="locate-outline" size={16} color={COLORS.primary} />
+          )}
+          <Text style={prpSt.useLocationTxt}>
+            {locating ? 'Detecting your location...' : 'Use current location'}
+          </Text>
+        </TouchableOpacity>
         <GooglePlacesInput
+          ref={placesRef}
           value={form.formattedAddress || form.locality}
           placeholder="Search for your area, locality..."
           onSelect={(place) => {
@@ -971,8 +972,7 @@ function StepProperty({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -980,6 +980,14 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   // Negative marginTop pulls the tip up over the GooglePlacesInput wrapper's
   // own 16px marginBottom, so it sits snug under the field instead of adrift.
   locHint: { fontSize: 12.5, color: COLORS.textMut, ...FONTS.regular, marginTop: -8, marginBottom: 14, lineHeight: 17 },
+  useLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.sm,
+  },
+  useLocationTxt: { fontSize: 13, color: COLORS.primary, ...FONTS.semibold },
   aptGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -994,6 +1002,9 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderColor: 'transparent',
     backgroundColor: COLORS.surface,
     alignItems: 'center',
+    // Android clips the border/background incompletely around rounded corners
+    // when elevation is combined with borderRadius unless overflow is hidden.
+    overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   aptCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
@@ -1026,13 +1037,15 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={stSt.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={stSt.content}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardOpeningTime={0}
+    >
         <Text style={stSt.title}>Room Details</Text>
         <Text style={stSt.sub}>Describe the room you're renting out.</Text>
 
@@ -1120,8 +1133,7 @@ function StepRoom({ form, update, onNext, onBack }: StepProps) {
         </View>
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -1133,6 +1145,9 @@ const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     backgroundColor: COLORS.surface,
+    // Android clips the border/background incompletely around rounded corners
+    // when elevation is combined with borderRadius unless overflow is hidden.
+    overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   typeCardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
@@ -1160,13 +1175,15 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={stSt.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={stSt.content}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardOpeningTime={0}
+    >
         <Text style={stSt.title}>Title & Description</Text>
         <Text style={stSt.sub}>This is the first thing guests see. Make it count!</Text>
 
@@ -1210,8 +1227,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
         )}
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -1244,7 +1260,6 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
 
   const displayName: string =
     user?.display_name || user?.first_name || user?.profile?.first_name || 'You';
-  const city: string = user?.city || user?.profile?.city || form.city;
 
   const saveFlatmate = () => {
     if (!draft.name.trim()) return;
@@ -1320,7 +1335,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
               Tap to add occupation & hobbies
             </Text>
           )}
-          {city ? <Text style={fmSt.detail}>{city}</Text> : null}
+          {form.hostHometown ? <Text style={fmSt.detail}>{form.hostHometown}</Text> : null}
         </View>
         <Ionicons name="pencil-outline" size={16} color={COLORS.textMut} />
       </TouchableOpacity>
@@ -1396,7 +1411,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
               <View style={fmSt.modalHeader}>
                 <Text style={fmSt.modalTitle}>Your profile</Text>
               </View>
-              <ScrollView keyboardShouldPersistTaps="handled">
+              <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" enableOnAndroid extraScrollHeight={20} keyboardOpeningTime={0}>
                 <Field
                   label="Age"
                   placeholder="e.g. 26"
@@ -1460,7 +1475,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                 >
                   <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
                 </TouchableOpacity>
-              </ScrollView>
+              </KeyboardAwareScrollView>
             </View>
           </TouchableOpacity>
         </KeyboardAvoidingView>
@@ -1482,7 +1497,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
               <View style={fmSt.modalHeader}>
                 <Text style={fmSt.modalTitle}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
               </View>
-              <ScrollView keyboardShouldPersistTaps="handled">
+              <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" enableOnAndroid extraScrollHeight={20} keyboardOpeningTime={0}>
                 <Field
                   label="Name"
                   placeholder="e.g. Arjun S."
@@ -1543,7 +1558,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
                 >
                   <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
                 </TouchableOpacity>
-              </ScrollView>
+              </KeyboardAwareScrollView>
             </View>
           </TouchableOpacity>
         </KeyboardAvoidingView>
@@ -1657,12 +1672,14 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-    <ScrollView
+    <KeyboardAwareScrollView
       style={{ flex: 1 }}
       contentContainerStyle={stSt.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardOpeningTime={0}
     >
       <Text style={stSt.title}>Amenities & Food</Text>
       <Text style={stSt.sub}>What's included in the stay? Guests see this before booking.</Text>
@@ -1723,8 +1740,7 @@ function StepAmenities({ form, update, onNext, onBack }: StepProps) {
       )}
 
       <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -2050,13 +2066,15 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={stSt.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={stSt.content}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardOpeningTime={0}
+    >
         <Text style={stSt.title}>Set Your Price</Text>
         <Text style={stSt.sub}>Are you subletting for a few months, or renting by the night?</Text>
 
@@ -2204,7 +2222,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             {mealCost > 0 && <PriceRow label="Meals (per day)" value={`₹${mealCost}`} />}
             <View style={prSt.divider} />
             <Text style={prSt.breakdownNote}>
-              Guests pay you directly for rent and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} platform fee to the guest at the time of booking.
+              Guests pay you directly for rent and meals. RoomBuddy charges a flat ₹{CONFIG.BOOKING_PLATFORM_FEE} booking fee to the guest at the time of booking.
             </Text>
             <Text style={[prSt.breakdownNote, prSt.breakdownNoteBold, { marginTop: 6 }]}>
               You receive 100% of your listed price.
@@ -2237,8 +2255,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
         )}
 
         <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -2322,13 +2339,15 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={stSt.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={stSt.content}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardOpeningTime={0}
+    >
         <Text style={stSt.title}>House Rules</Text>
         <Text style={stSt.sub}>Set clear expectations for your guests.</Text>
 
@@ -2375,8 +2394,7 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
         />
 
         <BottomNav onBack={onBack} onNext={onNext} nextLabel="Review & list" validate={validate} isValid={isValid} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -2904,12 +2922,11 @@ export default function ListingEditorScreen() {
   const route = useRoute<RouteProp<HostStackParamList, 'ListingEditor'>>();
   const { user } = useAuth();
   const COLORS = useThemeColors();
-  const hdrSt = useMemo(() => makeHdrStyles(COLORS), [COLORS]);
   const listingId = route.params?.listingId;
   const resumeDraft = route.params?.resumeDraft;
   const draftKey = user?.user_id ? getDraftKey(user.user_id) : null;
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(INIT);
   const [submitting, setSubmitting] = useState(false);
   const [loadingListing, setLoadingListing] = useState(false);
@@ -2942,7 +2959,7 @@ export default function ListingEditorScreen() {
         try {
           const saved = JSON.parse(data);
           setForm(saved.form ?? INIT);
-          setStep(saved.step ?? 0);
+          setStep(saved.step ?? 1);
         } catch {
           AsyncStorage.removeItem(draftKey);
         }
@@ -2960,7 +2977,7 @@ export default function ListingEditorScreen() {
 
   const back = useCallback(
     () => {
-      if (step === 0 || (listingId && step === 9)) {
+      if (step === 1 || (listingId && step === 9)) {
         navigation.goBack();
       } else {
         setStep((s) => s - 1);
@@ -3002,7 +3019,6 @@ export default function ListingEditorScreen() {
 
   const renderStep = () => {
     switch (step) {
-      case 0: return <StepWelcome onNext={next} />;
       case 1: return <StepProperty {...stepProps} />;
       case 2: return <StepRoom {...stepProps} />;
       case 3: return <StepTitle {...stepProps} />;
@@ -3040,15 +3056,8 @@ export default function ListingEditorScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}>
-      {step === 0 && (
-        <View style={hdrSt.row}>
-          <TouchableOpacity onPress={back} style={{ width: 36, height: 36, justifyContent: 'center' }}>
-            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
-          </TouchableOpacity>
-        </View>
-      )}
-      {step > 0 && <EditorHeader onSaveExit={saveExit} />}
-      {step > 0 && step < 10 && <ProgressBar step={step} />}
+      <EditorHeader onSaveExit={saveExit} />
+      {step < 10 && <ProgressBar step={step} />}
       {renderStep()}
     </View>
   );

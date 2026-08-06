@@ -352,6 +352,7 @@ def get_user_profile(user: User) -> dict:
         date_of_birth = profile.date_of_birth.isoformat() if profile.date_of_birth else None
         profile_photo_url = get_photo_url(profile.profile_photo_url) if profile.profile_photo_url else None
     except UserProfile.DoesNotExist:
+        profile = None
         first_name = ""
         last_name = ""
         city = ""

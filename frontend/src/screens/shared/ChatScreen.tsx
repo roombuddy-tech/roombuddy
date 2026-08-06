@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     ActivityIndicator,
     FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -13,7 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +41,20 @@ export default function ChatScreen() {
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
   const { userRole } = useAuth();
+
+  // Android 15 (and iOS home-indicator devices) draw edge-to-edge, so the bar
+  // needs the bottom inset — but only while the keyboard is closed. With the
+  // keyboard up the inset area is covered, and keeping it would leave a gap.
+  const insets = useSafeAreaInsets();
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s1 = Keyboard.addListener(showEvt, () => setKeyboardUp(true));
+    const s2 = Keyboard.addListener(hideEvt, () => setKeyboardUp(false));
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
+  const barPad = keyboardUp ? 0 : insets.bottom;
 
   // Tapping the property name opens that listing. This screen is shared by
   // both roles, and each stack registers the listing screen under its own name.
@@ -137,6 +152,8 @@ export default function ChatScreen() {
   );
 
   return (
+    // The bottom inset is applied to the input bar itself (see `barPad`) rather
+    // than here, so it can collapse while the keyboard is open.
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -161,7 +178,7 @@ export default function ChatScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {loading ? (
@@ -193,12 +210,12 @@ export default function ChatScreen() {
         )}
 
         {chatDisabled ? (
-          <View style={styles.chatDisabledBar}>
+          <View style={[styles.chatDisabledBar, { paddingBottom: 14 + barPad }]}>
             <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMut} />
             <Text style={styles.chatDisabledTxt}>Messaging is disabled for this booking</Text>
           </View>
         ) : (
-          <View style={styles.inputBar}>
+          <View style={[styles.inputBar, { paddingBottom: SPACING.sm + barPad }]}>
             <TextInput
               style={styles.input}
               value={draft}

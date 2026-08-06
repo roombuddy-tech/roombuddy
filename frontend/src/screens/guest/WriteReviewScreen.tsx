@@ -5,16 +5,14 @@ import React, { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
@@ -39,6 +37,8 @@ export default function WriteReviewScreen() {
   const { bookingId, listingTitle, hostName } = route.params;
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
+  // Bottom inset so the fixed bar clears the Android nav bar / iOS home indicator.
+  const insets = useSafeAreaInsets();
 
   const StarRow = ({ rating, onRate }: { rating: number; onRate: (n: number) => void }) => (
     <View style={styles.stars}>
@@ -102,7 +102,7 @@ export default function WriteReviewScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
@@ -111,7 +111,14 @@ export default function WriteReviewScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          extraScrollHeight={20}
+          keyboardOpeningTime={0}
+        >
           <Text style={styles.propertyName} numberOfLines={2}>{listingTitle}</Text>
           <Text style={styles.hostLine}>Hosted by {hostName}</Text>
 
@@ -165,9 +172,9 @@ export default function WriteReviewScreen() {
               textAlignVertical="top"
             />
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: SPACING.lg + insets.bottom }]}>
           <TouchableOpacity
             style={[styles.submitBtn, (overall === 0 || submitting) && styles.submitBtnDisabled]}
             onPress={onSubmit}
@@ -179,7 +186,7 @@ export default function WriteReviewScreen() {
               : <Text style={styles.submitBtnTxt}>Submit review</Text>}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
