@@ -35,8 +35,6 @@ export default function ProfileSetupScreen({ navigation }: Props) {
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [firstNameTouched, setFirstNameTouched] = useState(false);
   const [lastNameTouched, setLastNameTouched] = useState(false);
@@ -49,31 +47,6 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
   const isFormValid =
     firstName.trim().length >= 2 && lastName.trim().length >= 1 && acceptedTerms;
-
-  const handleVerifyEmail = async () => {
-    if (!email.trim() || !isValidEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
-      return;
-    }
-    setSendingEmail(true);
-    try {
-      await api.post(ENDPOINTS.USER.SEND_EMAIL_VERIFICATION, {
-        email: email.trim(),
-      });
-      setEmailSent(true);
-      Alert.alert(
-        'Verification Sent',
-        'Check your inbox and click the verification link.'
-      );
-    } catch (err: any) {
-      Alert.alert(
-        'Error',
-        getErrorMessage(err, 'Failed to send verification email.')
-      );
-    } finally {
-      setSendingEmail(false);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
@@ -232,44 +205,12 @@ export default function ProfileSetupScreen({ navigation }: Props) {
           <TextInput
             style={styles.input}
             value={email}
-            onChangeText={(t) => {
-              setEmail(t);
-              setEmailSent(false);
-            }}
+            onChangeText={setEmail}
             placeholder="Enter your email address"
             placeholderTextColor={COLORS.textMut}
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          {email.trim() && isValidEmail(email) && !emailSent && (
-            <TouchableOpacity
-              style={{ marginTop: 8, alignSelf: 'flex-start' }}
-              onPress={handleVerifyEmail}
-              disabled={sendingEmail}
-            >
-              <Text
-                style={{
-                  color: COLORS.primary,
-                  ...FONTS.semibold,
-                  fontSize: 14,
-                }}
-              >
-                {sendingEmail ? 'Sending...' : 'Verify email now'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {emailSent && (
-            <Text
-              style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: '#10B981',
-                ...FONTS.medium,
-              }}
-            >
-              ✓ Verification link sent — check your inbox
-            </Text>
-          )}
         </View>
 
         {/* Gender */}

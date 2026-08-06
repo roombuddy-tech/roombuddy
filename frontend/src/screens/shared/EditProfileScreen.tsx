@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GooglePlacesInput from '../../components/forms/GooglePlacesInput';
 import { ENDPOINTS } from '../../constants/endpoints';
@@ -129,11 +130,7 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
   const minDate = new Date(1920, 0, 1);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
@@ -149,10 +146,13 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
-        <ScrollView
+        <KeyboardAwareScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.form}
+          enableOnAndroid
+          extraScrollHeight={20}
+          keyboardOpeningTime={0}
         >
           <View style={styles.field}>
             <Text style={styles.label}>First name</Text>
@@ -219,9 +219,9 @@ export default function EditProfileScreen({ visible, onClose }: EditProfileProps
               onSelect={(place) => setCity(place.city || place.description)}
             />
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

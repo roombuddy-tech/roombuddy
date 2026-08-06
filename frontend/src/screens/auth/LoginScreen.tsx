@@ -5,7 +5,7 @@ import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import PhoneInput from '../../components/forms/PhoneInput';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import Button from '../../components/ui/Button';
-import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
+import { FONTS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
 import { authService } from '../../services/auth';
 import { getErrorMessage } from '../../utils/errors';
@@ -20,7 +20,6 @@ export default function LoginScreen({ navigation }: Props) {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [accountNotFound, setAccountNotFound] = useState(false);
 
   const handleContinue = async () => {
     if (!phone) {
@@ -36,29 +35,12 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
 
     try {
-      // Try auto mode first — works for existing users
-      await authService.sendOTP(phone, '+91', 'login');
-      navigation.navigate('OTP', { phoneNumber: phone, isSignup: false });
+      // "auto" mode finds-or-creates the account and always sends an OTP —
+      // new vs. existing is resolved after verification (see OTPScreen).
+      await authService.sendOTP(phone, '+91', 'auto');
+      navigation.navigate('OTP', { phoneNumber: phone });
     } catch (err: any) {
-      const code = err?.response?.data?.code;
-      if (code === 'ACCOUNT_NOT_FOUND') {
-        setAccountNotFound(true);
-      } else {
-        Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP. Please try again.'));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    setAccountNotFound(false);
-    setLoading(true);
-    try {
-      await authService.sendOTP(phone, '+91', 'signup');
-      navigation.navigate('OTP', { phoneNumber: phone, isSignup: true });
-    } catch (err: any) {
-      Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP.'));
+      Alert.alert('Error', getErrorMessage(err, 'Failed to send OTP. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -92,7 +74,6 @@ export default function LoginScreen({ navigation }: Props) {
               onChangeText={(text) => {
                 setPhone(text);
                 setError('');
-                setAccountNotFound(false);
               }}
               error={error}
               autoFocus
@@ -107,23 +88,6 @@ export default function LoginScreen({ navigation }: Props) {
               disabled={phone.length < 10}
               full
             />
-
-            {accountNotFound && (
-              <View style={styles.notFoundBox}>
-                <View style={styles.notFoundIconWrap}>
-                  <Ionicons name="person-add-outline" size={20} color={COLORS.accent} />
-                </View>
-                <View style={styles.notFoundContent}>
-                  <Text style={styles.notFoundTitle}>No account found</Text>
-                  <Text style={styles.notFoundDesc}>
-                    We couldn't find an account with this number.
-                  </Text>
-                  <Text style={styles.signUpLink} onPress={handleSignUp}>
-                    Create a new account →
-                  </Text>
-                </View>
-              </View>
-            )}
           </View>
         </View>
 
@@ -209,44 +173,5 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
     color: COLORS.primary,
     ...FONTS.medium,
     textDecorationLine: 'underline',
-  },
-  // "No account found" card
-  notFoundBox: {
-    flexDirection: 'row',
-    gap: 14,
-    backgroundColor: COLORS.warm,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: '#FFE0D6',
-  },
-  notFoundIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.accentAlpha,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  notFoundContent: {
-    flex: 1,
-  },
-  notFoundTitle: {
-    fontSize: 15,
-    ...FONTS.bold,
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  notFoundDesc: {
-    fontSize: 13,
-    color: COLORS.textSec,
-    lineHeight: 19,
-    marginBottom: 8,
-  },
-  signUpLink: {
-    fontSize: 14,
-    color: COLORS.accent,
-    ...FONTS.bold,
   },
 });

@@ -1,9 +1,13 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_PLACES_API_KEY } from '../../constants/maps';
 import { FONTS, RADIUS, SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
+
+export interface GooglePlacesInputHandle {
+  setAddressText: (text: string) => void;
+}
 
 export interface PlaceResult {
   description: string;
@@ -28,7 +32,10 @@ function extractComponent(details: GooglePlaceDetail, type: string): string {
   return comp?.long_name ?? '';
 }
 
-export default function GooglePlacesInput({ value, placeholder, onSelect, onChangeText }: Props) {
+function GooglePlacesInput(
+  { value, placeholder, onSelect, onChangeText }: Props,
+  forwardedRef: React.Ref<GooglePlacesInputHandle>
+) {
   const ref = useRef<any>(null);
   const COLORS = useThemeColors();
   const styles = useMemo(() => makeStyles(COLORS), [COLORS]);
@@ -39,6 +46,10 @@ export default function GooglePlacesInput({ value, placeholder, onSelect, onChan
     }
   }, []);
 
+  useImperativeHandle(forwardedRef, () => ({
+    setAddressText: (text: string) => ref.current?.setAddressText(text),
+  }));
+
   return (
     <View style={styles.wrap}>
       <GooglePlacesAutocomplete
@@ -46,7 +57,22 @@ export default function GooglePlacesInput({ value, placeholder, onSelect, onChan
         placeholder={placeholder ?? 'Search for your locality...'}
         fetchDetails
         onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => {
-          if (!detail) return;
+          if (!detail) {
+            // Place Details lookup failed (network hiccup, rate limit, etc.) —
+            // still commit the picked suggestion instead of silently dropping
+            // it and leaving whatever was manually typed.
+            onSelect({
+              description: data.description,
+              placeId: data.place_id ?? '',
+              lat: 0,
+              lng: 0,
+              city: data.structured_formatting?.main_text || data.description,
+              state: '',
+              pincode: '',
+              addressLine1: data.structured_formatting?.main_text || '',
+            });
+            return;
+          }
           const loc = detail.geometry?.location;
           const city =
             extractComponent(detail, 'locality') ||
@@ -92,10 +118,15 @@ export default function GooglePlacesInput({ value, placeholder, onSelect, onChan
         debounce={300}
         minLength={2}
         nearbyPlacesAPI="GooglePlacesSearch"
+        autoFillOnNotFound
+        onFail={(error) => console.warn('GooglePlacesInput: details request failed', error)}
+        onNotFound={() => console.warn('GooglePlacesInput: place details not found')}
       />
     </View>
   );
 }
+
+export default forwardRef(GooglePlacesInput);
 
 const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   wrap: {

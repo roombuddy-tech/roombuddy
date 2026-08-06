@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SPACING, ThemeColors } from '../../constants/theme';
 import { useThemeColors } from '../../context/ThemeContext';
@@ -22,22 +23,29 @@ export default function ScreenWrapper({ children, scroll = true, padded = true, 
 
   return (
     <SafeAreaView style={[styles.container, bg ? { backgroundColor: bg } : null]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {scroll ? (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {content}
-          </ScrollView>
-        ) : (
-          content
-        )}
-      </KeyboardAvoidingView>
+      {scroll ? (
+        // KeyboardAwareScrollView (not KeyboardAvoidingView + ScrollView) so the
+        // focused input — or anything rendered below it, like a places-autocomplete
+        // dropdown — actually scrolls above the keyboard on both platforms.
+        <KeyboardAwareScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          extraScrollHeight={20}
+          keyboardOpeningTime={0}
+        >
+          {content}
+        </KeyboardAwareScrollView>
+      ) : (
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {content}
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
