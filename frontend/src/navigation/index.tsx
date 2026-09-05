@@ -1,4 +1,5 @@
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import type { LinkingOptions } from '@react-navigation/native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -33,6 +34,27 @@ const GUEST_ROUTE = 'GuestRole';
 const HOST_ROUTE = 'HostRole';
 /** Root screens of each stack — swiping is only allowed while on these. */
 const TAB_ROOTS = ['GuestTabs', 'HostTabs'];
+
+// Shared listing links (https://roombuddy.co.in/listing.html?listingId=...)
+// open straight to the listing when the app is installed — via Universal
+// Links (iOS) / App Links (Android), configured in app.config.js. This maps
+// that URL to the "GuestListingDetail" screen wherever it's currently
+// mounted: directly under BrowseStack when logged out, or nested under the
+// Guest tab of RoleTabs when logged in. Only one of these is ever actually
+// present at a time, so listing them both here is harmless.
+const linking: LinkingOptions<any> = {
+  prefixes: ['https://roombuddy.co.in'],
+  config: {
+    screens: {
+      GuestListingDetail: 'listing.html',
+      [GUEST_ROUTE]: {
+        screens: {
+          GuestListingDetail: 'listing.html',
+        },
+      },
+    },
+  },
+};
 
 function RoleTabs({ swipeEnabled }: { swipeEnabled: boolean }) {
   const { userRole, switchRole } = useAuth();
@@ -103,7 +125,7 @@ export default function Navigation() {
   }
 
   return (
-    <NavigationContainer ref={navRef} onStateChange={handleStateChange}>
+    <NavigationContainer ref={navRef} onStateChange={handleStateChange} linking={linking}>
       {!isAuthenticated && didLogout ? (
         <AuthStack />
       ) : !isAuthenticated ? (

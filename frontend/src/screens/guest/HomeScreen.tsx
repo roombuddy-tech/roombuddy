@@ -109,7 +109,12 @@ export default function HomeScreen() {
       if (!coordsRef.current) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          // A cached fix resolves near-instantly; requesting a fresh GPS fix
+          // directly (getCurrentPositionAsync) is often slow or times out on
+          // Android, especially indoors, leaving distance_km silently missing.
+          const loc =
+            (await Location.getLastKnownPositionAsync()) ??
+            (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
           params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
           coordsRef.current = params;
         } else {
@@ -275,11 +280,17 @@ export default function HomeScreen() {
         Alert.alert('Location needed', 'Allow location access to find rooms near you.');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const loc =
+        (await Location.getLastKnownPositionAsync()) ??
+        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
       setSearchLat(loc.coords.latitude);
       setSearchLng(loc.coords.longitude);
+      // "Nearby" is display text for the search box only — it must NOT be
+      // sent as the API's text-search term, or the backend narrows results
+      // to listings whose title/address literally contains "Nearby" (i.e.
+      // none), discarding the lat/lng-based nearby search entirely.
       setQuery('Nearby');
-      doSearch({ lat: loc.coords.latitude, lng: loc.coords.longitude, q: 'Nearby' });
+      doSearch({ lat: loc.coords.latitude, lng: loc.coords.longitude, q: '' });
     } catch {
       Alert.alert('Error', "Couldn't get your location. Please try again.");
     }

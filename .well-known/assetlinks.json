@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.co.roombuddy.app",
+      "sha256_cert_fingerprints": ["D1:9D:C7:9B:B1:05:DC:88:41:FB:FA:0F:53:22:A3:FC:15:69:97:2F:17:36:E1:25:31:85:5F:0C:B4:7F:7E:FB"]
+    }
+  }
+]
