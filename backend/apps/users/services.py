@@ -300,6 +300,14 @@ def complete_user_profile(user: User, data: dict) -> dict:
     user.is_profile_complete = True
     user.save(update_fields=["email", "email_verified_at", "is_profile_complete", "updated_at"])
 
+    try:
+        from third_party.admin_alerts import notify_admin
+        name = f"{data['first_name']} {data['last_name']}".strip()
+        phone = f"{user.phone_country_code}{user.phone_number}" if user.phone_number else ""
+        notify_admin(f"🆕 New user joined\n{name} ({phone})")
+    except Exception:
+        logger.exception("admin new-user alert failed")
+
     return {
         "user_id": str(user.id),
         "display_name": profile.display_name,

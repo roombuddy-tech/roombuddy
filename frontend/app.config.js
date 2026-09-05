@@ -17,6 +17,9 @@ module.exports = {
     ios: {
       bundleIdentifier: "in.co.roombuddy.app",
       supportsTablet: true,
+      // Lets a tapped https://roombuddy.co.in/listing.html link open the app
+      // directly instead of Safari, when the app is installed.
+      associatedDomains: ["applinks:roombuddy.co.in"],
       infoPlist: {
         NSPhotoLibraryUsageDescription:
           "RoomBuddy needs access to your photos so you can upload pictures of your room when creating a listing — for example, photos of the bedroom and bathroom that guests see before booking.",
@@ -42,6 +45,22 @@ module.exports = {
           apiKey: process.env.GOOGLE_MAPS_API_KEY_ANDROID,
         },
       },
+      // Lets a tapped https://roombuddy.co.in/listing.html link open the app
+      // directly instead of the browser, when the app is installed.
+      intentFilters: [
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [
+            {
+              scheme: "https",
+              host: "roombuddy.co.in",
+              pathPrefix: "/listing.html",
+            },
+          ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+      ],
     },
     web: {
       favicon: "./assets/favicon.png",

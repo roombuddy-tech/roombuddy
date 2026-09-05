@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoomBuddy</title>
+  <meta name="robots" content="noindex" />
+</head>
+<body>
+  <!--
+    Reached only when the RoomBuddy app is NOT installed — if it is,
+    Universal Links (iOS) / App Links (Android) intercept this URL before it
+    ever loads and open the app directly to the shared listing instead.
+  -->
+  <script>
+    (function () {
+      var IOS_STORE_URL = 'https://apps.apple.com/in/app/roombuddy-room-rentals/id6784737607';
+      var ANDROID_STORE_URL = 'https://play.google.com/store/apps/details?id=in.co.roombuddy.app';
+      var ua = navigator.userAgent || navigator.vendor || '';
+
+      if (/iPad|iPhone|iPod/.test(ua)) {
+        window.location.replace(IOS_STORE_URL);
+      } else if (/android/i.test(ua)) {
+        window.location.replace(ANDROID_STORE_URL);
+      } else {
+        document.getElementById('fallback').style.display = 'block';
+      }
+    })();
+  </script>
+  <div id="fallback" style="display:none; font-family: sans-serif; text-align:center; padding: 40px 20px;">
+    <p>Get the RoomBuddy app to view this listing:</p>
+    <p>
+      <a href="https://apps.apple.com/in/app/roombuddy-room-rentals/id6784737607">iOS App Store</a>
+      &nbsp;|&nbsp;
+      <a href="https://play.google.com/store/apps/details?id=in.co.roombuddy.app">Google Play</a>
+    </p>
+  </div>
+  <noscript>
+    <p>Get the RoomBuddy app to view this listing:
+      <a href="https://apps.apple.com/in/app/roombuddy-room-rentals/id6784737607">iOS App Store</a> |
+      <a href="https://play.google.com/store/apps/details?id=in.co.roombuddy.app">Google Play</a>
+    </p>
+  </noscript>
+</body>
+</html>

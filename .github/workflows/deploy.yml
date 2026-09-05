@@ -65,7 +65,20 @@ jobs:
             --exclude "*.md" \
             --exclude "*.py" \
             --exclude "*.json" \
+            --exclude ".well-known/*" \
             --delete
+
+      # Uploaded separately from the sync above so each gets the exact
+      # content-type Apple/Google's link-verification fetchers require —
+      # the generic sync excludes *.json and would otherwise guess wrong.
+      - name: Upload app link verification files
+        run: |
+          aws s3 cp .well-known/apple-app-site-association \
+            s3://roombuddy.co.in/.well-known/apple-app-site-association \
+            --content-type "application/json"
+          aws s3 cp .well-known/assetlinks.json \
+            s3://roombuddy.co.in/.well-known/assetlinks.json \
+            --content-type "application/json"
 
       - name: Invalidate CloudFront cache
         run: |

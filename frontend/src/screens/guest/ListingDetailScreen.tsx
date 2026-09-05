@@ -15,6 +15,7 @@ import {
   NativeSyntheticEvent,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -402,6 +403,19 @@ export default function GuestListingDetailScreen() {
     listing.room.bathroom_type === 'attached' ? 'Attached bath' : listing.room.bathroom_type === 'shared' ? 'Shared bath' : null,
   ].filter(Boolean);
 
+  const handleShare = async () => {
+    // Opens straight to this listing on tap if the app is installed (Universal
+    // Links / App Links, configured in app.config.js); otherwise it lands on
+    // /listing.html which redirects to the App Store / Play Store.
+    const shareUrl = `https://roombuddy.co.in/listing.html?listingId=${listing.listing_id}`;
+    try {
+      await Share.share({
+        message: `Check out this stay on RoomBuddy — ${listing.title}\n${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch {}
+  };
+
   const handleBookNow = () => {
     if (!checkIn || !checkOut) return;
     setShowBookModal(false);
@@ -472,6 +486,9 @@ export default function GuestListingDetailScreen() {
           )}
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+            <Ionicons name="share-outline" size={20} color="#1a1a1a" />
           </TouchableOpacity>
           {photoUrls.length > 0 && (
             <View style={styles.photoCounter}>
@@ -1292,6 +1309,7 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   photo: { width: SCREEN_W, height: 300 },
   photoPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   backBtn: { position: 'absolute', top: 14, left: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', ...SHADOW.sm },
+  shareBtn: { position: 'absolute', top: 14, right: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', ...SHADOW.sm },
   photoCounter: { position: 'absolute', bottom: 14, right: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.pill },
   photoTag: { position: 'absolute', bottom: 14, left: 14, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
   photoTagTxt: { fontSize: 12, color: '#fff', ...FONTS.medium, textTransform: 'capitalize' },

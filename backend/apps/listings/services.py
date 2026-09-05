@@ -583,7 +583,13 @@ def create_listing(user: User, data: dict) -> dict:
     try:
         from third_party.admin_alerts import notify_admin
         state = "LIVE" if listing.status == Listing.Status.LIVE else "PENDING review"
-        notify_admin(f"📋 New listing ({state})\n“{listing.title}” — {prop.city_name or ''}")
+        host_profile = getattr(user, "profile", None)
+        host_name = f"{getattr(host_profile, 'first_name', '')} {getattr(host_profile, 'last_name', '')}".strip() or "Unknown host"
+        host_phone = f"{user.phone_country_code}{user.phone_number}" if user.phone_number else ""
+        notify_admin(
+            f"📋 New listing ({state})\n“{listing.title}” — {prop.city_name or ''}\n"
+            f"Host: {host_name} ({host_phone})"
+        )
     except Exception:
         logger.exception("admin listing alert failed")
 
