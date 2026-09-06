@@ -1,9 +1,8 @@
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import type { LinkingOptions } from '@react-navigation/native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 import { ThemeColors } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useThemeColors } from '../context/ThemeContext';
@@ -36,25 +35,27 @@ const HOST_ROUTE = 'HostRole';
 const TAB_ROOTS = ['GuestTabs', 'HostTabs'];
 
 // Shared listing links (https://roombuddy.co.in/listing.html?listingId=...)
-// open straight to the listing when the app is installed — via Universal
-// Links (iOS) / App Links (Android), configured in app.config.js. This maps
-// that URL to the "GuestListingDetail" screen wherever it's currently
-// mounted: directly under BrowseStack when logged out, or nested under the
-// Guest tab of RoleTabs when logged in. Only one of these is ever actually
-// present at a time, so listing them both here is harmless.
-const linking: LinkingOptions<any> = {
-  prefixes: ['https://roombuddy.co.in'],
-  config: {
-    screens: {
-      GuestListingDetail: 'listing.html',
-      [GUEST_ROUTE]: {
-        screens: {
-          GuestListingDetail: 'listing.html',
-        },
-      },
-    },
-  },
-};
+// open the app via Universal Links (iOS) / App Links (Android) — configured
+// in app.config.js/entitlements, unaffected by anything below. Getting the
+// OS to open the app is only half the job though: once inside, something
+// still has to route to the right screen.
+//
+// React Navigation's own declarative `linking` config (NavigationContainer's
+// `linking` prop) is the usual way to do that, but it doesn't resolve
+// reliably here: this app swaps between four *entirely different* root
+// navigators depending on auth state (AuthStack / BrowseStack /
+// ProfileIncompleteStack / RoleTabs), rather than one root with conditional
+// screens — plus RoleTabs is a material-top-tab navigator wrapping nested
+// stacks. That shape isn't what the automatic path-matching is built for, and
+// in testing it consistently fell back to the default screen instead of the
+// shared listing. So this reads the incoming URL directly and navigates
+// imperatively instead, which sidesteps that matching entirely.
+function parseSharedListingId(url: string | null): string | null {
+  if (!url) return null;
+  const queryIndex = url.indexOf('?');
+  if (queryIndex === -1) return null;
+  return new URLSearchParams(url.slice(queryIndex + 1)).get('listingId');
+}
 
 function RoleTabs({ swipeEnabled }: { swipeEnabled: boolean }) {
   const { userRole, switchRole } = useAuth();
@@ -91,6 +92,30 @@ export default function Navigation() {
 
   const showRolePager = isAuthenticated && isProfileComplete;
 
+  // Handle a shared listing link — both the cold-start case (app was closed,
+  // this URL is why it launched) and the warm case (app already running).
+  // The navigator may not be mounted/ready yet right after a cold start, so
+  // retry briefly rather than giving up on the first check.
+  const navigateToSharedListing = useCallback((url: string | null) => {
+    const listingId = parseSharedListingId(url);
+    if (!listingId) return;
+
+    const tryNavigate = (attemptsLeft: number) => {
+      if (navRef.isReady()) {
+        (navRef as any).navigate('GuestListingDetail', { listingId });
+      } else if (attemptsLeft > 0) {
+        setTimeout(() => tryNavigate(attemptsLeft - 1), 150);
+      }
+    };
+    tryNavigate(20); // up to ~3s for the navigator to mount after a cold start
+  }, [navRef]);
+
+  useEffect(() => {
+    Linking.getInitialURL().then(navigateToSharedListing);
+    const sub = Linking.addEventListener('url', ({ url }) => navigateToSharedListing(url));
+    return () => sub.remove();
+  }, [navigateToSharedListing]);
+
   // Drive the pager when the role is changed elsewhere (the header toggle).
   useEffect(() => {
     if (!showRolePager || !navRef.isReady()) return;
@@ -125,7 +150,7 @@ export default function Navigation() {
   }
 
   return (
-    <NavigationContainer ref={navRef} onStateChange={handleStateChange} linking={linking}>
+    <NavigationContainer ref={navRef} onStateChange={handleStateChange}>
       {!isAuthenticated && didLogout ? (
         <AuthStack />
       ) : !isAuthenticated ? (
