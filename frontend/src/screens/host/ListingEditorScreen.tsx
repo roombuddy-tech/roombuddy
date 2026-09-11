@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -1238,8 +1237,11 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
   const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
   const fmSt = useMemo(() => makeFmStyles(COLORS), [COLORS]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [hostModalOpen, setHostModalOpen] = useState(false);
+  // Add/edit flatmate & host-profile forms render as full pages within this
+  // step (matching every other wizard step's Back/Continue footer) rather
+  // than as bottom-sheet modals — those grew tall enough with the keyboard
+  // open to push their close button off the top of the screen.
+  const [subView, setSubView] = useState<'list' | 'host' | 'flatmate'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' });
 
@@ -1283,13 +1285,24 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
     }
     setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' });
     setEditingId(null);
-    setModalVisible(false);
+    setSubView('list');
+  };
+
+  const saveHostProfile = () => {
+    update({
+      hostAge: hostDraft.age,
+      hostOccupation: hostDraft.occupation,
+      hostHobbies: hostDraft.hobbies,
+      hostGender: hostDraft.gender,
+      hostHometown: hostDraft.hometown,
+    });
+    setSubView('list');
   };
 
   const editFlatmate = (fm: Flatmate) => {
     setEditingId(fm.id);
     setDraft({ name: fm.name, age: fm.age, occupation: fm.occupation, hobbies: fm.hobbies, gender: fm.gender, hometown: fm.hometown });
-    setModalVisible(true);
+    setSubView('flatmate');
   };
 
   const removeFlatmate = (id: string) => {
@@ -1305,6 +1318,154 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
 
   const GENDER_OPTIONS = ['Male', 'Female', 'Others', 'Prefer not to say'];
 
+  if (subView === 'host') {
+    return (
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={stSt.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={20}
+        keyboardOpeningTime={0}
+      >
+        <Text style={stSt.title}>Your profile</Text>
+        <Text style={stSt.sub}>Share a bit about yourself so guests know who they'll be living with.</Text>
+
+        <Field
+          label="Age"
+          placeholder="e.g. 26"
+          value={hostDraft.age}
+          onChange={(v) => { const n = parseInt(v, 10); setHostDraft((d) => ({ ...d, age: !v ? '' : (n > 99 ? '99' : v.replace(/[^0-9]/g, '')) })); }}
+          keyboardType="number-pad"
+          optional
+        />
+        <SectionLabel label="Gender" optional />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
+          {GENDER_OPTIONS.map((g) => (
+            <Chip
+              key={g}
+              label={g}
+              selected={hostDraft.gender === g.toLowerCase()}
+              onPress={() => setHostDraft((d) => ({ ...d, gender: g.toLowerCase() }))}
+            />
+          ))}
+        </View>
+        <Field
+          label="Occupation"
+          placeholder="e.g. Software Engineer"
+          value={hostDraft.occupation}
+          onChange={(v) => setHostDraft((d) => ({ ...d, occupation: v }))}
+          optional
+        />
+        <Field
+          label="Hobbies"
+          placeholder="e.g. Reading, Cooking, Cricket"
+          value={hostDraft.hobbies}
+          onChange={(v) => setHostDraft((d) => ({ ...d, hobbies: v }))}
+          optional
+        />
+        <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
+          {/* Row + separate Texts: a nested <Text> in a different
+              fontFamily is clipped rather than wrapped on Android. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text }}>Hometown </Text>
+            <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+          </View>
+          <GooglePlacesInput
+            value={hostDraft.hometown}
+            placeholder="e.g. Jaipur"
+            onSelect={(place) => setHostDraft((d) => ({ ...d, hometown: place.city || place.description }))}
+            onChangeText={(text) => setHostDraft((d) => ({ ...d, hometown: text }))}
+          />
+        </View>
+
+        <BottomNav onBack={() => setSubView('list')} onNext={saveHostProfile} nextLabel="Save" />
+      </KeyboardAwareScrollView>
+    );
+  }
+
+  if (subView === 'flatmate') {
+    return (
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={stSt.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={20}
+        keyboardOpeningTime={0}
+      >
+        <Text style={stSt.title}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
+        <Text style={stSt.sub}>Let guests know who else lives in the home.</Text>
+
+        <Field
+          label="Name"
+          placeholder="e.g. Arjun S."
+          value={draft.name}
+          onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
+        />
+        <Field
+          label="Age"
+          placeholder="e.g. 26"
+          value={draft.age}
+          onChange={(v) => { const n = parseInt(v, 10); setDraft((d) => ({ ...d, age: !v ? '' : (n > 99 ? '99' : v.replace(/[^0-9]/g, '')) })); }}
+          keyboardType="number-pad"
+          optional
+        />
+        <SectionLabel label="Gender" optional />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
+          {GENDER_OPTIONS.map((g) => (
+            <Chip
+              key={g}
+              label={g}
+              selected={draft.gender === g.toLowerCase()}
+              onPress={() => setDraft((d) => ({ ...d, gender: g.toLowerCase() }))}
+            />
+          ))}
+        </View>
+        <Field
+          label="Occupation"
+          placeholder="e.g. SE at Google"
+          value={draft.occupation}
+          onChange={(v) => setDraft((d) => ({ ...d, occupation: v }))}
+          optional
+        />
+        <Field
+          label="Hobbies"
+          placeholder="e.g. Cricket, Cooking"
+          value={draft.hobbies}
+          onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
+          optional
+        />
+        <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
+          {/* Row + separate Texts: a nested <Text> in a different
+              fontFamily is clipped rather than wrapped on Android. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text }}>Hometown </Text>
+            <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
+          </View>
+          <GooglePlacesInput
+            value={draft.hometown}
+            placeholder="e.g. Jaipur"
+            onSelect={(place) => setDraft((d) => ({ ...d, hometown: place.city || place.description }))}
+            onChangeText={(text) => setDraft((d) => ({ ...d, hometown: text }))}
+          />
+        </View>
+
+        <BottomNav
+          onBack={() => {
+            setEditingId(null);
+            setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' });
+            setSubView('list');
+          }}
+          onNext={saveFlatmate}
+          nextLabel="Save"
+        />
+      </KeyboardAwareScrollView>
+    );
+  }
+
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -1315,7 +1476,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       <Text style={[stSt.sub, { marginBottom: SPACING.md }]}>Let guests know who they'll be sharing the space with.</Text>
 
       {/* Host card — tappable to add occupation/hobbies/gender */}
-      <TouchableOpacity style={fmSt.card} onPress={() => setHostModalOpen(true)} activeOpacity={0.7}>
+      <TouchableOpacity style={fmSt.card} onPress={() => setSubView('host')} activeOpacity={0.7}>
         <View style={fmSt.avatar}>
           <Text style={fmSt.avatarTxt}>{initials(displayName)}</Text>
         </View>
@@ -1370,7 +1531,7 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
 
       <TouchableOpacity
         style={fmSt.addCard}
-        onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setModalVisible(true); }}
+        onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setSubView('flatmate'); }}
         activeOpacity={0.7}
       >
         <Ionicons name="add" size={24} color={COLORS.primary} />
@@ -1394,175 +1555,6 @@ function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
       </View>
 
       <BottomNav onBack={onBack} onNext={onNext} />
-
-      {/* Host profile modal */}
-      <Modal visible={hostModalOpen} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <TouchableOpacity
-            style={fmSt.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setHostModalOpen(false)}
-          >
-            <View style={fmSt.modalSheet} onStartShouldSetResponder={() => true}>
-              <View style={fmSt.dragHandleWrap}><View style={fmSt.dragHandle} /></View>
-              <View style={fmSt.modalHeader}>
-                <Text style={fmSt.modalTitle}>Your profile</Text>
-              </View>
-              <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" enableOnAndroid extraScrollHeight={20} keyboardOpeningTime={0}>
-                <Field
-                  label="Age"
-                  placeholder="e.g. 26"
-                  value={hostDraft.age}
-                  onChange={(v) => { const n = parseInt(v, 10); setHostDraft((d) => ({ ...d, age: !v ? '' : (n > 99 ? '99' : v.replace(/[^0-9]/g, '')) })); }}
-                  keyboardType="number-pad"
-                  optional
-                />
-                <SectionLabel label="Gender" optional />
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
-                  {GENDER_OPTIONS.map((g) => (
-                    <Chip
-                      key={g}
-                      label={g}
-                      selected={hostDraft.gender === g.toLowerCase()}
-                      onPress={() => setHostDraft((d) => ({ ...d, gender: g.toLowerCase() }))}
-                    />
-                  ))}
-                </View>
-                <Field
-                  label="Occupation"
-                  placeholder="e.g. Software Engineer"
-                  value={hostDraft.occupation}
-                  onChange={(v) => setHostDraft((d) => ({ ...d, occupation: v }))}
-                  optional
-                />
-                <Field
-                  label="Hobbies"
-                  placeholder="e.g. Reading, Cooking, Cricket"
-                  value={hostDraft.hobbies}
-                  onChange={(v) => setHostDraft((d) => ({ ...d, hobbies: v }))}
-                  optional
-                />
-                <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
-                  {/* Row + separate Texts: a nested <Text> in a different
-                      fontFamily is clipped rather than wrapped on Android. */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 8 }}>
-                    <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text }}>Hometown </Text>
-                    <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
-                  </View>
-                  <GooglePlacesInput
-                    value={hostDraft.hometown}
-                    placeholder="e.g. Jaipur"
-                    onSelect={(place) => setHostDraft((d) => ({ ...d, hometown: place.city || place.description }))}
-                    onChangeText={(text) => setHostDraft((d) => ({ ...d, hometown: text }))}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={fmSt.saveBtn}
-                  onPress={() => {
-                    update({
-                      hostAge: hostDraft.age,
-                      hostOccupation: hostDraft.occupation,
-                      hostHobbies: hostDraft.hobbies,
-                      hostGender: hostDraft.gender,
-                      hostHometown: hostDraft.hometown,
-                    });
-                    setHostModalOpen(false);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
-                </TouchableOpacity>
-              </KeyboardAwareScrollView>
-            </View>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Add flatmate modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <TouchableOpacity
-            style={fmSt.modalOverlay}
-            activeOpacity={1}
-            onPress={() => { setEditingId(null); setDraft({ name: '', age: '', occupation: '', hobbies: '', gender: '', hometown: '' }); setModalVisible(false); }}
-          >
-            <View style={fmSt.modalSheet} onStartShouldSetResponder={() => true}>
-              <View style={fmSt.dragHandleWrap}><View style={fmSt.dragHandle} /></View>
-              <View style={fmSt.modalHeader}>
-                <Text style={fmSt.modalTitle}>{editingId ? 'Edit flatmate' : 'Add flatmate'}</Text>
-              </View>
-              <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" enableOnAndroid extraScrollHeight={20} keyboardOpeningTime={0}>
-                <Field
-                  label="Name"
-                  placeholder="e.g. Arjun S."
-                  value={draft.name}
-                  onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
-                />
-                <Field
-                  label="Age"
-                  placeholder="e.g. 26"
-                  value={draft.age}
-                  onChange={(v) => { const n = parseInt(v, 10); setDraft((d) => ({ ...d, age: !v ? '' : (n > 99 ? '99' : v.replace(/[^0-9]/g, '')) })); }}
-                  keyboardType="number-pad"
-                  optional
-                />
-                <SectionLabel label="Gender" optional />
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm }}>
-                  {GENDER_OPTIONS.map((g) => (
-                    <Chip
-                      key={g}
-                      label={g}
-                      selected={draft.gender === g.toLowerCase()}
-                      onPress={() => setDraft((d) => ({ ...d, gender: g.toLowerCase() }))}
-                    />
-                  ))}
-                </View>
-                <Field
-                  label="Occupation"
-                  placeholder="e.g. SE at Google"
-                  value={draft.occupation}
-                  onChange={(v) => setDraft((d) => ({ ...d, occupation: v }))}
-                  optional
-                />
-                <Field
-                  label="Hobbies"
-                  placeholder="e.g. Cricket, Cooking"
-                  value={draft.hobbies}
-                  onChange={(v) => setDraft((d) => ({ ...d, hobbies: v }))}
-                  optional
-                />
-                <View style={{ marginTop: 16, marginBottom: SPACING.md, zIndex: 10 }}>
-                  {/* Row + separate Texts: a nested <Text> in a different
-                      fontFamily is clipped rather than wrapped on Android. */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 8 }}>
-                    <Text style={{ fontSize: 14, ...FONTS.bold, color: COLORS.text }}>Hometown </Text>
-                    <Text style={{ fontSize: 12, color: COLORS.textMut, ...FONTS.regular }}>(optional)</Text>
-                  </View>
-                  <GooglePlacesInput
-                    value={draft.hometown}
-                    placeholder="e.g. Jaipur"
-                    onSelect={(place) => setDraft((d) => ({ ...d, hometown: place.city || place.description }))}
-                    onChangeText={(text) => setDraft((d) => ({ ...d, hometown: text }))}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={fmSt.saveBtn}
-                  onPress={saveFlatmate}
-                  activeOpacity={0.85}
-                >
-                  <Text style={{ color: '#fff', fontSize: 15, ...FONTS.semibold }}>Save</Text>
-                </TouchableOpacity>
-              </KeyboardAwareScrollView>
-            </View>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
     </ScrollView>
   );
 }
@@ -1608,32 +1600,6 @@ const makeFmStyles = (COLORS: ThemeColors) => StyleSheet.create({
     gap: 6,
   },
   addTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.primary },
-  modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
-  dragHandleWrap: { alignItems: 'center' as const, paddingTop: 6, paddingBottom: 2 },
-  dragHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border },
-  modalSheet: {
-    backgroundColor: COLORS.bg,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    paddingTop: 0,
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xxl,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.xs,
-  },
-  modalTitle: { fontSize: 18, ...FONTS.bold, color: COLORS.text },
-  saveBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: SPACING.md,
-  },
 });
 
 // ─── Step 5: Amenities & Food ─────────────────────────────────────────────────
