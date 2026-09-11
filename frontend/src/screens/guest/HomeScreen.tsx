@@ -313,11 +313,14 @@ export default function HomeScreen() {
         value={query}
         placeholder="Where are you looking?"
         onSelect={(place) => {
+          // Dates are optional for search — don't auto-open the calendar
+          // here, or picking a location immediately buries the (already
+          // enabled) Search button under it, making dates feel mandatory
+          // when they aren't.
           const area = place.addressLine1 || place.city || place.description;
           setQuery(area);
           setSearchLat(place.lat || null);
           setSearchLng(place.lng || null);
-          if (!checkIn) setShowCalendar(true);
         }}
       />
 
@@ -351,6 +354,7 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      <Text style={styles.searchHint}>Dates are optional — search a city to start browsing.</Text>
 
       {/* Calendar */}
       {showCalendar && (
@@ -394,7 +398,6 @@ export default function HomeScreen() {
         <Ionicons name="search" size={16} color="#fff" />
         <Text style={styles.searchBtnTxt}>{isEditMode ? 'Update search' : 'Search rooms'}</Text>
       </TouchableOpacity>
-      <Text style={styles.searchHint}>Dates are optional — search a city to start browsing.</Text>
     </View>
   );
 

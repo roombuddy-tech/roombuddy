@@ -4,7 +4,10 @@
     "target": {
       "namespace": "android_app",
       "package_name": "in.co.roombuddy.app",
-      "sha256_cert_fingerprints": ["D1:9D:C7:9B:B1:05:DC:88:41:FB:FA:0F:53:22:A3:FC:15:69:97:2F:17:36:E1:25:31:85:5F:0C:B4:7F:7E:FB"]
+      "sha256_cert_fingerprints": [
+        "07:FD:14:39:ED:32:E6:68:01:5C:CC:FA:EA:D5:35:84:79:71:67:27:FF:12:07:06:E2:8C:AF:97:AF:CD:40:80",
+        "D1:9D:C7:9B:B1:05:DC:88:41:FB:FA:0F:53:22:A3:FC:15:69:97:2F:17:36:E1:25:31:85:5F:0C:B4:7F:7E:FB"
+      ]
     }
   }
 ]

@@ -13,6 +13,7 @@ import {
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   RefreshControl,
   ScrollView,
   Share,
@@ -408,11 +409,16 @@ export default function GuestListingDetailScreen() {
     // Links / App Links, configured in app.config.js); otherwise it lands on
     // /listing.html which redirects to the App Store / Play Store.
     const shareUrl = `https://roombuddy.co.in/listing.html?listingId=${listing.listing_id}`;
+    const caption = `Check out this stay on RoomBuddy — ${listing.title}`;
     try {
-      await Share.share({
-        message: `Check out this stay on RoomBuddy — ${listing.title}\n${shareUrl}`,
-        url: shareUrl,
-      });
+      // iOS treats `message` and `url` as two separate share items, so
+      // passing the link in both duplicates it in the share sheet. Android
+      // ignores `url` entirely, so the link has to live in `message` there.
+      await Share.share(
+        Platform.OS === 'ios'
+          ? { message: caption, url: shareUrl }
+          : { message: `${caption}\n${shareUrl}` }
+      );
     } catch {}
   };
 
