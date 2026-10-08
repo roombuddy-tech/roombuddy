@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 #
 # Runs RoomBuddy's periodic booking jobs. Invoked by the systemd timer
-# `roombuddy-cron.timer` every 5 minutes. Both commands are idempotent and
+# `roombuddy-cron.timer` every 5 minutes. All commands are idempotent and
 # cheap, so running them on the same cadence is safe:
 #
 #   expire_stale_bookings      — free up unpaid / unresponded bookings
 #   advance_booking_lifecycle  — accepted → active on check-in,
 #                                active/accepted → completed after check-out
+#   end_expired_temporary_listings — snooze temporary listings past their
+#                                available-until date, notify host once
 #
 # Each command is isolated so one failing does not stop the other.
 set -uo pipefail
@@ -24,3 +26,4 @@ fi
 
 "$VENV/bin/python" manage.py expire_stale_bookings     || echo "[cron] expire_stale_bookings failed"
 "$VENV/bin/python" manage.py advance_booking_lifecycle || echo "[cron] advance_booking_lifecycle failed"
+"$VENV/bin/python" manage.py end_expired_temporary_listings || echo "[cron] end_expired_temporary_listings failed"
