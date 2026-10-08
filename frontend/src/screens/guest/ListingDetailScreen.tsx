@@ -35,6 +35,7 @@ import { savePendingIntent, type PendingAction } from '../../services/pendingInt
 import { getListingReviews, type ListingReviewsResponse, type ReviewItem } from '../../services/reviews';
 import { getGuestListingDetail } from '../../services/search';
 import { genderPrefMeta, type GuestListingDetail } from '../../types/listing';
+import { describeDuration, formatDisplayDate, parseISODate } from '../../utils/formatters';
 
 type Nav = NativeStackNavigationProp<GuestStackParamList, 'GuestListingDetail'>;
 type Rt = RouteProp<GuestStackParamList, 'GuestListingDetail'>;
@@ -214,6 +215,25 @@ export default function GuestListingDetailScreen() {
 
   const isMonthlyListing = listing?.rental_type === 'monthly';
 
+  const blockedRanges = listing?.blocked_dates ?? [];
+  const blockedDays = useMemo(() => {
+    const days = new Set<string>();
+    for (const r of blockedRanges) {
+      const cur = parseISODate(r.start_date);
+      const end = parseISODate(r.end_date);
+      if (!cur || !end) continue;
+      while (cur <= end) {
+        days.add(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return days;
+  }, [blockedRanges]);
+  const stayHitsBlocked = (inISO: string, outISO: string) =>
+    blockedRanges.some((r) => r.start_date < outISO && r.end_date >= inISO);
+  const alertBlocked = () =>
+    Alert.alert('Dates unavailable', 'Your stay includes dates the host has blocked. Please pick different dates.');
+
   const addMonths = (iso: string, months: number) => {
     const d = new Date(iso);
     d.setMonth(d.getMonth() + months);
@@ -228,6 +248,7 @@ export default function GuestListingDetailScreen() {
   const [monthlyStep, setMonthlyStep] = useState<'start' | 'end'>('start');
 
   const onDayPress = (day: DateData) => {
+    if (blockedDays.has(day.dateString)) return;
     // Monthly: a range picker with a MINIMUM of min_months. First tap (or a tap
     // on/before the current move-in, or one that falls short of the minimum
     // stay) starts a fresh selection: move-in = tapped date, move-out defaults
@@ -240,11 +261,15 @@ export default function GuestListingDetailScreen() {
         monthlyStep === 'end' && checkIn && minEnd && day.dateString >= minEnd;
 
       if (canExtend) {
+        if (stayHitsBlocked(checkIn!, day.dateString)) { alertBlocked(); return; }
         setCheckOut(day.dateString);
         setMonthlyStep('start');
       } else {
+        const out = addMonths(day.dateString, minMonths);
+        // The minimum stay would run into a blocked stretch — don't select it.
+        if (stayHitsBlocked(day.dateString, out)) { alertBlocked(); return; }
         setCheckIn(day.dateString);
-        setCheckOut(addMonths(day.dateString, minMonths));
+        setCheckOut(out);
         setMonthlyStep('end');
       }
       return;
@@ -253,12 +278,15 @@ export default function GuestListingDetailScreen() {
       setCheckIn(day.dateString); setCheckOut(null);
     } else {
       if (day.dateString <= checkIn) { setCheckIn(day.dateString); setCheckOut(null); }
+      else if (stayHitsBlocked(checkIn, day.dateString)) alertBlocked();
       else setCheckOut(day.dateString);
     }
   };
 
   const getMarkedDates = () => {
     const marks: Record<string, any> = {};
+    // Blocked days: greyed out and untappable.
+    blockedDays.forEach((d) => { marks[d] = { disabled: true, disableTouchEvent: true }; });
     if (!checkIn) return marks;
     if (!checkOut) { marks[checkIn] = { startingDay: true, endingDay: true, color: COLORS.primary, textColor: '#fff' }; return marks; }
     const cur = new Date(checkIn);
@@ -437,6 +465,18 @@ export default function GuestListingDetailScreen() {
   };
 
   const today = new Date().toISOString().slice(0, 10);
+  // Host's availability window — grey out days before available_from and,
+  // for temporary listings, after available_until. ISO strings compare safely.
+  const calendarMinDate = listing.available_from && listing.available_from > today ? listing.available_from : today;
+  const calendarMaxDate = listing.available_until || undefined;
+
+  // Availability banner, shown up top so guests see the window before tapping
+  // Book now. A missing or past available_from means the room is free now.
+  const futureFrom = listing.available_from && listing.available_from > today ? listing.available_from : null;
+  const fromLabel = futureFrom ? formatDisplayDate(futureFrom) : 'Now';
+  const isTemporaryStay = listing.listing_term === 'temporary' && !!listing.available_until;
+  // Duration counts from the later of today / available_from — what's actually left.
+  const availabilityDuration = isTemporaryStay ? describeDuration(futureFrom || today, listing.available_until) : null;
   const hasReviews = reviewsData && reviewsData.total > 0;
 
   const { cleanDesc, nearbyLine } = parseNearbyFromDescription(listing.description || '');
@@ -543,6 +583,31 @@ export default function GuestListingDetailScreen() {
                 </View>
               )}
             </View>
+
+            {isTemporaryStay ? (
+              <View style={styles.availCard}>
+                <View style={styles.availIcon}>
+                  <MaterialCommunityIcons name="bag-suitcase-outline" size={20} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.availLabel}>Short-term sublet</Text>
+                  <Text style={styles.availDates}>
+                    {fromLabel}  →  {formatDisplayDate(listing.available_until)}
+                  </Text>
+                  {availabilityDuration && <Text style={styles.availSub}>Available for {availabilityDuration}</Text>}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.availCard}>
+                <View style={styles.availIcon}>
+                  <MaterialCommunityIcons name="home-heart" size={20} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.availLabel}>Looking for a flatmate</Text>
+                  <Text style={styles.availDates}>{futureFrom ? `Available from ${fromLabel}` : 'Available now'}</Text>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* ── About ── */}
@@ -671,7 +736,7 @@ export default function GuestListingDetailScreen() {
                       <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.textMut} />
                       <Text style={styles.mbFoot}>
                         Rent &amp; deposit paid to the host directly. RoomBuddy charges a flat ₹49 to reserve.
-                        {listing.available_from ? `  Available from ${listing.available_from}.` : ''}
+                        {futureFrom ? `  Available from ${fromLabel}.` : '  Available now.'}
                       </Text>
                     </View>
                   </View>
@@ -836,13 +901,11 @@ export default function GuestListingDetailScreen() {
             <View style={styles.checkinRow}>
               {listing.rental_type === 'monthly' ? (
                 <>
-                  {listing.available_from ? (
-                    <View style={styles.checkinCard}>
-                      <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                      <Text style={styles.checkinLabel}>Available from</Text>
-                      <Text style={styles.checkinTime}>{listing.available_from}</Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.checkinCard}>
+                    <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.checkinLabel}>Available from</Text>
+                    <Text style={styles.checkinTime}>{fromLabel}</Text>
+                  </View>
                   <View style={styles.checkinCard}>
                     <Ionicons name="time-outline" size={20} color={COLORS.primary} />
                     <Text style={styles.checkinLabel}>Minimum stay</Text>
@@ -1149,9 +1212,12 @@ export default function GuestListingDetailScreen() {
                     : (!checkIn ? 'Select check-in date' : !checkOut ? 'Select check-out date' : `${checkIn}  to  ${checkOut}`)}
                 </Text>
                 <Calendar
-                  minDate={today} markingType="period" markedDates={getMarkedDates()} onDayPress={onDayPress}
+                  minDate={calendarMinDate} maxDate={calendarMaxDate} markingType="period" markedDates={getMarkedDates()} onDayPress={onDayPress}
                   theme={{ todayTextColor: COLORS.primary, arrowColor: COLORS.primary, textDayFontWeight: '500', textMonthFontWeight: '700', textDayHeaderFontWeight: '600', textDayFontSize: 14, textMonthFontSize: 16 }}
                 />
+                {blockedDays.size > 0 && (
+                  <Text style={styles.modalHint}>Greyed-out dates are unavailable — the host has blocked them.</Text>
+                )}
                 {isMonthlyListing
                   ? <Text style={styles.modalHint}>Minimum stay: {listing.min_months || 1} month{(listing.min_months || 1) > 1 ? 's' : ''} · you’ll settle rent with the host directly</Text>
                   : (listing.min_nights > 1 && <Text style={styles.modalHint}>Minimum stay: {listing.min_nights} nights</Text>)}
@@ -1342,6 +1408,11 @@ const makeStyles = (COLORS: ThemeColors) => StyleSheet.create({
   ratingPillCount: { fontSize: 12, color: '#B45309', ...FONTS.regular },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.primaryAlpha, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
   verifiedTxt: { fontSize: 12, ...FONTS.semibold, color: COLORS.primary },
+  availCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginTop: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  availIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryAlpha, justifyContent: 'center', alignItems: 'center' },
+  availLabel: { fontSize: 11, ...FONTS.semibold, color: COLORS.textMut, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
+  availDates: { fontSize: 15, ...FONTS.bold, color: COLORS.text },
+  availSub: { fontSize: 12, ...FONTS.medium, color: COLORS.primary, marginTop: 2 },
   instantPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,184,0,0.12)', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
   instantTxt: { fontSize: 12, ...FONTS.semibold, color: '#92400E' },
 

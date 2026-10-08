@@ -44,6 +44,22 @@ class Listing(models.Model):
         max_length=10, choices=RentalType.choices, default=RentalType.MONTHLY,
     )
 
+    # Listing term — independent of pricing. Permanent = host is replacing a
+    # flatmate for good; temporary = room is free only for a fixed window
+    # (e.g. a 2–3 month sublet), bounded by available_from → available_until.
+    class ListingTerm(models.TextChoices):
+        PERMANENT = "permanent"
+        TEMPORARY = "temporary"
+
+    listing_term = models.CharField(
+        max_length=10, choices=ListingTerm.choices, default=ListingTerm.PERMANENT,
+    )
+    available_until = models.DateField(null=True, blank=True)
+    # The available_until we already sent the "stay period ended" notice for.
+    # Guarantees one notice per period, even if the host un-snoozes without
+    # changing dates; extending the dates arms it again.
+    term_ended_notified_for = models.DateField(null=True, blank=True)
+
     # ── Monthly pricing (used when rental_type == monthly) ──────────────
     monthly_rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     maintenance_monthly = models.DecimalField(max_digits=10, decimal_places=2, default=0)
