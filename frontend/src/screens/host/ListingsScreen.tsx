@@ -13,9 +13,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { HostStackParamList, HostTabParamList } from '../../navigation/types';
 import api from '../../services/api';
+import { resolveDraftStep, TOTAL_STEPS } from './ListingEditorScreen';
 
 const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
-const TOTAL_STEPS = 9;
 
 type NavProp = CompositeNavigationProp<
   BottomTabNavigationProp<HostTabParamList, 'Listing'>,
@@ -42,6 +42,7 @@ interface ListingItem {
 }
 
 interface DraftData {
+  v?: number;
   step: number;
   form: { title?: string; apartmentName?: string };
 }
@@ -176,7 +177,7 @@ export default function ListingsScreen() {
   };
 
   const draftTitle = draft?.form?.title?.trim() || draft?.form?.apartmentName?.trim() || 'Untitled listing';
-  const draftStepsCompleted = draft ? Math.max(0, draft.step) : 0;
+  const draftStepsCompleted = draft ? Math.max(0, resolveDraftStep(draft)) : 0;
 
   // Push the Verification screen as a real route rather than a local <Modal>.
   // RN's Modal renders outside the app's SafeAreaProvider, so the screen's

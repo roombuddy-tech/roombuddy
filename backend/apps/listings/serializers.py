@@ -111,7 +111,12 @@ class CreateListingRequestSerializer(serializers.Serializer):
     utilities_included = serializers.BooleanField(required=False, default=False)
     utilities_est_monthly = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     min_months = serializers.IntegerField(required=False, allow_null=True)
+
+    # Listing term. Temporary listings must give a from → until window;
+    # permanent listings only have an optional move-in date.
+    listing_term = serializers.ChoiceField(choices=["permanent", "temporary"], default="permanent")
     available_from = serializers.DateField(required=False, allow_null=True)
+    available_until = serializers.DateField(required=False, allow_null=True)
     security_deposit = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=0)
     food_kitchen_access = serializers.BooleanField(default=False)
     food_meals_available = serializers.BooleanField(default=False)
@@ -120,6 +125,19 @@ class CreateListingRequestSerializer(serializers.Serializer):
     food_meal_types = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     house_rules = HouseRulesInputSerializer()
     blocked_dates = BlockedDateInputSerializer(many=True, required=False, default=list)
+
+    def validate(self, attrs):
+        if attrs.get("listing_term") == "temporary":
+            start, end = attrs.get("available_from"), attrs.get("available_until")
+            if not start or not end:
+                raise serializers.ValidationError(
+                    {"available_until": "Temporary listings need both an available-from and an available-until date."}
+                )
+            if end <= start:
+                raise serializers.ValidationError(
+                    {"available_until": "Available-until must be after available-from."}
+                )
+        return attrs
 
 
 class CreateListingResponseSerializer(serializers.Serializer):

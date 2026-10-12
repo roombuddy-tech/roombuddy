@@ -37,6 +37,7 @@ class EventType(models.TextChoices):
     MESSAGE_RECEIVED = "message.received", "New message received"
     ID_VERIFICATION_APPROVED = "id_verification.approved", "ID verification approved"
     ID_VERIFICATION_REJECTED = "id_verification.rejected", "ID verification rejected"
+    LISTING_TERM_ENDED = "listing.term_ended", "Temporary listing period ended"
 
 
 class NotificationTemplate(models.Model):

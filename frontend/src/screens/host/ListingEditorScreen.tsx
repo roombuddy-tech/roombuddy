@@ -33,6 +33,7 @@ import { useTheme, useThemeColors } from '../../context/ThemeContext';
 import type { HostStackParamList } from '../../navigation/types';
 import { createListing, getListing, updateListing } from '../../services/listings';
 import { uploadAllPropertyPhotos } from '../../services/properties';
+import { describeDuration, formatDisplayDate, parseISODate } from '../../utils/formatters';
 
 const getDraftKey = (userId: string) => `LISTING_DRAFT_${userId}`;
 
@@ -94,7 +95,9 @@ interface FormData {
   utilitiesIncluded: boolean;
   utilitiesEstMonthly: string;
   minMonths: string;
+  listingTerm: '' | 'permanent' | 'temporary';
   availableFrom: string;
+  availableUntil: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
   noPets: boolean;
@@ -161,7 +164,9 @@ const INIT: FormData = {
   utilitiesIncluded: false,
   utilitiesEstMonthly: '',
   minMonths: '3',
+  listingTerm: '',
   availableFrom: '',
+  availableUntil: '',
   noSmoking: true,
   noLoudMusic: true,
   noPets: true,
@@ -183,7 +188,17 @@ const INIT: FormData = {
   blockedDates: [],
 };
 
-const TOTAL_STEPS = 9;
+export const TOTAL_STEPS = 10;
+// Bumped when steps are renumbered so saved drafts resume on the right page.
+// v1 (no field) = before the "Listing term" step was added as step 1.
+const DRAFT_VERSION = 2;
+
+// Map a saved draft's step onto the current numbering. Old drafts predate the
+// new step 1, so shift them forward one page. Shared with the Listings screen.
+export function resolveDraftStep(saved: { v?: number; step?: number }): number {
+  const step = saved.step ?? 1;
+  return saved.v === DRAFT_VERSION ? step : Math.min(step + 1, TOTAL_STEPS);
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -767,7 +782,307 @@ const makeTpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   timeSel: { color: COLORS.primary, ...FONTS.semibold },
 });
 
-// ─── Step 1: Your Property ────────────────────────────────────────────────────
+// ─── Date Picker ──────────────────────────────────────────────────────────────
+
+// Dates are stored as local "YYYY-MM-DD" — never via toISOString(), which
+// converts to UTC and can shift the day back for IST users.
+function toISODate(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+function addDays(d: Date, n: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + n);
+  return out;
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function DatePicker({
+  label,
+  value,
+  onChange,
+  optional,
+  minimumDate,
+  placeholder = 'Select date',
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  optional?: boolean;
+  minimumDate?: Date;
+  placeholder?: string;
+}) {
+  const { mode } = useTheme();
+  const COLORS = useThemeColors();
+  const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
+  const tpSt = useMemo(() => makeTpStyles(COLORS), [COLORS]);
+  const [open, setOpen] = useState(false);
+  const initial = () => parseISODate(value) ?? minimumDate ?? startOfToday();
+  const [tempDate, setTempDate] = useState(initial);
+
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={fldSt.label}>
+        {label}
+        {optional && <OptionalMark />}
+      </Text>
+      <TouchableOpacity
+        style={tpSt.trigger}
+        onPress={() => { setTempDate(initial()); setOpen(true); }}
+        activeOpacity={0.7}
+      >
+        <Text style={[tpSt.triggerTxt, !value && { color: COLORS.textMut }]} numberOfLines={1}>
+          {value ? formatDisplayDate(value) : placeholder}
+        </Text>
+        <Ionicons name="calendar-outline" size={18} color={COLORS.textSec} />
+      </TouchableOpacity>
+
+      {/* Same split as TimePicker: Android's native dialog stands alone,
+          iOS gets the inline picker inside our bottom sheet. */}
+      {open && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          minimumDate={minimumDate}
+          onChange={(event, selectedDate) => {
+            setOpen(false);
+            if (event.type === 'set' && selectedDate) onChange(toISODate(selectedDate));
+          }}
+        />
+      )}
+
+      {Platform.OS === 'ios' && (
+        <Modal visible={open} transparent animationType="slide">
+          <View style={tpSt.overlay}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => setOpen(false)} />
+            <View style={tpSt.sheet}>
+              <View style={tpSt.sheetHeader}>
+                <TouchableOpacity onPress={() => setOpen(false)}>
+                  <Text style={{ fontSize: 16, color: COLORS.textSec, ...FONTS.medium }}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={tpSt.sheetTitle}>{label}</Text>
+                <TouchableOpacity onPress={() => { onChange(toISODate(tempDate)); setOpen(false); }}>
+                  <Text style={{ fontSize: 16, color: COLORS.primary, ...FONTS.semibold }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="inline"
+                minimumDate={minimumDate}
+                themeVariant={mode}
+                accentColor={COLORS.primary}
+                onChange={(_, selectedDate) => { if (selectedDate) setTempDate(selectedDate); }}
+                style={{ marginHorizontal: SPACING.md }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+// ─── Step 1: Listing Term ─────────────────────────────────────────────────────
+
+const LISTING_TERMS = [
+  {
+    value: 'permanent',
+    icon: 'home-heart',
+    label: 'Find a flatmate',
+    sub: "Moving out or have a spare room? Find someone to take it over for good.",
+    tagIcon: 'infinity',
+    tag: 'Open-ended',
+  },
+  {
+    value: 'temporary',
+    icon: 'bag-suitcase-outline',
+    label: 'Short-term sublet',
+    sub: 'Away for a while? Rent your room out for a fixed stretch — a few weeks or months.',
+    tagIcon: 'calendar-range-outline',
+    tag: 'Fixed dates',
+  },
+] as const;
+
+function StepTerm({ form, update, onNext, onBack }: StepProps) {
+  const COLORS = useThemeColors();
+  const stSt = useMemo(() => makeStStyles(COLORS), [COLORS]);
+  const tmSt = useMemo(() => makeTmStyles(COLORS), [COLORS]);
+  const isTemporary = form.listingTerm === 'temporary';
+  const today = startOfToday();
+  const fromDate = parseISODate(form.availableFrom);
+  const duration = isTemporary ? describeDuration(form.availableFrom, form.availableUntil) : null;
+
+  const validate = (): string | null => {
+    if (!form.listingTerm) return 'Please choose what you are listing for';
+    if (isTemporary) {
+      if (!form.availableFrom) return 'Please pick the date your room is free from';
+      if (!form.availableUntil) return 'Please pick the date your room is free until';
+      if (!duration) return 'The end date must be after the start date';
+    }
+    return null;
+  };
+  const isValid = validate() === null;
+
+  const setFrom = (v: string) => {
+    // Drop an end date that no longer sits after the new start date.
+    const until = parseISODate(form.availableUntil);
+    const from = parseISODate(v);
+    update({ availableFrom: v, ...(until && from && until <= from ? { availableUntil: '' } : {}) });
+  };
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={stSt.content} showsVerticalScrollIndicator={false}>
+      <Text style={stSt.title}>What are you listing?</Text>
+      <Text style={stSt.sub}>Tell guests whether this is a long-term home or a stay with an end date.</Text>
+
+      <View style={{ gap: SPACING.sm, marginTop: SPACING.sm }}>
+        {LISTING_TERMS.map((t) => {
+          const sel = form.listingTerm === t.value;
+          return (
+            <TouchableOpacity
+              key={t.value}
+              style={[tmSt.card, sel && tmSt.cardSel]}
+              onPress={() => update({ listingTerm: t.value })}
+              activeOpacity={0.8}
+            >
+              <View style={[tmSt.iconWrap, sel && tmSt.iconWrapSel]}>
+                <MaterialCommunityIcons name={t.icon} size={26} color={sel ? '#fff' : COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={tmSt.labelRow}>
+                  <Text style={[tmSt.label, sel && { color: COLORS.primary }]}>{t.label}</Text>
+                  {sel && <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />}
+                </View>
+                <Text style={tmSt.sub}>{t.sub}</Text>
+                <View style={tmSt.tag}>
+                  <MaterialCommunityIcons name={t.tagIcon} size={13} color={COLORS.textSec} />
+                  <Text style={tmSt.tagTxt}>{t.tag}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {form.listingTerm === 'permanent' && (
+        <>
+          <SectionLabel label="When can they move in?" />
+          <DatePicker
+            label="Available from"
+            value={form.availableFrom}
+            onChange={setFrom}
+            minimumDate={today}
+            placeholder="Right away"
+            optional
+          />
+        </>
+      )}
+
+      {isTemporary && (
+        <>
+          <SectionLabel label="When is your room free?" />
+          <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+            <View style={{ flex: 1 }}>
+              <DatePicker label="From" value={form.availableFrom} onChange={setFrom} minimumDate={today} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <DatePicker
+                label="Until"
+                value={form.availableUntil}
+                onChange={(v) => update({ availableUntil: v })}
+                minimumDate={addDays(fromDate ?? today, 1)}
+              />
+            </View>
+          </View>
+          {duration && (
+            <View style={tmSt.durationPill}>
+              <MaterialCommunityIcons name="calendar-clock-outline" size={15} color={COLORS.primary} />
+              <Text style={tmSt.durationTxt}>Available for {duration}</Text>
+            </View>
+          )}
+        </>
+      )}
+
+      {!!form.listingTerm && (
+        <View style={stSt.infoBox}>
+          <Ionicons name="information-circle" size={16} color={COLORS.primary} style={{ marginRight: 8, marginTop: 1 }} />
+          <Text style={{ fontSize: 12, color: COLORS.primaryDark, lineHeight: 18, flex: 1 }}>
+            {isTemporary
+              ? 'Guests only see your room for these dates. You can still price it monthly or nightly later.'
+              : 'Your listing stays open until you find the right flatmate. You can pause it anytime.'}
+          </Text>
+        </View>
+      )}
+
+      <BottomNav onBack={onBack} onNext={onNext} validate={validate} isValid={isValid} />
+    </ScrollView>
+  );
+}
+
+const makeTmStyles = (COLORS: ThemeColors) => StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: COLORS.surface,
+    // Same Android rounded-corner + elevation fix as the apartment cards.
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  cardSel: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryAlpha },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primaryAlpha,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconWrapSel: { backgroundColor: COLORS.primary },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  label: { fontSize: 16, ...FONTS.semibold, color: COLORS.text },
+  sub: { fontSize: 13, color: COLORS.textSec, lineHeight: 19 },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: SPACING.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  tagTxt: { fontSize: 11, ...FONTS.medium, color: COLORS.textSec },
+  durationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: -4,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.primaryAlpha,
+  },
+  durationTxt: { fontSize: 13, ...FONTS.semibold, color: COLORS.primary },
+});
+
+// ─── Step 2: Your Property ────────────────────────────────────────────────────
 
 function StepProperty({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
@@ -1012,7 +1327,7 @@ const makePrpStyles = (COLORS: ThemeColors) => StyleSheet.create({
   aptSub: { fontSize: 11, color: COLORS.textSec, textAlign: 'center' },
 });
 
-// ─── Step 2: Room Details ─────────────────────────────────────────────────────
+// ─── Step 3: Room Details ─────────────────────────────────────────────────────
 
 function StepRoom({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
@@ -1154,7 +1469,7 @@ const makeRdStyles = (COLORS: ThemeColors) => StyleSheet.create({
   typeSub: { fontSize: 12, color: COLORS.textSec, lineHeight: 16 },
 });
 
-// ─── Step 3: Title & Description ──────────────────────────────────────────────
+// ─── Step 4: Title & Description ──────────────────────────────────────────────
 
 function StepTitle({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
@@ -1230,7 +1545,7 @@ function StepTitle({ form, update, onNext, onBack }: StepProps) {
   );
 }
 
-// ─── Step 4: Flatmates ────────────────────────────────────────────────────────
+// ─── Step 5: Flatmates ────────────────────────────────────────────────────────
 
 function StepFlatmates({ form, update, onNext, onBack }: StepProps) {
   const { user } = useAuth();
@@ -1602,7 +1917,7 @@ const makeFmStyles = (COLORS: ThemeColors) => StyleSheet.create({
   addTxt: { fontSize: 14, ...FONTS.medium, color: COLORS.primary },
 });
 
-// ─── Step 5: Amenities & Food ─────────────────────────────────────────────────
+// ─── Step 6: Amenities & Food ─────────────────────────────────────────────────
 
 function StepAmenities({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
@@ -1727,7 +2042,7 @@ const makeAmStyles = (COLORS: ThemeColors) => StyleSheet.create({
   },
 });
 
-// ─── Step 6: Photos ───────────────────────────────────────────────────────────
+// ─── Step 7: Photos ───────────────────────────────────────────────────────────
 
 const ALL_PHOTO_CATEGORIES = [
   ...PHOTO_CATEGORIES,
@@ -1989,7 +2304,7 @@ const makePhStyles = (COLORS: ThemeColors, SHADOW: ThemeShadows) => StyleSheet.c
 
 });
 
-// ─── Step 7: Set Your Price ───────────────────────────────────────────────────
+// ─── Step 8: Set Your Price ───────────────────────────────────────────────────
 
 function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
@@ -2287,7 +2602,7 @@ const makePrStyles = (COLORS: ThemeColors) => StyleSheet.create({
   minStayTxtSel: { color: '#fff', ...FONTS.semibold },
 });
 
-// ─── Step 8: House Rules ──────────────────────────────────────────────────────
+// ─── Step 9: House Rules ──────────────────────────────────────────────────────
 
 function StepRules({ form, update, onNext, onBack }: StepProps) {
   const COLORS = useThemeColors();
@@ -2365,7 +2680,7 @@ function StepRules({ form, update, onNext, onBack }: StepProps) {
 }
 
 
-// ─── Step 9: Review & Publish ─────────────────────────────────────────────────
+// ─── Step 10: Review & Publish ─────────────────────────────────────────────────
 
 function StepReview({
   form,
@@ -2538,15 +2853,25 @@ function StepReview({
 
   const SUMMARY_ROWS = [
     {
-      label: 'Property',
+      label: 'Listing type',
       step: 1,
+      value: [
+        form.listingTerm === 'temporary' ? 'Short-term sublet' : form.listingTerm === 'permanent' ? 'New flatmate' : null,
+        form.listingTerm === 'temporary' && form.availableFrom && form.availableUntil
+          ? `${formatDisplayDate(form.availableFrom)} – ${formatDisplayDate(form.availableUntil)}`
+          : form.availableFrom ? `From ${formatDisplayDate(form.availableFrom)}` : null,
+      ].filter(Boolean).join(' · '),
+    },
+    {
+      label: 'Property',
+      step: 2,
       value: [form.apartmentType, form.floorNumber ? `${form.floorNumber} floor` : null, form.apartmentName, form.locality]
         .filter(Boolean).join(' · '),
     },
-    { label: 'Title', step: 3, value: form.title },
+    { label: 'Title', step: 4, value: form.title },
     {
       label: 'Room',
-      step: 2,
+      step: 3,
       value: [
         form.roomType === 'private' ? 'Private' : form.roomType === 'shared' ? 'Shared' : null,
         form.bedType ? `${form.bedType.charAt(0).toUpperCase()}${form.bedType.slice(1)} bed` : null,
@@ -2555,24 +2880,24 @@ function StepReview({
     },
     {
       label: 'Flatmates',
-      step: 4,
+      step: 5,
       value: form.flatmates.length > 0
         ? `${form.flatmates.length} flatmate${form.flatmates.length > 1 ? 's' : ''} added`
         : 'No flatmates added',
     },
     {
       label: 'Amenities',
-      step: 5,
+      step: 6,
       value: [amenityHighlights || null, form.homeCooked ? 'Home-cooked meals' : null].filter(Boolean).join(' · '),
     },
     {
       label: 'Photos',
-      step: 6,
+      step: 7,
       value: totalPhotos > 0 ? `${totalPhotos} photo${totalPhotos > 1 ? 's' : ''} added` : 'No photos added',
     },
     {
       label: 'Price',
-      step: 7,
+      step: 8,
       value: [
         rvPrice > 0 ? `₹${rvPrice.toLocaleString('en-IN')}${rvUnit}` : null,
         !rvIsMonthly && form.homeCooked && form.mealCost ? `+ ₹${form.mealCost}/day meals` : null,
@@ -2580,7 +2905,7 @@ function StepReview({
     },
     {
       label: 'House Rules',
-      step: 8,
+      step: 9,
       value: [
         ruleCount > 0 ? `${ruleCount} rule${ruleCount > 1 ? 's' : ''} set` : null,
         form.checkInTime ? `Check-in ${form.checkInTime}` : null,
@@ -2846,7 +3171,9 @@ function mapListingToForm(data: any): FormData {
     utilitiesIncluded: !!data.monthly_breakdown?.utilities_included,
     utilitiesEstMonthly: data.monthly_breakdown?.utilities_est_monthly ? String(Math.round(data.monthly_breakdown.utilities_est_monthly)) : '',
     minMonths: data.min_months != null ? String(data.min_months) : '3',
+    listingTerm: data.listing_term === 'temporary' ? 'temporary' : 'permanent',
     availableFrom: data.available_from || '',
+    availableUntil: data.available_until || '',
     noSmoking: hr.no_smoking,
     noLoudMusic: hr.no_loud_music,
     noPets: hr.no_pets,
@@ -2905,7 +3232,7 @@ export default function ListingEditorScreen() {
     getListing(listingId)
       .then((data: any) => {
         setForm(mapListingToForm(data));
-        setStep(9);
+        setStep(TOTAL_STEPS);
       })
       .catch(() => {
         Alert.alert('Error', 'Failed to load listing. Please try again.');
@@ -2924,8 +3251,9 @@ export default function ListingEditorScreen() {
         if (!data) return;
         try {
           const saved = JSON.parse(data);
-          setForm(saved.form ?? INIT);
-          setStep(saved.step ?? 1);
+          // Merge over INIT so drafts saved before new fields existed still have them.
+          setForm({ ...INIT, ...(saved.form ?? {}) });
+          setStep(resolveDraftStep(saved));
         } catch {
           AsyncStorage.removeItem(draftKey);
         }
@@ -2943,7 +3271,7 @@ export default function ListingEditorScreen() {
 
   const back = useCallback(
     () => {
-      if (step === 1 || (listingId && step === 9)) {
+      if (step === 1 || (listingId && step === TOTAL_STEPS)) {
         navigation.goBack();
       } else {
         setStep((s) => s - 1);
@@ -2973,7 +3301,7 @@ export default function ListingEditorScreen() {
     // For new listings — save draft locally
     if (draftKey && step > 0) {
       try {
-        await AsyncStorage.setItem(draftKey, JSON.stringify({ step, form }));
+        await AsyncStorage.setItem(draftKey, JSON.stringify({ v: DRAFT_VERSION, step, form }));
       } catch {}
     }
     navigation.goBack();
@@ -2985,15 +3313,16 @@ export default function ListingEditorScreen() {
 
   const renderStep = () => {
     switch (step) {
-      case 1: return <StepProperty {...stepProps} />;
-      case 2: return <StepRoom {...stepProps} />;
-      case 3: return <StepTitle {...stepProps} />;
-      case 4: return <StepFlatmates {...stepProps} />;
-      case 5: return <StepAmenities {...stepProps} />;
-      case 6: return <StepPhotos {...stepProps} />;
-      case 7: return <StepPrice {...stepProps} />;
-      case 8: return <StepRules {...stepProps} />;
-      case 9: return (
+      case 1: return <StepTerm {...stepProps} />;
+      case 2: return <StepProperty {...stepProps} />;
+      case 3: return <StepRoom {...stepProps} />;
+      case 4: return <StepTitle {...stepProps} />;
+      case 5: return <StepFlatmates {...stepProps} />;
+      case 6: return <StepAmenities {...stepProps} />;
+      case 7: return <StepPhotos {...stepProps} />;
+      case 8: return <StepPrice {...stepProps} />;
+      case 9: return <StepRules {...stepProps} />;
+      case 10: return (
         <StepReview
           form={form}
           onBack={back}
@@ -3023,7 +3352,7 @@ export default function ListingEditorScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top }}>
       <EditorHeader onSaveExit={saveExit} />
-      {step < 10 && <ProgressBar step={step} />}
+      <ProgressBar step={step} />
       {renderStep()}
     </View>
   );

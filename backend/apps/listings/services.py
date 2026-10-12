@@ -308,6 +308,16 @@ def update_listing(user: User, listing_id: str, data: dict) -> dict | None:
         listing.title = d["title"]
         listing.description = d.get("description", "")
         _apply_pricing_fields(listing, d)
+        _apply_term_fields(listing, d)
+        if (
+            listing.status == Listing.Status.SNOOZED
+            and listing.term_ended_notified_for
+            and (listing.available_until is None or listing.available_until > timezone.localdate())
+        ):
+            # Auto-snoozed when its period ended; the host has now extended it
+            # (or made it permanent), so bring it back.
+            listing.status = Listing.Status.LIVE
+            listing.term_ended_notified_for = None
         listing.food_kitchen_access = d.get("food_kitchen_access", False)
         listing.food_meals_available = d.get("food_meals_available", False)
         listing.food_meal_cost = d.get("food_meal_cost")
@@ -542,6 +552,7 @@ def create_listing(user: User, data: dict) -> dict:
             status=_listing_status_for_user(user),
         )
         _apply_pricing_fields(listing, d)
+        _apply_term_fields(listing, d)
         listing.save()
         if listing.status == Listing.Status.LIVE:
             listing.published_at = datetime.now()
@@ -640,7 +651,6 @@ def _apply_pricing_fields(listing: Listing, d: dict) -> None:
         listing.utilities_included = bool(d.get("utilities_included", False))
         listing.utilities_est_monthly = d.get("utilities_est_monthly")
         listing.min_months = d.get("min_months")
-        listing.available_from = d.get("available_from")
         # Nightly rate not used for monthly; null it so stale values don't linger.
         listing.host_price_per_night = None
         listing.min_nights = 1
@@ -649,6 +659,19 @@ def _apply_pricing_fields(listing: Listing, d: dict) -> None:
         listing.min_nights = d.get("min_nights", 1)
         # Clear any monthly leftovers on a nightly listing.
         listing.monthly_rent = None
+
+
+def _apply_term_fields(listing: Listing, d: dict) -> None:
+    """
+    Set listing term + availability window. Applies to both rental types —
+    a temporary sublet can still be priced monthly. Permanent listings have
+    no end date. Shared by create_listing and update_listing.
+    """
+    listing.listing_term = d.get("listing_term", Listing.ListingTerm.PERMANENT)
+    listing.available_from = d.get("available_from")
+    listing.available_until = (
+        d.get("available_until") if listing.listing_term == Listing.ListingTerm.TEMPORARY else None
+    )
 
 
 def _pricing_dict(listing: Listing) -> dict:
@@ -703,7 +726,9 @@ def _pricing_dict(listing: Listing) -> dict:
         "recurring_monthly": recurring,
         "min_nights": listing.min_nights,
         "min_months": listing.min_months,
+        "listing_term": listing.listing_term,
         "available_from": listing.available_from.isoformat() if listing.available_from else None,
+        "available_until": listing.available_until.isoformat() if listing.available_until else None,
         "security_deposit": deposit,
         "monthly_breakdown": breakdown,
     }
@@ -764,6 +789,7 @@ def _listing_to_dict(listing: Listing) -> dict:
         "title": listing.title,
         "area_name": _get_area_name(listing),
         "rental_type": listing.rental_type,
+        "listing_term": listing.listing_term,
         "display_price": display_price,
         "price_unit": "month" if is_monthly else "night",
         # Kept for backward-compat with nightly clients; null on monthly.
@@ -837,6 +863,12 @@ def search_guest_listings(
         Listing.objects
         .filter(status=Listing.Status.LIVE)
         .filter(host_user__profile__id_verification_status="approved")
+        # Temporary stays whose window ends today or earlier can't be booked —
+        # hide them right away rather than waiting for the auto-snooze job.
+        .exclude(
+            listing_term=Listing.ListingTerm.TEMPORARY,
+            available_until__lte=timezone.localdate(),
+        )
         .select_related("property", "room")
         .prefetch_related("listing_amenities__amenity")
     )
@@ -917,7 +949,6 @@ def search_guest_listings(
             qs = qs.exclude(id__in=blocked_ids)
 
             from apps.bookings.models import Booking
-            from django.utils import timezone
             now = timezone.now()
             booked_ids = (
                 Booking.objects.filter(

@@ -53,7 +53,9 @@ export async function createListing(form: {
   utilitiesIncluded: boolean;
   utilitiesEstMonthly: string;
   minMonths: string;
+  listingTerm: '' | 'permanent' | 'temporary';
   availableFrom: string;
+  availableUntil: string;
   noSmoking: boolean;
   noLoudMusic: boolean;
   noPets: boolean;
@@ -125,6 +127,7 @@ export async function createListing(form: {
     title: form.title,
     description,
     ..._pricingPayload(form),
+    ..._termPayload(form),
     food_kitchen_access: form.kitchenAccess,
     food_meals_available: form.homeCooked,
     food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
@@ -233,6 +236,7 @@ export async function updateListing(
     title: form.title,
     description,
     ..._pricingPayload(form),
+    ..._termPayload(form),
     food_kitchen_access: form.kitchenAccess,
     food_meals_available: form.homeCooked,
     food_meal_cost: form.homeCooked && form.mealCost ? parseFloat(form.mealCost) : null,
@@ -301,13 +305,23 @@ function _pricingPayload(form: any): Record<string, any> {
       utilities_included: !!form.utilitiesIncluded,
       utilities_est_monthly: form.utilitiesIncluded ? null : (num(form.utilitiesEstMonthly) || null),
       min_months: num(form.minMonths) || null,
-      available_from: form.availableFrom || null,
     };
   }
   return {
     rental_type: 'nightly',
     host_price_per_night: parseFloat(form.nightlyRate),
     min_nights: _mapMinStay(form.minStay),
+  };
+}
+
+// Listing term + availability window. Independent of rental type — a temporary
+// sublet can be priced monthly or nightly. Permanent listings have no end date.
+function _termPayload(form: any): Record<string, any> {
+  const temporary = form.listingTerm === 'temporary';
+  return {
+    listing_term: temporary ? 'temporary' : 'permanent',
+    available_from: form.availableFrom || null,
+    available_until: temporary ? (form.availableUntil || null) : null,
   };
 }
 

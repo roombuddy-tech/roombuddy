@@ -55,6 +55,9 @@ export interface GuestListingDetail {
   max_nights: number;
   min_months: number | null;
   available_from: string | null;
+  available_until: string | null;
+  listing_term?: 'permanent' | 'temporary';
+  blocked_dates?: Array<{ start_date: string; end_date: string }>;
   security_deposit: number;
   monthly_breakdown: {
     monthly_rent: number;

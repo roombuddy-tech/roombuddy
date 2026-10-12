@@ -15,7 +15,7 @@ from apps.notifications.models import EventType
 from apps.notifications.services import dispatch
 
 from apps.bookings.models import Booking, BookingStatusHistory
-from apps.listings.models import Listing
+from apps.listings.models import Listing, ListingBlockedDate
 from apps.listings.services import _pricing_dict
 from apps.payments.services import initiate_refund_for_cancelled_booking
 from apps.users.models import User, PayoutAccount
@@ -105,6 +105,37 @@ def _quantize(value: Decimal) -> Decimal:
 
 
 # ─── Quote ───────────────────────────────────────────────────────────────
+
+def _validate_availability_window(listing: Listing, check_in: date, check_out: date) -> None:
+    """Raise ValidationError if the stay falls outside available_from → available_until
+    or overlaps a host-blocked range."""
+    if listing.available_from and check_in < listing.available_from:
+        raise ValidationError({
+            "error": f"This room is available from {listing.available_from:%d %b %Y}",
+            "code": ErrorCode.OUTSIDE_AVAILABILITY,
+        })
+    if listing.available_until and check_out > listing.available_until:
+        raise ValidationError({
+            "error": f"This room is only available until {listing.available_until:%d %b %Y}",
+            "code": ErrorCode.OUTSIDE_AVAILABILITY,
+        })
+    # Host-blocked ranges are inclusive nights; the stay occupies the nights
+    # check_in .. check_out-1, so checking out on a block's first day is fine.
+    blocked = (
+        ListingBlockedDate.objects
+        .filter(listing=listing, start_date__lt=check_out, end_date__gte=check_in)
+        .order_by("start_date")
+        .first()
+    )
+    if blocked:
+        raise ValidationError({
+            "error": (
+                f"The host has blocked {blocked.start_date:%d %b} – {blocked.end_date:%d %b %Y}. "
+                "Please choose different dates."
+            ),
+            "code": ErrorCode.OUTSIDE_AVAILABILITY,
+        })
+
 
 def _quote_monthly(listing: Listing, check_in: date, check_out: date) -> dict:
     """
@@ -199,6 +230,10 @@ def quote_booking(listing_id, check_in: date, check_out: date, meal_option: bool
             "error": "Listing not found or not available",
             "code": ErrorCode.LISTING_NOT_FOUND,
         })
+
+    # Host's availability window. Checked here so both the quote and
+    # create_booking (which quotes first) reject out-of-window stays.
+    _validate_availability_window(listing, check_in, check_out)
 
     # Monthly listings (Option A): the guest reserves for the flat platform fee;
     # rent, deposit and setup are settled directly with the host. No nights math.
