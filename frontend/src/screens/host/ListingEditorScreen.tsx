@@ -950,7 +950,9 @@ function StepTerm({ form, update, onNext, onBack }: StepProps) {
             <TouchableOpacity
               key={t.value}
               style={[tmSt.card, sel && tmSt.cardSel]}
-              onPress={() => update({ listingTerm: t.value })}
+              // Flatmate (permanent) listings are always priced monthly; nightly is
+              // only offered for short-term sublets.
+              onPress={() => update(t.value === 'permanent' ? { listingTerm: t.value, rentalType: 'monthly' } : { listingTerm: t.value })}
               activeOpacity={0.8}
             >
               <View style={[tmSt.iconWrap, sel && tmSt.iconWrapSel]}>
@@ -2312,8 +2314,15 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
   const fldSt = useMemo(() => makeFldStyles(COLORS), [COLORS]);
   const prSt = useMemo(() => makePrStyles(COLORS), [COLORS]);
   const [rateFocused, setRateFocused] = useState(false);
-  const isMonthly = form.rentalType === 'monthly';
+  const isPermanent = form.listingTerm === 'permanent';
+  const isMonthly = isPermanent || form.rentalType === 'monthly';
   const rate = parseInt(form.nightlyRate, 10) || 0;
+
+  // Older listings were defaulted to permanent while priced nightly — move
+  // them onto monthly pricing so what's saved matches what's shown.
+  useEffect(() => {
+    if (isPermanent && form.rentalType !== 'monthly') update({ rentalType: 'monthly' });
+  }, [isPermanent, form.rentalType, update]);
   const mealCost = form.homeCooked ? (parseInt(form.mealCost, 10) || 0) : 0;
 
   // Monthly numbers for the live breakdown.
@@ -2357,9 +2366,14 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
       keyboardOpeningTime={0}
     >
         <Text style={stSt.title}>Set Your Price</Text>
-        <Text style={stSt.sub}>Are you subletting for a few months, or renting by the night?</Text>
+        <Text style={stSt.sub}>
+          {isPermanent
+            ? 'Flatmate listings are rented monthly. Set the rent and any regular costs.'
+            : 'Are you subletting for a few months, or renting by the night?'}
+        </Text>
 
-        {/* Rental type toggle — gates everything below */}
+        {/* Rental type toggle — gates everything below. Short-term sublets only. */}
+        {!isPermanent && (
         <View style={prSt.typeRow}>
           {([
             { v: 'monthly', icon: 'calendar-outline', label: 'Monthly', sub: 'Sublet for weeks / months' },
@@ -2380,6 +2394,7 @@ function StepPrice({ form, update, onNext, onBack }: StepProps) {
             );
           })}
         </View>
+        )}
 
         {isMonthly ? (
           <>
